@@ -131,53 +131,13 @@ for idx, postal_zip in enumerate(postal.posti_alue):
     postal.loc[idx, "walktime_mean"] = round(this_mean, 2)
 
 
+
 ###################################
 ### PREPARE AND SHOW STATISTICS ###
 ###################################
     
 statistics = Stats(records, postal, visitors, invalid)
 statistics.calculateStats()
-
-# Tells us how many records each user has sent to me
-#average_answers = records.groupby('ip', as_index=False)['id'].count()
-#answer_sum = postal["answer_count"].sum()
-#answer_mean = round(postal["answer_count"].mean(), 3)
-#areasWithAnswers = postal["answer_count"][postal["answer_count"]!=0].count()
-#areasWithout = list(postal["nimi"][postal["answer_count"]==0])
-#areasMoreThanHundred = len(postal[postal["answer_count"] >= 100])
-#areasMoreThanTen = len(postal[postal["answer_count"] >= 10]) - areasMoreThanHundred
-#areasMoreThanOne = len(postal[postal["answer_count"] >= 1]) - areasMoreThanTen - areasMoreThanHundred
-#uniqueVisitors = np.count_nonzero(visitors["ip"].unique())
-#visitorcount_mean = round(visitors["count"].mean(), 3)
-#visitors_returned = visitors["count"][visitors["count"] > 1].count()
-#uniqueRecords = np.count_nonzero(records["ip"].unique())
-
-### PRINT STATISTICS
-#print("-----------")
-#print("---Stats---")
-#print("-----------")
-#print("Total answers: {0}".format(answer_sum))
-#print("Areas with answers: {0}".format(areasWithAnswers))
-#print("Areas without answers: {0}".format(167 - areasWithAnswers))
-#print("Answers per area, mean: {0}".format(answer_mean))
-#print("Unanswered areas: {0}".format(areasWithout))
-#print("Areas with more than 100 answers: {0}".format(areasMoreThanHundred))
-#print("Areas with  10-99 answers: {0}".format(areasMoreThanTen))
-#print("Areas with  1-9 answers: {0}".format(areasMoreThanOne))
-#print("Amount of unique IP addresses (visitors): {0}".format(
-#        uniqueVisitors))
-#print("Amount of visitors returned once or more: {0}".format(visitors_returned))
-#print("How many times visited, mean: {0}".format(visitorcount_mean))
-#print("Amount of unique IP addresses of responses (records): {0}".format(
-#        uniqueRecords))
-#print("Number of invalid records not taken into account: {0}".format(invalid))
-##sama tulema kuin yllä
-##len(set(records['ip']).intersection(set(visitors['ip'])))
-#print("{0} % of visitors sent me records".format(
-#        round(uniqueRecords / uniqueVisitors * 100, 2)))
-
-#print("Mean amount of received records per user: {0}". format(
-#        round(average_answers["id"].mean(), 2)))
 
 
 
@@ -217,7 +177,6 @@ z = np.abs(stats.zscore(
 
 # test removing outlier data
 boston_df_out = boston_df_o1[~((boston_df_o1 < (Q1 - 1.5 * IQR)) | (boston_df_o1 > (Q3 + 1.5 * IQR))).any(axis=1)]
-
 
 
 
