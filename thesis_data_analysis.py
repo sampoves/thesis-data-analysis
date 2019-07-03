@@ -7,7 +7,6 @@ Created on Fri May 10 00:07:36 2019
 Sampo Vesanen Thesis survey datacrunch
 
 TODO:
-    - generate postal code areas here in code
     - remove unreachable islands
     - See how long user took to first visit survey and answer to the survey
     - Respondent specific reports
@@ -59,7 +58,6 @@ visitors = pd.read_csv(os.path.join(datawd, visitors_data))
 
 # Shapefiles
 grid = gpd.read_file("MetropAccess_YKR_grid_EurefFIN.shp", encoding='utf-8')
-#postal = gpd.read_file("paavo\pno_research_area.shp", encoding='utf-8')
 resarea = gpd.read_file("paavo\pno_dissolve.shp", encoding='utf-8')
 
 
@@ -73,16 +71,26 @@ postal = gpd.read_file(r"paavo\2019\pno_tilasto_2019.shp", encoding='utf-8')
 postal = postal[postal.kunta.isin(muns)]
 postal = postal.reset_index()
 
+# Remove islands unreachable by car
+
+# Remove all islands, but first check if intersections present, and preserve 
+# shapes which intersect with some other postal code area
+removeAllIslands = ["00140", "00210", "02230", "02360", "02270", "02160", 
+                    "00150", "00850", "00930", "00930", "00980"]
+
+# Dictionary. Preserve specified amount of islands from largest to smallest
+preserveAmount = {"00860": 1, "00340": 3, "00200": 2}
+
+# special case Suvisaaristo
+removeSome = ["02380"]
+
+# INSERT HERE ISLAND REMOVER
+
+
+
 #######################
 ### FIX SOURCE DATA ###
 #######################
-
-# Due to some shapefile saving shenanigans my source encoding string encoding
-# was Windows-1252. Fix the encoding with these list comprehensions
-# These may be not necessary after processing shapefiles from the beginning
-# in this script. It was a cool piece of code!
-#postal.nimi = [x.encode("windows-1252").decode("utf-8") for x in list(postal.nimi)]
-#postal.namn = [x.encode("windows-1252").decode("utf-8") for x in list(postal.namn)]
 
 # Datetimes to datetime format
 records["timestamp"] = convertToDatetime(records, "timestamp")
@@ -95,6 +103,10 @@ visitors["ts_latest"] = convertToDatetimeVar2(visitors, "ts_latest")
 ### DETECTION OF ILLEGAL DATA ###
 #################################
 
+# Detect if a user has answered a same area multiple times, insert here
+
+
+
 # Remove illegal answers. At this time any value 99 is deemed illegal
 delList = []
 invalid = 0
@@ -104,6 +116,7 @@ for idx, (value, value2) in enumerate(zip(records["parktime"], records["walktime
         print("Illegal walktime or parktime detected:", idx, value, value2)
         delList.append(idx)
         invalid += 1
+        # Missing: removal of misbehaving respondents from df "visitors"
         
 records = records.drop(records.index[delList])
 records = records.reset_index()
@@ -202,12 +215,12 @@ boston_df_out = boston_df_o1[~((boston_df_o1 < (Q1 - 1.5 * IQR)) | (boston_df_o1
 postal['coords'] = postal['geometry'].apply(lambda x: x.representative_point().coords[:])
 postal['coords'] = [coords[0] for coords in postal['coords']]
 
+
+
+# PLOT AMOUNT OF RECORDS
 # Plot with layers. Base is basemap for zipcodes without answers
 base = postal.plot(linewidth=0.8, edgecolor="0.8", color="white", 
-                   figsize=(15, 12))
-
-# then remove all zip codes with no answers
-#postal = postal.loc[postal["answer_count"]!=0]
+                   figsize=(24, 12))
 
 # now plot all non-zero areas on top of base
 postal.loc[postal["answer_count"]!=0].plot(
@@ -216,14 +229,8 @@ postal.loc[postal["answer_count"]!=0].plot(
         legend=True)
 
 # annotate
-for idx, row in postal.iterrows():
-    annotation = "{0}, {1}".format(row['nimi'], str(row["answer_count"]))
-    #annotation = "{0}".format(str(row["answer_count"]))
-    plt.annotate(s=annotation, xy=row['coords'],
-                 horizontalalignment='center')
-
+annotationFunction(postal, "answer_count")
 plt.tight_layout()
-
 
 
 
@@ -241,16 +248,11 @@ base = postal.plot(linewidth=0.8, edgecolor="0.8", color="white",
 
 postal.loc[~postal["walktime_mean"].isnull()].plot(
         ax=base, column="walktime_mean", cmap="OrRd", linewidth=0.8,
-        figsize=(15, 12), edgecolor="0.8", scheme='fisher_jenks',
+        figsize=(24, 12), edgecolor="0.8", scheme='fisher_jenks',
         legend=True)
 
 # annotate
-for idx, row in postal.iterrows():
-    annotation = "{0}, {1}".format(row['nimi'], str(row["walktime_mean"]))
-    #annotation = "{0}".format(str(row["answer_count"]))
-    plt.annotate(s=annotation, xy=row['coords'],
-                 horizontalalignment='center')
-
+annotationFunction(postal, "walktime_mean")
 plt.tight_layout()
 
 
@@ -262,16 +264,11 @@ base = postal.plot(linewidth=0.8, edgecolor="0.8", color="white",
 
 postal.loc[~postal["parktime_mean"].isnull()].plot(
         ax=base, column="parktime_mean", cmap="OrRd", linewidth=0.8,
-        figsize=(15, 12), edgecolor="0.8", scheme='fisher_jenks',
+        figsize=(24, 12), edgecolor="0.8", scheme='fisher_jenks',
         legend=True)
 
 # annotate
-for idx, row in postal.iterrows():
-    annotation = "{0}, {1}".format(row['nimi'], str(row["parktime_mean"]))
-    #annotation = "{0}".format(str(row["answer_count"]))
-    plt.annotate(s=annotation, xy=row['coords'],
-                 horizontalalignment='center')
-
+annotationFunction(postal, "parktime_mean")
 plt.tight_layout()
 
 
@@ -318,9 +315,9 @@ plt.tight_layout()
 plt.show()
 
 
-# merkitsevyys scatter plot
+# merkitsevyysscatterplot
 # outo?
-###########################
+#########################
 fig, ax = plt.subplots(figsize=(8,8))
 ax.scatter(records["timeofday"], records["parktime"])
 plt.grid(True)

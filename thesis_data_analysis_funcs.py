@@ -12,6 +12,19 @@ import numpy as np
 import pandas as pd 
 import random
 import string
+import matplotlib.pyplot as plt
+
+
+def annotationFunction(df, rowname):
+    '''
+    Annotate postal code areas in Matplotlib plot.
+    Df is the dataframe to fetch shapes from, rowname gives the value to
+    the annotations.
+    '''
+    for idx, row in df.iterrows():
+        annotation = "{0}, {1}".format(row['nimi'], str(row[rowname]))
+        plt.annotate(s=annotation, xy=row['coords'],
+                     horizontalalignment='center')
 
 
 def convertToDatetime(dataframe, columnName):
