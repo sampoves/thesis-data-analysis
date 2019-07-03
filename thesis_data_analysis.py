@@ -7,6 +7,8 @@ Created on Fri May 10 00:07:36 2019
 Sampo Vesanen Thesis survey datacrunch
 
 TODO:
+    - generate postal code areas here in code
+    - remove unreachable islands
     - See how long user took to first visit survey and answer to the survey
     - Respondent specific reports
     - Filter results with 99 (probably me)
@@ -41,8 +43,8 @@ from thesis_data_analysis_funcs import *
 ################################
 
 # Up to date "records"
-records_data = "records260619.csv"
-visitors_data = "visitors260619.csv"
+records_data = "records020719.csv"
+visitors_data = "visitors020719.csv"
 
 
 
@@ -57,10 +59,19 @@ visitors = pd.read_csv(os.path.join(datawd, visitors_data))
 
 # Shapefiles
 grid = gpd.read_file("MetropAccess_YKR_grid_EurefFIN.shp", encoding='utf-8')
-postal = gpd.read_file("paavo\pno_research_area.shp", encoding='utf-8')
+#postal = gpd.read_file("paavo\pno_research_area.shp", encoding='utf-8')
 resarea = gpd.read_file("paavo\pno_dissolve.shp", encoding='utf-8')
 
 
+##########################
+### PROCESS SHAPEFILES ###
+##########################
+
+# Process Helsinki Capital Region geodataframe from PAAVO data
+muns = ["091", "049", "092", "235"]
+postal = gpd.read_file(r"paavo\2019\pno_tilasto_2019.shp", encoding='utf-8')
+postal = postal[postal.kunta.isin(muns)]
+postal = postal.reset_index()
 
 #######################
 ### FIX SOURCE DATA ###
@@ -68,8 +79,10 @@ resarea = gpd.read_file("paavo\pno_dissolve.shp", encoding='utf-8')
 
 # Due to some shapefile saving shenanigans my source encoding string encoding
 # was Windows-1252. Fix the encoding with these list comprehensions
-postal.nimi = [x.encode("windows-1252").decode("utf-8") for x in list(postal.nimi)]
-postal.namn = [x.encode("windows-1252").decode("utf-8") for x in list(postal.namn)]
+# These may be not necessary after processing shapefiles from the beginning
+# in this script. It was a cool piece of code!
+#postal.nimi = [x.encode("windows-1252").decode("utf-8") for x in list(postal.nimi)]
+#postal.namn = [x.encode("windows-1252").decode("utf-8") for x in list(postal.namn)]
 
 # Datetimes to datetime format
 records["timestamp"] = convertToDatetime(records, "timestamp")
