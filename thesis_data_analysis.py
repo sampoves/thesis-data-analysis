@@ -16,6 +16,7 @@ TODO:
     - Have same IPs sent records for same areas more than once?
     - se yks tyyppi joka sanoi lähettäneensä virhedataa
     - Descriptive statistics, correlation charts
+    - Can't get geoplot to work
 """
 
 import os
@@ -25,6 +26,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import figure
 from datetime import timedelta
+from shapely.geometry import Polygon, MultiPolygon
+import operator
+from heapq import nlargest
 #import mapclassify #scheme="fisher_jenks" needs mapclassify
 
 wd = r"C:\Sampon\Maantiede\Master of the Universe\python"
@@ -42,8 +46,8 @@ from thesis_data_analysis_funcs import *
 ################################
 
 # Up to date "records"
-records_data = "records020719.csv"
-visitors_data = "visitors020719.csv"
+records_data = "records110719.csv"
+visitors_data = "visitors110719.csv"
 
 
 
@@ -51,7 +55,7 @@ visitors_data = "visitors020719.csv"
 ### IMPORT DATA ###
 ###################
 
-# Survey data
+# Survey data. Lambda x to preserve leading zeros
 records = pd.read_csv(os.path.join(datawd, records_data), 
                       converters={'zipcode': lambda x: str(x)})
 visitors = pd.read_csv(os.path.join(datawd, visitors_data))
@@ -59,6 +63,7 @@ visitors = pd.read_csv(os.path.join(datawd, visitors_data))
 # Shapefiles
 grid = gpd.read_file("MetropAccess_YKR_grid_EurefFIN.shp", encoding='utf-8')
 resarea = gpd.read_file("paavo\pno_dissolve.shp", encoding='utf-8')
+
 
 
 ##########################
@@ -69,22 +74,68 @@ resarea = gpd.read_file("paavo\pno_dissolve.shp", encoding='utf-8')
 muns = ["091", "049", "092", "235"]
 postal = gpd.read_file(r"paavo\2019\pno_tilasto_2019.shp", encoding='utf-8')
 postal = postal[postal.kunta.isin(muns)]
-postal = postal.reset_index()
+postal = postal.reset_index().drop(columns=["index"])
 
-# Remove islands unreachable by car
+### Remove islands unreachable by car
+# Preserve two largest Polygons from these postal code areas
+preserveTwoLargest = ["00830", "00570", "00340", "00200", "00890"]
 
-# Remove all islands, but first check if intersections present, and preserve 
-# shapes which intersect with some other postal code area
-removeAllIslands = ["00140", "00210", "02230", "02360", "02270", "02160", 
-                    "00150", "00850", "00930", "00930", "00980"]
+# preserve largest includes island postal code areas
+preserveLargest = ["00210", "00860", "00840", "00850", "00870", "00590"]
 
-# Dictionary. Preserve specified amount of islands from largest to smallest
-preserveAmount = {"00860": 1, "00340": 3, "00200": 2}
+# KESKEN
+#"00340" preserve largest 3
+#"02100" preserve all
 
-# special case Suvisaaristo
-removeSome = ["02380"]
+# Suvisaaristo needs special attention
+suvisaar = Polygon([(371829.79632436, 6668010.26942102), 
+                    (372652.78908073, 6667612.58164613), 
+                    (371343.73348838, 6666204.10411005), 
+                    (372923.43770531, 6665381.11135368), 
+                    (374635.70451388, 6667452.40184791), 
+                    (372078.35118367, 6668800.12152949), 
+                    (371829.79632436, 6668010.26942102)])
 
-# INSERT HERE ISLAND REMOVER
+# get mainland
+mainland = max(postal.unary_union, key=lambda a: a.area)
+
+# process islands unreachable by car
+for idx, geom in enumerate(postal.geometry):
+    # "in" utilises operator
+    if postal.loc[idx, "posti_alue"] in preserveTwoLargest:
+        thisGeom = postal.loc[idx]
+        geomList = [(idx, P.area) for idx, P in enumerate(thisGeom.geometry)]
+        geomList = geomList[:2] # two largest
+        geomList = [idx for idx, area in geomList] # preserve ids
+        # get two largest Polygons in MultiPolygon in current thisGeom
+        thisGeom = MultiPolygon(
+                [geom for idx, geom in enumerate(thisGeom.geometry) if idx in geomList])
+        mainland = mainland.union(thisGeom)
+    
+    # islands
+    if postal.loc[idx, "posti_alue"] in preserveLargest:
+        if geom.geom_type == "MultiPolygon":
+            largest = max(geom, key=lambda a: a.area)
+        else:
+            largest = geom
+        mainland = mainland.union(largest)
+    
+    # special case Suvisaaristo
+    if postal.loc[idx, "posti_alue"] == "02380":
+        match = postal.loc[idx, "geometry"]
+        preserve = MultiPolygon(
+                [geom for geom in match if geom.intersects(suvisaar)])
+        mainland = mainland.union(preserve)
+
+# replace postal geometries with geometries without islands
+for idx, geom in enumerate(postal.geometry):
+    if geom.geom_type == "MultiPolygon":
+        thisGeom = MultiPolygon(
+                [pol for idx, pol in enumerate(geom) if pol.intersects(mainland.buffer(-10))])
+        if thisGeom.is_empty == False:
+            postal.at[idx, "geometry"] = thisGeom
+            
+
 
 
 
@@ -209,6 +260,8 @@ boston_df_out = boston_df_o1[~((boston_df_o1 < (Q1 - 1.5 * IQR)) | (boston_df_o1
 #################
 ### VISUALISE ###
 #################
+# needs more advanced plotting. Compare to other data I have available,
+# population, area etc
 #https://towardsdatascience.com/lets-make-a-map-using-geopandas-pandas-and-matplotlib-to-make-a-chloropleth-map-dddc31c1983d
 
 # prepare annotation
@@ -225,7 +278,7 @@ base = postal.plot(linewidth=0.8, edgecolor="0.8", color="white",
 # now plot all non-zero areas on top of base
 postal.loc[postal["answer_count"]!=0].plot(
         ax=base, column="answer_count", cmap="OrRd", linewidth=0.8,
-        figsize=(15, 12), edgecolor="0.8", scheme='fisher_jenks',
+        figsize=(24, 12), edgecolor="0.8", scheme='fisher_jenks',
         legend=True)
 
 # annotate
@@ -234,17 +287,10 @@ plt.tight_layout()
 
 
 
-# en saa asennettuu geoplottii
-#ax = geoplot.kdeplot(injurious_collisions.sample(1000),
-#                     shade=True, shade_lowest=False,
-#                     clip=boroughs.geometry)
-#geoplot.polyplot(boroughs, ax=ax)
-
-
 
 # PLOT WALKTIME MEAN
 base = postal.plot(linewidth=0.8, edgecolor="0.8", color="white", 
-                   figsize=(15, 12))
+                   figsize=(24, 12))
 
 postal.loc[~postal["walktime_mean"].isnull()].plot(
         ax=base, column="walktime_mean", cmap="OrRd", linewidth=0.8,
@@ -260,7 +306,7 @@ plt.tight_layout()
 
 # PLOT PARKTIME MEAN
 base = postal.plot(linewidth=0.8, edgecolor="0.8", color="white", 
-                   figsize=(15, 12))
+                   figsize=(24, 12))
 
 postal.loc[~postal["parktime_mean"].isnull()].plot(
         ax=base, column="parktime_mean", cmap="OrRd", linewidth=0.8,
