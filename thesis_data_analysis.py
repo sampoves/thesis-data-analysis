@@ -76,18 +76,16 @@ postal = gpd.read_file(r"paavo\2019\pno_tilasto_2019.shp", encoding='utf-8')
 postal = postal[postal.kunta.isin(muns)]
 postal = postal.reset_index().drop(columns=["index"])
 
+
 ### Remove islands unreachable by car
+
 # Preserve two largest Polygons from these postal code areas
 preserveTwoLargest = ["00830", "00570", "00340", "00200", "00890"]
 
 # preserve largest includes island postal code areas
 preserveLargest = ["00210", "00860", "00840", "00850", "00870", "00590"]
 
-# KESKEN
-#"00340" preserve largest 3
-#"02100" preserve all
-
-# Suvisaaristo needs special attention
+# Suvisaaristo needs special attention. Define Polygon
 suvisaar = Polygon([(371829.79632436, 6668010.26942102), 
                     (372652.78908073, 6667612.58164613), 
                     (371343.73348838, 6666204.10411005), 
@@ -96,11 +94,12 @@ suvisaar = Polygon([(371829.79632436, 6668010.26942102),
                     (372078.35118367, 6668800.12152949), 
                     (371829.79632436, 6668010.26942102)])
 
-# get mainland
+# Get mainland
 mainland = max(postal.unary_union, key=lambda a: a.area)
 
-# process islands unreachable by car
+# Process islands unreachable by car
 for idx, geom in enumerate(postal.geometry):
+    
     # "in" utilises operator
     if postal.loc[idx, "posti_alue"] in preserveTwoLargest:
         thisGeom = postal.loc[idx]
@@ -112,7 +111,7 @@ for idx, geom in enumerate(postal.geometry):
                 [geom for idx, geom in enumerate(thisGeom.geometry) if idx in geomList])
         mainland = mainland.union(thisGeom)
     
-    # islands
+    # Islands
     if postal.loc[idx, "posti_alue"] in preserveLargest:
         if geom.geom_type == "MultiPolygon":
             largest = max(geom, key=lambda a: a.area)
@@ -120,14 +119,29 @@ for idx, geom in enumerate(postal.geometry):
             largest = geom
         mainland = mainland.union(largest)
     
-    # special case Suvisaaristo
+    # Special case Tapiola, preserve entire MultiPolygon
+    if postal.loc[idx, "posti_alue"] == "02100":
+        thisGeom = postal.loc[idx, "geometry"]
+        mainland = mainland.union(thisGeom)
+        
+    # Special case Suvisaaristo
     if postal.loc[idx, "posti_alue"] == "02380":
         match = postal.loc[idx, "geometry"]
         preserve = MultiPolygon(
                 [geom for geom in match if geom.intersects(suvisaar)])
         mainland = mainland.union(preserve)
+    
+    # Special case Kuusisaari-Lehtisaari, preserve 3 largest Polygons
+    if postal.loc[idx, "posti_alue"] == "00340":
+        thisGeom = postal.loc[idx]
+        geomList = [(idx, P.area) for idx, P in enumerate(thisGeom.geometry)]
+        geomList = geomList[:3] # three largest
+        geomList = [idx for idx, area in geomList] # preserve ids
+        thisGeom = MultiPolygon(
+                [geom for idx, geom in enumerate(thisGeom.geometry) if idx in geomList])
+        mainland = mainland.union(thisGeom)
 
-# replace postal geometries with geometries without islands
+# Replace postal geometries with geometries without islands
 for idx, geom in enumerate(postal.geometry):
     if geom.geom_type == "MultiPolygon":
         thisGeom = MultiPolygon(
@@ -135,8 +149,6 @@ for idx, geom in enumerate(postal.geometry):
         if thisGeom.is_empty == False:
             postal.at[idx, "geometry"] = thisGeom
             
-
-
 
 
 #######################
@@ -154,8 +166,27 @@ visitors["ts_latest"] = convertToDatetimeVar2(visitors, "ts_latest")
 ### DETECTION OF ILLEGAL DATA ###
 #################################
 
-# Detect if a user has answered a same area multiple times, insert here
-
+# Detect if a user has answered a same area multiple times
+for visitor in records.ip.unique():
+    theseRecords = records.loc[records['ip'] == visitor]
+    if(theseRecords["zipcode"].is_unique) == False:
+        print("\nDuplicates detected for ip code {0}".format(
+                theseRecords.ip.unique()[0]))
+        dupl = theseRecords[theseRecords.zipcode.duplicated(keep=False)]
+        dupl = dupl.sort_values(by=['zipcode'])
+        dupl = dupl.groupby(["zipcode"]).agg(
+                {"id": lambda x: x.tolist(),
+                 "timestamp": lambda x: x.tolist(), "ip": "first",
+                 "zipcode": "first", 
+                 "likert": lambda x: identicaltest(x), # defined in funcs.py
+                 "parkspot": lambda x: identicaltest(x),
+                 "parktime": lambda x: identicaltest(x), 
+                 "walktime": lambda x: identicaltest(x), 
+                 "timeofday": lambda x: identicaltest(x)})
+    
+        # produce report
+        for idx, row in dupl.drop(["ip"], axis=1).iterrows():
+            print(row.to_string(), "\n") # suppress dtype
 
 
 # Remove illegal answers. At this time any value 99 is deemed illegal

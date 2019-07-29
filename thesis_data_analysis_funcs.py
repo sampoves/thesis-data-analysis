@@ -113,6 +113,9 @@ class Stats:
         self.areasMoreThanOne = len(self.postal[
                 self.postal["answer_count"] >= 1]) - self.areasMoreThanTen - self.areasMoreThanHundred
         
+        # Amount of total visits
+        self.totalVisits = self.visitors["count"].sum()
+        
         # Amount of unique IP addresses in visitors
         self.uniqueVisitors = np.count_nonzero(
                 self.visitors["ip"].unique())
@@ -128,6 +131,9 @@ class Stats:
         # Amount of unique IP addresses of responses in records
         self.uniqueRecords = np.count_nonzero(
                 self.records["ip"].unique())
+        
+        # TOP 10 most answers per user
+        self.topten = list(self.records['ip'].value_counts().nlargest(10))
         
         # Show stats
         self.printStats()
@@ -155,6 +161,8 @@ class Stats:
                 self.areasMoreThanTen))
         print("Areas with 1-9 answers: {0}".format(
                 self.areasMoreThanOne))
+        print("Total amount of visits: {0}".format(
+                self.totalVisits))
         print("Amount of unique IP addresses (visitors): {0}".format(
                 self.uniqueVisitors))
         print("Amount of visitors returned once or more: {0}".format(
@@ -172,3 +180,15 @@ class Stats:
         
         print("Mean amount of received records per user: {0}". format(
                 round(self.average_answers["id"].mean(), 2)))
+        print("TOP 10 most answers per user: {0}".format(
+                self.topten))
+        
+
+
+def identicaltest(x):
+    '''
+    This anonymous function is to be used with groupby objects. It will
+    determine from Pandas Series whether the values in that series are
+    identical or unidentical. Return string answer or list.
+    '''
+    return "identical" if len(set(x)) == 1 else x.tolist()
