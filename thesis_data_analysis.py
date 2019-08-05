@@ -7,16 +7,12 @@ Created on Fri May 10 00:07:36 2019
 Sampo Vesanen Thesis survey datacrunch
 
 TODO:
-    - remove unreachable islands
     - See how long user took to first visit survey and answer to the survey
     - Respondent specific reports
-    - Filter results with 99 (probably me)
-    - Geographic analyses (geoplot not working sadface)
+    - Geographic analyses (Can't get geoplot to work)
     - Detect outliers
     - Have same IPs sent records for same areas more than once?
-    - se yks tyyppi joka sanoi lähettäneensä virhedataa
     - Descriptive statistics, correlation charts
-    - Can't get geoplot to work
 """
 
 import os
@@ -26,9 +22,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import figure
 from datetime import timedelta
-from shapely.geometry import Polygon, MultiPolygon
+from shapely.geometry import Polygon, MultiPolygon, Point
 import operator
-from heapq import nlargest
+#from heapq import nlargest
 #import mapclassify #scheme="fisher_jenks" needs mapclassify
 
 wd = r"C:\Sampon\Maantiede\Master of the Universe\python"
@@ -46,8 +42,8 @@ from thesis_data_analysis_funcs import *
 ################################
 
 # Up to date "records"
-records_data = "records110719.csv"
-visitors_data = "visitors110719.csv"
+records_data = "records050819.csv"
+visitors_data = "visitors050819.csv"
 
 
 
@@ -63,6 +59,26 @@ visitors = pd.read_csv(os.path.join(datawd, visitors_data))
 # Shapefiles
 grid = gpd.read_file("MetropAccess_YKR_grid_EurefFIN.shp", encoding='utf-8')
 resarea = gpd.read_file("paavo\pno_dissolve.shp", encoding='utf-8')
+
+
+
+#######################
+### FIX SOURCE DATA ###
+#######################
+
+# Datetimes to datetime format
+records["timestamp"] = convertToDatetime(records, "timestamp")
+visitors["ts_first"] = convertToDatetimeVar2(visitors, "ts_first")
+visitors["ts_latest"] = convertToDatetimeVar2(visitors, "ts_latest")
+
+# visitors, records: remove my visits and three records
+visitors = visitors.iloc[1:]
+records = records.drop([0, 5, 6])
+
+# I was contacted on 24.5.2019 22.41 that someone had filled three zipcodes
+# erroneously: Kallio, Käpylä and one other (probably Pukinmäki-Savela).
+# This is to remove those records.
+records = records.drop([1277, 1278, 1279])
 
 
 
@@ -82,7 +98,7 @@ postal = postal.reset_index().drop(columns=["index"])
 # Preserve two largest Polygons from these postal code areas
 preserveTwoLargest = ["00830", "00570", "00340", "00200", "00890"]
 
-# preserve largest includes island postal code areas
+# Preserve largest includes island postal code areas
 preserveLargest = ["00210", "00860", "00840", "00850", "00870", "00590"]
 
 # Suvisaaristo needs special attention. Define Polygon
@@ -151,32 +167,62 @@ for idx, geom in enumerate(postal.geometry):
             
 
 
-#######################
-### FIX SOURCE DATA ###
-#######################
+############################
+### RESPONDENT BEHAVIOUR ###
+############################
 
-# Datetimes to datetime format
-records["timestamp"] = convertToDatetime(records, "timestamp")
-visitors["ts_first"] = convertToDatetimeVar2(visitors, "ts_first")
-visitors["ts_latest"] = convertToDatetimeVar2(visitors, "ts_latest")
+# Create groupby aggregations of the records
+visitor_grp = records.groupby(["ip"]).agg({
+        "id": "count", 
+        "timestamp": lambda x: x.tolist(),
+        "zipcode": lambda x: x.tolist(),
+        "likert": lambda x: x.tolist(),
+        "parkspot": lambda x: x.tolist(),
+        "parktime": lambda x: x.tolist(),
+        "walktime": lambda x: x.tolist(),
+        "timeofday": lambda x: x.tolist()})
 
 
+# TÄSSÄ ISOO SEKOILUU
+base = postal.plot(linewidth=0.8, edgecolor="0.8", color="white", 
+                   figsize=(24, 12))
 
+point = postal[postal.posti_alue.isin(zipcodes)].unary_union.centroid
+gpd.GeoDataFrame(geometry=Point(point))
+postal[postal.posti_alue.isin(zipcodes)].plot(
+        ax=base,  marker='o', linewidth=0.8,
+        figsize=(24, 12), edgecolor="0.8",
+        legend=True)
+
+for idx, respondent in visitor_grp.iterrows():
+    if respondent.id > 1:
+        zipcodes = respondent.zipcode
+        postal[postal.posti_alue.isin(zipcodes)].plot(
+                ax=base,  marker='o', linewidth=0.8,
+                figsize=(24, 12), edgecolor="0.8",
+                legend=True)
+        
+        
+        
+        
+        
 #################################
 ### DETECTION OF ILLEGAL DATA ###
 #################################
 
-# Detect if a user has answered a same area multiple times
+# Detect if a user has answered a same area multiple times.
+# PLEASE NOTE THAT THIS ONLY LOCATES DUPLICATES
 for visitor in records.ip.unique():
     theseRecords = records.loc[records['ip'] == visitor]
+    
     if(theseRecords["zipcode"].is_unique) == False:
         print("\nDuplicates detected for ip code {0}".format(
                 theseRecords.ip.unique()[0]))
         dupl = theseRecords[theseRecords.zipcode.duplicated(keep=False)]
-        dupl = dupl.sort_values(by=['zipcode'])
         dupl = dupl.groupby(["zipcode"]).agg(
                 {"id": lambda x: x.tolist(),
-                 "timestamp": lambda x: x.tolist(), "ip": "first",
+                 "timestamp": lambda x: x.tolist(), 
+                 "ip": "first",
                  "zipcode": "first", 
                  "likert": lambda x: identicaltest(x), # defined in funcs.py
                  "parkspot": lambda x: identicaltest(x),
@@ -189,23 +235,35 @@ for visitor in records.ip.unique():
             print(row.to_string(), "\n") # suppress dtype
 
 
-# Remove illegal answers. At this time any value 99 is deemed illegal
+# Remove illegal answers. At this time any value 99 is deemed illegal. invalid
+# starts at 6 as at this point I have removed 3 of my own records and 3 others
+# which were reported to me as false. See above.
 delList = []
-invalid = 0
+illegal = []
+invalid = 6
 
-for idx, (value, value2) in enumerate(zip(records["parktime"], records["walktime"])):
+for idx, (value, value2, value3) in enumerate(zip(records["parktime"], records["walktime"], records["ip"])):
     if (value == 99 or value2 == 99):
         print("Illegal walktime or parktime detected:", idx, value, value2)
         delList.append(idx)
+        illegal.append(value3)
         invalid += 1
-        # Missing: removal of misbehaving respondents from df "visitors"
-        
+ 
+# Illegal contains all ips which have 99 as answers. illegal_df shows all
+# records made by these ip addresses
+illegal = list(set(illegal))
+illegal_df = records[records["ip"].isin(illegal)]
+
+# Drop the records which have 99 as answer. Drop the ip addresses from visitors
+# as well.
 records = records.drop(records.index[delList])
 records = records.reset_index()
+visitors = visitors[~visitors["ip"].isin(illegal)]
+visitors = visitors.reset_index()
 
 # Anonymisation of ip addresses
-for ip in records.ip:
-    records = records.replace(to_replace = ip, value = anonymise()) 
+#for ip in records.ip:
+#    records = records.replace(to_replace = ip, value = anonymise()) 
 
 
 
@@ -216,27 +274,31 @@ for ip in records.ip:
 
 postal["answer_count"] = 0
 
-# Add answer count to postal.answer_count
+# Add column "answer count" to postal.answer_count
 for zipcode in records.zipcode:
     for idx, postal_zip in enumerate(postal.posti_alue):
         if postal_zip == zipcode:
             postal.loc[idx, "answer_count"] += 1
 
-### add parktime and walktime means
+### add columns for parktime and walktime mean
 postal["parktime_mean"] = 0
 postal["walktime_mean"] = 0
 
-# Add mean to postal.parktime_mean
+# Calculate mean to postal.parktime_mean
 for idx, postal_zip in enumerate(postal.posti_alue):
     this_mean = records.loc[
             records['zipcode'] == postal_zip]["parktime"].mean()
     postal.loc[idx, "parktime_mean"] = round(this_mean, 2)
 
-# Add mean to postal.walktime_mean
+# Calculate mean to postal.walktime_mean
 for idx, postal_zip in enumerate(postal.posti_alue):
     this_mean = records.loc[
             records['zipcode'] == postal_zip]["walktime"].mean()
     postal.loc[idx, "walktime_mean"] = round(this_mean, 2)
+
+# Prepare annotation of plot features
+postal['coords'] = postal['geometry'].apply(lambda x: x.representative_point().coords[:])
+postal['coords'] = [coords[0] for coords in postal['coords']]
 
 
 
@@ -294,10 +356,36 @@ boston_df_out = boston_df_o1[~((boston_df_o1 < (Q1 - 1.5 * IQR)) | (boston_df_o1
 # needs more advanced plotting. Compare to other data I have available,
 # population, area etc
 #https://towardsdatascience.com/lets-make-a-map-using-geopandas-pandas-and-matplotlib-to-make-a-chloropleth-map-dddc31c1983d
+# see this:
+# https://www.dummies.com/education/math/statistics/how-to-interpret-a-correlation-coefficient-r/
 
-# prepare annotation
-postal['coords'] = postal['geometry'].apply(lambda x: x.representative_point().coords[:])
-postal['coords'] = [coords[0] for coords in postal['coords']]
+#likert-problematiikka
+# https://www.theanalysisfactor.com/can-likert-scale-data-ever-be-continuous/
+# https://www.researchgate.net/post/Can_we_use_Likert_scale_data_in_multiple_regression_analysis
+# https://www.researchgate.net/post/How_can_I_assess_statistical_significance_of_Likert_scale
+
+# TODO: Plot records compared to population and area in zipcodes
+
+# REGRESSION LINE TESTING
+# STATISTICAL SIGNIFICANCE
+from scipy import stats
+rho, pval = stats.spearmanr(records.likert, records.parktime)
+rho, pval = stats.spearmanr(records.parktime, records.timeofday) #pieni pval!
+rho, pval = stats.spearmanr(records.parkspot, records.walktime)
+
+np.random.seed(0)
+x = np.random.rand(100, 1)
+y = 2 + 3 * x + np.random.rand(100, 1)
+plt.scatter(x, y, s=10)
+plt.xlabel('liikert/x')
+plt.ylabel('parkkitiem/y')
+plt.show()
+
+plt.scatter(records.likert, records.parktime, s=10)
+plt.xlabel('liikert/x')
+plt.ylabel('parkkitiem/y')
+plt.show()
+
 
 
 
