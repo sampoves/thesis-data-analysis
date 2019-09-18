@@ -13,6 +13,7 @@ TODO:
     - Detect outliers
     - Have same IPs sent records for same areas more than once?
     - Descriptive statistics, correlation charts
+    - Plot records compared to population and area in zipcodes
 """
 
 import os
@@ -23,6 +24,8 @@ import matplotlib.pyplot as plt
 from matplotlib.pyplot import figure
 from datetime import timedelta
 from shapely.geometry import Polygon, MultiPolygon, Point
+import shapely.affinity
+
 import operator
 #from heapq import nlargest
 #import mapclassify #scheme="fisher_jenks" needs mapclassify
@@ -42,8 +45,8 @@ from thesis_data_analysis_funcs import *
 ################################
 
 # Up to date "records"
-records_data = "records050819.csv"
-visitors_data = "visitors050819.csv"
+records_data = "records180919.csv"
+visitors_data = "visitors180919.csv"
 
 
 
@@ -71,14 +74,19 @@ records["timestamp"] = convertToDatetime(records, "timestamp")
 visitors["ts_first"] = convertToDatetimeVar2(visitors, "ts_first")
 visitors["ts_latest"] = convertToDatetimeVar2(visitors, "ts_latest")
 
-# visitors, records: remove my visits and three records
+# visitors, records: remove author's visits and three records inputted by
+# the author
 visitors = visitors.iloc[1:]
 records = records.drop([0, 5, 6])
 
 # I was contacted on 24.5.2019 22.41 that someone had filled three zipcodes
 # erroneously: Kallio, Käpylä and one other (probably Pukinmäki-Savela).
-# This is to remove those records.
+# The following removes those records.
 records = records.drop([1277, 1278, 1279])
+
+# Anonymisation of ip addresses
+for ip in records.ip:
+    records = records.replace(to_replace = ip, value = anonymise()) 
 
 
 
@@ -183,23 +191,84 @@ visitor_grp = records.groupby(["ip"]).agg({
         "timeofday": lambda x: x.tolist()})
 
 
-# TÄSSÄ ISOO SEKOILUU
-base = postal.plot(linewidth=0.8, edgecolor="0.8", color="white", 
+
+    
+###############################
+# respondent specific reports
+# IN CONSTRUCTION  
+
+# build base for map
+base = postal.plot(linewidth=0.8, 
+                   edgecolor="0.8", 
+                   color="white", 
                    figsize=(24, 12))
 
-point = postal[postal.posti_alue.isin(zipcodes)].unary_union.centroid
-gpd.GeoDataFrame(geometry=Point(point))
+# get unique visitors
+unique_visitors = list(records.ip.unique())
+
+# get areas in Point format for each visitor, then use these Points to 
+# create elliptical area of influence
+for idx, visitor in enumerate(unique_visitors):
+    currentZipcodes = records.zipcode[records.ip.isin([visitor])]
+    currentAreas = postal.geometry[postal.posti_alue.isin(currentZipcodes)].centroid
+    
+    # for testing! for ellipses
+    #if idx == 1000:
+    #    break
+    
+    # show every 500th map
+    if idx % 500 == 0:
+        currentAreas.plot(ax=base)
+
+# trying to fit ellipse
+xmean, ymean = x.mean(), y.mean()
+theseX = currentAreas.x
+theseY = currentAreas.y
+xmean, ymean = theseX.mean(), theseY.mean()
+theseX -= xmean
+theseY -= ymean
+
+U, S, V = np.linalg.svd(np.stack((theseX, theseY)))
+
+tt = np.linspace(0, 2*np.pi, 1000)
+circle = np.stack((np.cos(tt), np.sin(tt)))    # unit circle
+transform = np.sqrt(2/N) * U.dot(np.diag(S))   # transformation matrix
+fit = transform.dot(circle) + np.array([[xmean], [ymean]])
+
+# initiate zipcodes as background
+base = postal.plot(linewidth=0.8, 
+                   edgecolor="0.8", 
+                   color="white", 
+                   figsize=(24, 12))
+currentAreas.plot(ax=base) # the original Points
+
+# fit ellipse
+plt.plot(fit[0, :], fit[1, :], 'r')
+plt.show()
+
+#point = postal[postal.posti_alue.isin(currentZipcodes)].unary_union.centroid
+#gpd.GeoDataFrame(geometry=Point(point))
+##############################################
+
+
+
 postal[postal.posti_alue.isin(zipcodes)].plot(
-        ax=base,  marker='o', linewidth=0.8,
-        figsize=(24, 12), edgecolor="0.8",
+        ax=base,  
+        marker='o', 
+        linewidth=0.8,
+        figsize=(24, 12), 
+        edgecolor="0.8",
         legend=True)
 
 for idx, respondent in visitor_grp.iterrows():
     if respondent.id > 1:
         zipcodes = respondent.zipcode
         postal[postal.posti_alue.isin(zipcodes)].plot(
-                ax=base,  marker='o', linewidth=0.8,
-                figsize=(24, 12), edgecolor="0.8",
+                ax=base,  
+                marker='o', 
+                linewidth=0.8,
+                figsize=(24, 12), 
+                edgecolor="0.8",
                 legend=True)
         
         
@@ -261,11 +330,6 @@ records = records.reset_index()
 visitors = visitors[~visitors["ip"].isin(illegal)]
 visitors = visitors.reset_index()
 
-# Anonymisation of ip addresses
-#for ip in records.ip:
-#    records = records.replace(to_replace = ip, value = anonymise()) 
-
-
 
 
 #################################
@@ -280,7 +344,7 @@ for zipcode in records.zipcode:
         if postal_zip == zipcode:
             postal.loc[idx, "answer_count"] += 1
 
-### add columns for parktime and walktime mean
+### add columns parktime mean and walktime mean
 postal["parktime_mean"] = 0
 postal["walktime_mean"] = 0
 
@@ -364,7 +428,7 @@ boston_df_out = boston_df_o1[~((boston_df_o1 < (Q1 - 1.5 * IQR)) | (boston_df_o1
 # https://www.researchgate.net/post/Can_we_use_Likert_scale_data_in_multiple_regression_analysis
 # https://www.researchgate.net/post/How_can_I_assess_statistical_significance_of_Likert_scale
 
-# TODO: Plot records compared to population and area in zipcodes
+
 
 # REGRESSION LINE TESTING
 # STATISTICAL SIGNIFICANCE
@@ -391,13 +455,19 @@ plt.show()
 
 # PLOT AMOUNT OF RECORDS
 # Plot with layers. Base is basemap for zipcodes without answers
-base = postal.plot(linewidth=0.8, edgecolor="0.8", color="white", 
+base = postal.plot(linewidth=0.8, 
+                   edgecolor="0.8", 
+                   color="white", 
                    figsize=(24, 12))
 
 # now plot all non-zero areas on top of base
 postal.loc[postal["answer_count"]!=0].plot(
-        ax=base, column="answer_count", cmap="OrRd", linewidth=0.8,
-        figsize=(24, 12), edgecolor="0.8", scheme='fisher_jenks',
+        ax=base, column="answer_count", 
+        cmap="OrRd", 
+        linewidth=0.8,
+        figsize=(24, 12), 
+        edgecolor="0.8", 
+        scheme='fisher_jenks',
         legend=True)
 
 # annotate
@@ -412,8 +482,13 @@ base = postal.plot(linewidth=0.8, edgecolor="0.8", color="white",
                    figsize=(24, 12))
 
 postal.loc[~postal["walktime_mean"].isnull()].plot(
-        ax=base, column="walktime_mean", cmap="OrRd", linewidth=0.8,
-        figsize=(24, 12), edgecolor="0.8", scheme='fisher_jenks',
+        ax=base, 
+        column="walktime_mean", 
+        cmap="OrRd", 
+        linewidth=0.8,
+        figsize=(24, 12), 
+        edgecolor="0.8", 
+        scheme='fisher_jenks',
         legend=True)
 
 # annotate
@@ -428,8 +503,13 @@ base = postal.plot(linewidth=0.8, edgecolor="0.8", color="white",
                    figsize=(24, 12))
 
 postal.loc[~postal["parktime_mean"].isnull()].plot(
-        ax=base, column="parktime_mean", cmap="OrRd", linewidth=0.8,
-        figsize=(24, 12), edgecolor="0.8", scheme='fisher_jenks',
+        ax=base, 
+        column="parktime_mean", 
+        cmap="OrRd", 
+        linewidth=0.8,
+        figsize=(24, 12), 
+        edgecolor="0.8", 
+        scheme='fisher_jenks',
         legend=True)
 
 # annotate
@@ -440,15 +520,17 @@ plt.tight_layout()
 
 
 
-#visitors datetime chart, v2, annotate important events
+# Visitors datetime chart, v2, annotate important events
+########################################################
 fig, ax = plt.subplots()
 ax.plot_date(visitors["ts_first"], visitors.index)
-ax.annotate('local max', xy=("2019-05-22", 191), xytext=("2019-05-30", 1500),
+ax.annotate('local max', 
+            xy=("2019-05-22", 191), 
+            xytext=("2019-05-30", 1500),
             arrowprops=dict(facecolor='black', shrink=0.05),)
 plt.grid(True)
 plt.tight_layout()
 plt.show()
-
 
 
 
@@ -475,16 +557,6 @@ for dictkey, dictvalue in zip(dates.keys(), dates.values()):
                     arrowprops=dict(facecolor='black', shrink=0.05),)
             helper = 1
 
-plt.grid(True)
-plt.tight_layout()
-plt.show()
-
-
-# merkitsevyysscatterplot
-# outo?
-#########################
-fig, ax = plt.subplots(figsize=(8,8))
-ax.scatter(records["timeofday"], records["parktime"])
 plt.grid(True)
 plt.tight_layout()
 plt.show()
