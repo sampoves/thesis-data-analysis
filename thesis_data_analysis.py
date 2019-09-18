@@ -212,16 +212,16 @@ for idx, visitor in enumerate(unique_visitors):
     currentZipcodes = records.zipcode[records.ip.isin([visitor])]
     currentAreas = postal.geometry[postal.posti_alue.isin(currentZipcodes)].centroid
     
-    # for testing! for ellipses
-    #if idx == 1000:
-    #    break
+    # for testing! for ellipses. idx 820, 700 has 9 Points!
+    if idx == 800:
+        break
     
     # show every 500th map
-    if idx % 500 == 0:
-        currentAreas.plot(ax=base)
+    #if idx % 500 == 0:
+    #    currentAreas.plot(ax=base)
 
 # trying to fit ellipse
-xmean, ymean = x.mean(), y.mean()
+# credit to: https://stackoverflow.com/a/47876498/9455395
 theseX = currentAreas.x
 theseY = currentAreas.y
 xmean, ymean = theseX.mean(), theseY.mean()
@@ -230,9 +230,10 @@ theseY -= ymean
 
 U, S, V = np.linalg.svd(np.stack((theseX, theseY)))
 
-tt = np.linspace(0, 2*np.pi, 1000)
+# alkuperäinen: np.sqrt(2 / N)
+tt = np.linspace(0, 2 * np.pi, 1000)
 circle = np.stack((np.cos(tt), np.sin(tt)))    # unit circle
-transform = np.sqrt(2/N) * U.dot(np.diag(S))   # transformation matrix
+transform = np.sqrt(140 / N) * U.dot(np.diag(S))   # transformation matrix
 fit = transform.dot(circle) + np.array([[xmean], [ymean]])
 
 # initiate zipcodes as background
