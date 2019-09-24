@@ -7,13 +7,15 @@ Created on Fri May 10 00:07:36 2019
 Sampo Vesanen Thesis survey datacrunch
 
 TODO:
-    - See how long user took to first visit survey and answer to the survey
     - Respondent specific reports
     - Geographic analyses (Can't get geoplot to work)
     - Detect outliers
-    - Have same IPs sent records for same areas more than once?
     - Descriptive statistics, correlation charts
     - Plot records compared to population and area in zipcodes
+
+Important questions etc
+    - See how long user took to first visit survey and answer to the survey
+    - Have same IPs sent records for same areas more than once?
 """
 
 import os
@@ -25,9 +27,8 @@ from matplotlib.pyplot import figure
 from datetime import timedelta
 from shapely.geometry import Polygon, MultiPolygon, Point
 import shapely.affinity
-
 import operator
-#from heapq import nlargest
+#from heapq import nlargest #mikä tää o
 #import mapclassify #scheme="fisher_jenks" needs mapclassify
 
 wd = r"C:\Sampon\Maantiede\Master of the Universe\python"
@@ -65,28 +66,36 @@ resarea = gpd.read_file("paavo\pno_dissolve.shp", encoding='utf-8')
 
 
 
-#######################
-### FIX SOURCE DATA ###
-#######################
+###########################
+### PREPARE SOURCE DATA ###
+###########################
 
-# Datetimes to datetime format
+# Anonymisation of ip addresses
+for ip in records.ip:
+    records = records.replace(to_replace = ip, value = anonymise()) 
+
+# Timestamps to datetime format
 records["timestamp"] = convertToDatetime(records, "timestamp")
 visitors["ts_first"] = convertToDatetimeVar2(visitors, "ts_first")
 visitors["ts_latest"] = convertToDatetimeVar2(visitors, "ts_latest")
 
 # visitors, records: remove author's visits and three records inputted by
-# the author
-visitors = visitors.iloc[1:]
+# the author. I have visited the survey from university, work and mobile
+# phone and these will be impossible to trace down.
 records = records.drop([0, 5, 6])
 
-# I was contacted on 24.5.2019 22.41 that someone had filled three zipcodes
-# erroneously: Kallio, Käpylä and one other (probably Pukinmäki-Savela).
+# I was contacted on 24.5.2019 22.41 that a respondent had filled three 
+# zipcodes erroneously: Kallio, Käpylä and one other (probably Pukinmäki-Savela).
 # The following removes those records.
 records = records.drop([1277, 1278, 1279])
 
-# Anonymisation of ip addresses
-for ip in records.ip:
-    records = records.replace(to_replace = ip, value = anonymise()) 
+# author's home computer visits
+visitors = visitors.iloc[1:] 
+
+ # 82.102.24.252, a confirmed VPN visit by author
+visitors = visitors.drop([3753])
+
+
 
 
 
@@ -212,41 +221,45 @@ for idx, visitor in enumerate(unique_visitors):
     currentZipcodes = records.zipcode[records.ip.isin([visitor])]
     currentAreas = postal.geometry[postal.posti_alue.isin(currentZipcodes)].centroid
     
-    # for testing! for ellipses. idx 820, 700 has 9 Points!
-    if idx == 800:
+    # for testing! for ellipses. idx 820, 700, 900 have lotsa Points!
+    if idx == 700:
         break
     
     # show every 500th map
     #if idx % 500 == 0:
     #    currentAreas.plot(ax=base)
 
-# trying to fit ellipse
+# trying to fit ellipse.
+# this works beautifully in plot if if-statement is brought in to the for loop.
+# remember to comment out base and currentAreas.plot() down there
 # credit to: https://stackoverflow.com/a/47876498/9455395
-theseX = currentAreas.x
-theseY = currentAreas.y
-xmean, ymean = theseX.mean(), theseY.mean()
-theseX -= xmean
-theseY -= ymean
+if(len(currentAreas) > 1):
+    theseX = currentAreas.x
+    theseY = currentAreas.y
+    xmean, ymean = theseX.mean(), theseY.mean()
+    theseX -= xmean
+    theseY -= ymean
+    
+    U, S, V = np.linalg.svd(np.stack((theseX, theseY)))
+    
+    # alkuperäinen: np.sqrt(2 / N). 140 oli jossain vaiheessa hyvä kun N = 300
+    tt = np.linspace(0, 2 * np.pi, 1000)
+    circle = np.stack((np.cos(tt), np.sin(tt)))    # unit circle
+    transform = np.sqrt(2 / len(currentAreas)) * U.dot(np.diag(S))   # transformation matrix
+    fit = transform.dot(circle) + np.array([[xmean], [ymean]])
+    
+    # initiate zipcodes as background
+    base = postal.plot(linewidth=0.8, 
+                       edgecolor="0.8", 
+                       color="white", 
+                       figsize=(24, 12))
+    currentAreas.plot(ax=base) # the original Points
+    
+    # fit ellipse
+    plt.plot(fit[0, :], fit[1, :], 'r')
+    plt.show()
 
-U, S, V = np.linalg.svd(np.stack((theseX, theseY)))
-
-# alkuperäinen: np.sqrt(2 / N)
-tt = np.linspace(0, 2 * np.pi, 1000)
-circle = np.stack((np.cos(tt), np.sin(tt)))    # unit circle
-transform = np.sqrt(140 / N) * U.dot(np.diag(S))   # transformation matrix
-fit = transform.dot(circle) + np.array([[xmean], [ymean]])
-
-# initiate zipcodes as background
-base = postal.plot(linewidth=0.8, 
-                   edgecolor="0.8", 
-                   color="white", 
-                   figsize=(24, 12))
-currentAreas.plot(ax=base) # the original Points
-
-# fit ellipse
-plt.plot(fit[0, :], fit[1, :], 'r')
-plt.show()
-
+    
 #point = postal[postal.posti_alue.isin(currentZipcodes)].unary_union.centroid
 #gpd.GeoDataFrame(geometry=Point(point))
 ##############################################
@@ -271,6 +284,7 @@ for idx, respondent in visitor_grp.iterrows():
                 figsize=(24, 12), 
                 edgecolor="0.8",
                 legend=True)
+        
         
         
         
@@ -455,67 +469,115 @@ plt.show()
 
 
 # PLOT AMOUNT OF RECORDS
-# Plot with layers. Base is basemap for zipcodes without answers
-base = postal.plot(linewidth=0.8, 
+
+def parkingPlot(df, column, zeroAllowed):
+    '''
+    plot as function
+    '''
+    # Plot with layers. Base is basemap for zipcodes without answers
+    base = df.plot(linewidth=0.8, 
                    edgecolor="0.8", 
                    color="white", 
                    figsize=(24, 12))
 
+    if zeroAllowed == 0:
+        # now plot all non-zero areas on top of base
+        df.loc[df[column]!=0].plot(
+                ax=base, 
+                column=column, 
+                cmap="OrRd", 
+                linewidth=0.8,
+                figsize=(24, 12), 
+                edgecolor="0.8", 
+                scheme='fisher_jenks',
+                legend=True)
+    else:
+        # zero allowed but null is forbidden
+        df.loc[~df[column].isnull()].plot(
+                ax=base, 
+                column=column, 
+                cmap="OrRd", 
+                linewidth=0.8,
+                figsize=(24, 12), 
+                edgecolor="0.8", 
+                scheme='fisher_jenks',
+                legend=True)
+    
+    # annotate
+    annotationFunction(df, column)
+    plt.tight_layout()
+
+
+# Plot with layers as function
+parkingPlot(postal, "answer_count", 0) #AMOUNT OF RECORDS
+parkingPlot(postal, "walktime_mean", 1) #PLOT WALKTIME MEAN
+parkingPlot(postal, "parktime_mean", 1) #PLOT PARKTIME MEAN
+
+
+# Plot with layers. Base is basemap for zipcodes without answers
+#base = postal.plot(linewidth=0.8, 
+#                   edgecolor="0.8", 
+#                   color="white", 
+#                   figsize=(24, 12))
+
 # now plot all non-zero areas on top of base
-postal.loc[postal["answer_count"]!=0].plot(
-        ax=base, column="answer_count", 
-        cmap="OrRd", 
-        linewidth=0.8,
-        figsize=(24, 12), 
-        edgecolor="0.8", 
-        scheme='fisher_jenks',
-        legend=True)
+#postal.loc[postal["answer_count"]!=0].plot(
+#        ax=base, column="answer_count", 
+#        cmap="OrRd", 
+#        linewidth=0.8,
+#        figsize=(24, 12), 
+#        edgecolor="0.8", 
+#        scheme='fisher_jenks',
+#        legend=True)
 
 # annotate
-annotationFunction(postal, "answer_count")
-plt.tight_layout()
+#annotationFunction(postal, "answer_count")
+#plt.tight_layout()
+
 
 
 
 
 # PLOT WALKTIME MEAN
-base = postal.plot(linewidth=0.8, edgecolor="0.8", color="white", 
-                   figsize=(24, 12))
+#base = postal.plot(linewidth=0.8, 
+#                   edgecolor="0.8", 
+#                   color="white", 
+#                   figsize=(24, 12))
 
-postal.loc[~postal["walktime_mean"].isnull()].plot(
-        ax=base, 
-        column="walktime_mean", 
-        cmap="OrRd", 
-        linewidth=0.8,
-        figsize=(24, 12), 
-        edgecolor="0.8", 
-        scheme='fisher_jenks',
-        legend=True)
+#postal.loc[~postal["walktime_mean"].isnull()].plot(
+#        ax=base, 
+#        column="walktime_mean", 
+#        cmap="OrRd", 
+#        linewidth=0.8,
+#        figsize=(24, 12), 
+#        edgecolor="0.8", 
+#        scheme='fisher_jenks',
+#        legend=True)
 
 # annotate
-annotationFunction(postal, "walktime_mean")
-plt.tight_layout()
+#annotationFunction(postal, "walktime_mean")
+#plt.tight_layout()
 
 
 
 
 # PLOT PARKTIME MEAN
-base = postal.plot(linewidth=0.8, edgecolor="0.8", color="white", 
-                   figsize=(24, 12))
+#base = postal.plot(linewidth=0.8, edgecolor="0.8", color="white", 
+#                   figsize=(24, 12))
 
-postal.loc[~postal["parktime_mean"].isnull()].plot(
-        ax=base, 
-        column="parktime_mean", 
-        cmap="OrRd", 
-        linewidth=0.8,
-        figsize=(24, 12), 
-        edgecolor="0.8", 
-        scheme='fisher_jenks',
-        legend=True)
+#postal.loc[~postal["parktime_mean"].isnull()].plot(
+#        ax=base, 
+#        column="parktime_mean", 
+#        cmap="OrRd", 
+#        linewidth=0.8,
+#        figsize=(24, 12), 
+#        edgecolor="0.8", 
+#        scheme='fisher_jenks',
+#        legend=True)
 
 # annotate
-annotationFunction(postal, "parktime_mean")
-plt.tight_layout()
+#annotationFunction(postal, "parktime_mean")
+#plt.tight_layout()
 
 
 
