@@ -2,7 +2,7 @@
 """
 Created on Sun May 12 22:54:34 2019
 
-@author: Sampo
+@author: Sampo Vesanen
 
 Functions for thesis data crunch
 """
@@ -10,9 +10,47 @@ Functions for thesis data crunch
 # Import functions
 import numpy as np
 import pandas as pd 
-import random
-import string
 import matplotlib.pyplot as plt
+
+
+
+def parkingPlot(df, column, zeroAllowed):
+    '''
+    Plot results as function. Functionally it is quite limited.
+    '''
+    # Plot with layers. Base is basemap for zipcodes without answers
+    base = df.plot(linewidth=0.8, 
+                   edgecolor="0.8", 
+                   color="white", 
+                   figsize=(24, 12))
+
+    if zeroAllowed == 0:
+        # now plot all non-zero areas on top of base
+        df.loc[df[column]!=0].plot(
+                ax=base, 
+                column=column, 
+                cmap="OrRd", 
+                linewidth=0.8,
+                figsize=(24, 12), 
+                edgecolor="0.8", 
+                scheme='fisher_jenks',
+                legend=True)
+    else:
+        # zero allowed but null is forbidden
+        df.loc[~df[column].isnull()].plot(
+                ax=base, 
+                column=column, 
+                cmap="OrRd", 
+                linewidth=0.8,
+                figsize=(24, 12), 
+                edgecolor="0.8", 
+                scheme='fisher_jenks',
+                legend=True)
+    
+    # annotate
+    annotationFunction(df, column)
+    plt.tight_layout()
+
 
 
 def annotationFunction(df, rowname):
@@ -27,11 +65,13 @@ def annotationFunction(df, rowname):
                      horizontalalignment='center')
 
 
+
 def convertToDatetime(dataframe, columnName):
     '''
     Declutter code
     '''
     return pd.to_datetime(dataframe[columnName], format="%d-%m-%Y %H:%M:%S") 
+
 
 
 def convertToDatetimeVar2(dataframe, columnName):
@@ -40,14 +80,6 @@ def convertToDatetimeVar2(dataframe, columnName):
     '''
     return pd.to_datetime(dataframe[columnName], format="%Y-%m-%d %H:%M:%S")
 
-
-def anonymise(stringLength=10):
-    """
-    Generate a random string of fixed length 
-    Thank you: https://pynative.com/python-generate-random-string/
-    """
-    lettersAndDigits = string.ascii_lowercase + string.digits
-    return ''.join(random.choice(lettersAndDigits) for i in range(stringLength))
 
 
 def detect_outlier(data_1):
@@ -65,6 +97,7 @@ def detect_outlier(data_1):
         if np.abs(z_score) > threshold:
             outliers.append(y)
     return outliers
+
 
 
 class Stats:

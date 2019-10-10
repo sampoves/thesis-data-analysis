@@ -25,14 +25,19 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import figure
 from datetime import timedelta
-from shapely.geometry import Polygon, MultiPolygon, Point
+from shapely.geometry import Polygon, MultiPolygon, Point, LinearRing
 import shapely.affinity
 import operator
-#from heapq import nlargest #mikä tää o
 #import mapclassify #scheme="fisher_jenks" needs mapclassify
 
+
+# Working directories
 wd = r"C:\Sampon\Maantiede\Master of the Universe\python"
 datawd = r"C:\Sampon\Maantiede\Master of the Universe\leaflet_survey_results"
+
+# Survey data file paths
+records_data = os.path.join(datawd, "records.csv")
+visitors_data = os.path.join(datawd, "visitors.csv")
 
 os.chdir(wd)
 
@@ -41,24 +46,13 @@ from thesis_data_analysis_funcs import *
 
 
 
-################################
-### SOME IMPORTANT VARIABLES ###
-################################
-
-# Up to date "records"
-records_data = "records180919.csv"
-visitors_data = "visitors180919.csv"
-
-
-
 ###################
 ### IMPORT DATA ###
 ###################
 
 # Survey data. Lambda x to preserve leading zeros
-records = pd.read_csv(os.path.join(datawd, records_data), 
-                      converters={'zipcode': lambda x: str(x)})
-visitors = pd.read_csv(os.path.join(datawd, visitors_data))
+records = pd.read_csv(records_data, converters={'zipcode': lambda x: str(x)})
+visitors = pd.read_csv(visitors_data)
 
 # Shapefiles
 grid = gpd.read_file("MetropAccess_YKR_grid_EurefFIN.shp", encoding='utf-8')
@@ -69,10 +63,6 @@ resarea = gpd.read_file("paavo\pno_dissolve.shp", encoding='utf-8')
 ###########################
 ### PREPARE SOURCE DATA ###
 ###########################
-
-# Anonymisation of ip addresses
-for ip in records.ip:
-    records = records.replace(to_replace = ip, value = anonymise()) 
 
 # Timestamps to datetime format
 records["timestamp"] = convertToDatetime(records, "timestamp")
@@ -108,6 +98,15 @@ muns = ["091", "049", "092", "235"]
 postal = gpd.read_file(r"paavo\2019\pno_tilasto_2019.shp", encoding='utf-8')
 postal = postal[postal.kunta.isin(muns)]
 postal = postal.reset_index().drop(columns=["index"])
+
+# In the traditional travel time matrix all parking took 0.42 minutes. The
+# team used the bounding box below to define an area in center of Helsinki
+# to note an area where people walk a longer time to their cars
+walkingBbox = LinearRing([(387678.024778, 6675360.99039), 
+                          (387891.53396, 6670403.35286),
+                          (383453.380944, 6670212.21613), 
+                          (383239.871737, 6675169.85373),
+                          (387678.024778, 6675360.99039)])
 
 
 ### Remove islands unreachable by car
@@ -175,6 +174,9 @@ for idx, geom in enumerate(postal.geometry):
         mainland = mainland.union(thisGeom)
 
 # Replace postal geometries with geometries without islands
+# NB! postal.at[idx, "geometry"] = thisGeom seems to raise ValueError in
+# GeoPandas 0.6.0. Complains that "Must have equal len keys and value when 
+# setting with an iterable"
 for idx, geom in enumerate(postal.geometry):
     if geom.geom_type == "MultiPolygon":
         thisGeom = MultiPolygon(
@@ -188,7 +190,7 @@ for idx, geom in enumerate(postal.geometry):
 ### RESPONDENT BEHAVIOUR ###
 ############################
 
-# Create groupby aggregations of the records
+# Create groupby aggregations of the records.
 visitor_grp = records.groupby(["ip"]).agg({
         "id": "count", 
         "timestamp": lambda x: x.tolist(),
@@ -199,103 +201,14 @@ visitor_grp = records.groupby(["ip"]).agg({
         "walktime": lambda x: x.tolist(),
         "timeofday": lambda x: x.tolist()})
 
-
-
     
-###############################
-# respondent specific reports
-# IN CONSTRUCTION  
-
-# build base for map
-base = postal.plot(linewidth=0.8, 
-                   edgecolor="0.8", 
-                   color="white", 
-                   figsize=(24, 12))
-
-# get unique visitors
-unique_visitors = list(records.ip.unique())
-
-# get areas in Point format for each visitor, then use these Points to 
-# create elliptical area of influence
-for idx, visitor in enumerate(unique_visitors):
-    currentZipcodes = records.zipcode[records.ip.isin([visitor])]
-    currentAreas = postal.geometry[postal.posti_alue.isin(currentZipcodes)].centroid
-    
-    # for testing! for ellipses. idx 820, 700, 900 have lotsa Points!
-    if idx == 700:
-        break
-    
-    # show every 500th map
-    #if idx % 500 == 0:
-    #    currentAreas.plot(ax=base)
-
-# trying to fit ellipse.
-# this works beautifully in plot if if-statement is brought in to the for loop.
-# remember to comment out base and currentAreas.plot() down there
-# credit to: https://stackoverflow.com/a/47876498/9455395
-if(len(currentAreas) > 1):
-    theseX = currentAreas.x
-    theseY = currentAreas.y
-    xmean, ymean = theseX.mean(), theseY.mean()
-    theseX -= xmean
-    theseY -= ymean
-    
-    U, S, V = np.linalg.svd(np.stack((theseX, theseY)))
-    
-    # alkuperäinen: np.sqrt(2 / N). 140 oli jossain vaiheessa hyvä kun N = 300
-    tt = np.linspace(0, 2 * np.pi, 1000)
-    circle = np.stack((np.cos(tt), np.sin(tt)))    # unit circle
-    transform = np.sqrt(2 / len(currentAreas)) * U.dot(np.diag(S))   # transformation matrix
-    fit = transform.dot(circle) + np.array([[xmean], [ymean]])
-    
-    # initiate zipcodes as background
-    base = postal.plot(linewidth=0.8, 
-                       edgecolor="0.8", 
-                       color="white", 
-                       figsize=(24, 12))
-    currentAreas.plot(ax=base) # the original Points
-    
-    # fit ellipse
-    plt.plot(fit[0, :], fit[1, :], 'r')
-    plt.show()
-
-    
-#point = postal[postal.posti_alue.isin(currentZipcodes)].unary_union.centroid
-#gpd.GeoDataFrame(geometry=Point(point))
-##############################################
-
-
-
-postal[postal.posti_alue.isin(zipcodes)].plot(
-        ax=base,  
-        marker='o', 
-        linewidth=0.8,
-        figsize=(24, 12), 
-        edgecolor="0.8",
-        legend=True)
-
-for idx, respondent in visitor_grp.iterrows():
-    if respondent.id > 1:
-        zipcodes = respondent.zipcode
-        postal[postal.posti_alue.isin(zipcodes)].plot(
-                ax=base,  
-                marker='o', 
-                linewidth=0.8,
-                figsize=(24, 12), 
-                edgecolor="0.8",
-                legend=True)
-        
-        
-        
-        
-        
         
 #################################
 ### DETECTION OF ILLEGAL DATA ###
 #################################
 
-# Detect if a user has answered a same area multiple times.
-# PLEASE NOTE THAT THIS ONLY LOCATES DUPLICATES
+# Detect if a user has answered a same area multiple times. Please note that 
+# this only locates duplicates but does nothing about it.
 for visitor in records.ip.unique():
     theseRecords = records.loc[records['ip'] == visitor]
     
@@ -319,18 +232,21 @@ for visitor in records.ip.unique():
             print(row.to_string(), "\n") # suppress dtype
 
 
-# Remove illegal answers. At this time any value 99 is deemed illegal. invalid
-# starts at 6 as at this point I have removed 3 of my own records and 3 others
-# which were reported to me as false. See above.
+# Remove illegal answers. At this time any value equal or above 90 is deemed 
+# illegal. invalid starts at 6 as at this point I have removed 3 of my own 
+# records and 3 others which were reported to me as false. See above.
 delList = []
 illegal = []
 invalid = 6
 
-for idx, (value, value2, value3) in enumerate(zip(records["parktime"], records["walktime"], records["ip"])):
-    if (value == 99 or value2 == 99):
-        print("Illegal walktime or parktime detected:", idx, value, value2)
+for idx, (park_value, walk_value, ip_value) in enumerate(
+        zip(records["parktime"], records["walktime"], records["ip"])):
+    
+    if (park_value >= 90 or walk_value >= 90):
+        print("Illegal walktime or parktime detected:", idx, park_value, 
+              walk_value)
         delList.append(idx)
-        illegal.append(value3)
+        illegal.append(ip_value)
         invalid += 1
  
 # Illegal contains all ips which have 99 as answers. illegal_df shows all
@@ -351,17 +267,16 @@ visitors = visitors.reset_index()
 ### ADD DATA TO GEODATAFRAMES ###
 #################################
 
+# Add column "answer count", "parktime mean", and "walktime mean"
 postal["answer_count"] = 0
+postal["parktime_mean"] = 0
+postal["walktime_mean"] = 0
 
-# Add column "answer count" to postal.answer_count
+# Calculate answers
 for zipcode in records.zipcode:
     for idx, postal_zip in enumerate(postal.posti_alue):
         if postal_zip == zipcode:
             postal.loc[idx, "answer_count"] += 1
-
-### add columns parktime mean and walktime mean
-postal["parktime_mean"] = 0
-postal["walktime_mean"] = 0
 
 # Calculate mean to postal.parktime_mean
 for idx, postal_zip in enumerate(postal.posti_alue):
@@ -379,6 +294,19 @@ for idx, postal_zip in enumerate(postal.posti_alue):
 postal['coords'] = postal['geometry'].apply(lambda x: x.representative_point().coords[:])
 postal['coords'] = [coords[0] for coords in postal['coords']]
 
+# Ratio: answer_count/total population in postal code
+# NB This is not useful for plotting, think of something else
+postal["answ_hevakiy"] = postal.apply(
+        lambda row: round(row["answer_count"]/row["he_vakiy"], 5), axis=1)
+
+# population density
+postal["pop_dens"] = postal.apply(
+        lambda row: round(row["he_vakiy"]/(row["pinta_ala"]/1000000), 2), axis=1)
+
+# ratio pop density to answer_count
+postal["dens_answ"] = postal.apply(
+        lambda row: round(row["pop_dens"]/row["answer_count"], 3), axis=1)
+
 
 
 ###################################
@@ -391,41 +319,11 @@ statistics.calculateStats()
 
 
 #####################
-### OUTLIER STUFF ###
+### EXPORT TO CSV ###
 #####################
-#https://medium.com/datadriveninvestor/finding-outliers-in-dataset-using-python-efc3fce6ce32
-#https://towardsdatascience.com/ways-to-detect-and-remove-the-outliers-404d16608dba
-plt.scatter(records.index, records.parktime)
-plt.scatter(records.index, records.walktime)
-plt.scatter(records.parktime, records.walktime)
 
-# z-score
-outlier_datapoints = detect_outlier(records.parktime)
-
-# iqr
-#dataset = records.parktime
-dataset = records.walktime
-
-dataset = sorted(dataset)
-q1, q3 = np.percentile(dataset, [25,75])
-
-iqr = q3 - q1
-lower_bound = q1 - (1.5 * iqr) 
-upper_bound = q3 + (1.5 * iqr) 
-
-# outlier graph
-import seaborn as sns
-sns.boxplot(x=records["parktime"])
-
-
-
-# TOISEN SIVUN MEININKI, KESKEN
-from scipy import stats
-z = np.abs(stats.zscore(
-        records[records.columns.difference(['timestamp', "ip", "zipcode"])]))
-
-# test removing outlier data
-boston_df_out = boston_df_o1[~((boston_df_o1 < (Q1 - 1.5 * IQR)) | (boston_df_o1 > (Q3 + 1.5 * IQR))).any(axis=1)]
+# data to csv for R. "pythonrecords.csv"
+records.to_csv(wd + "records.csv")
 
 
 
@@ -435,151 +333,16 @@ boston_df_out = boston_df_o1[~((boston_df_o1 < (Q1 - 1.5 * IQR)) | (boston_df_o1
 # needs more advanced plotting. Compare to other data I have available,
 # population, area etc
 #https://towardsdatascience.com/lets-make-a-map-using-geopandas-pandas-and-matplotlib-to-make-a-chloropleth-map-dddc31c1983d
-# see this:
-# https://www.dummies.com/education/math/statistics/how-to-interpret-a-correlation-coefficient-r/
-
-#likert-problematiikka
-# https://www.theanalysisfactor.com/can-likert-scale-data-ever-be-continuous/
-# https://www.researchgate.net/post/Can_we_use_Likert_scale_data_in_multiple_regression_analysis
-# https://www.researchgate.net/post/How_can_I_assess_statistical_significance_of_Likert_scale
-
-
-
-# REGRESSION LINE TESTING
-# STATISTICAL SIGNIFICANCE
-from scipy import stats
-rho, pval = stats.spearmanr(records.likert, records.parktime)
-rho, pval = stats.spearmanr(records.parktime, records.timeofday) #pieni pval!
-rho, pval = stats.spearmanr(records.parkspot, records.walktime)
-
-np.random.seed(0)
-x = np.random.rand(100, 1)
-y = 2 + 3 * x + np.random.rand(100, 1)
-plt.scatter(x, y, s=10)
-plt.xlabel('liikert/x')
-plt.ylabel('parkkitiem/y')
-plt.show()
-
-plt.scatter(records.likert, records.parktime, s=10)
-plt.xlabel('liikert/x')
-plt.ylabel('parkkitiem/y')
-plt.show()
-
-
-
 
 # PLOT AMOUNT OF RECORDS
-
-def parkingPlot(df, column, zeroAllowed):
-    '''
-    plot as function
-    '''
-    # Plot with layers. Base is basemap for zipcodes without answers
-    base = df.plot(linewidth=0.8, 
-                   edgecolor="0.8", 
-                   color="white", 
-                   figsize=(24, 12))
-
-    if zeroAllowed == 0:
-        # now plot all non-zero areas on top of base
-        df.loc[df[column]!=0].plot(
-                ax=base, 
-                column=column, 
-                cmap="OrRd", 
-                linewidth=0.8,
-                figsize=(24, 12), 
-                edgecolor="0.8", 
-                scheme='fisher_jenks',
-                legend=True)
-    else:
-        # zero allowed but null is forbidden
-        df.loc[~df[column].isnull()].plot(
-                ax=base, 
-                column=column, 
-                cmap="OrRd", 
-                linewidth=0.8,
-                figsize=(24, 12), 
-                edgecolor="0.8", 
-                scheme='fisher_jenks',
-                legend=True)
-    
-    # annotate
-    annotationFunction(df, column)
-    plt.tight_layout()
-
-
 # Plot with layers as function
 parkingPlot(postal, "answer_count", 0) #AMOUNT OF RECORDS
 parkingPlot(postal, "walktime_mean", 1) #PLOT WALKTIME MEAN
 parkingPlot(postal, "parktime_mean", 1) #PLOT PARKTIME MEAN
-
-
-# Plot with layers. Base is basemap for zipcodes without answers
-#base = postal.plot(linewidth=0.8, 
-#                   edgecolor="0.8", 
-#                   color="white", 
-#                   figsize=(24, 12))
-
-# now plot all non-zero areas on top of base
-#postal.loc[postal["answer_count"]!=0].plot(
-#        ax=base, column="answer_count", 
-#        cmap="OrRd", 
-#        linewidth=0.8,
-#        figsize=(24, 12), 
-#        edgecolor="0.8", 
-#        scheme='fisher_jenks',
-#        legend=True)
-
-# annotate
-#annotationFunction(postal, "answer_count")
-#plt.tight_layout()
-
-
-
-
-
-# PLOT WALKTIME MEAN
-#base = postal.plot(linewidth=0.8, 
-#                   edgecolor="0.8", 
-#                   color="white", 
-#                   figsize=(24, 12))
-
-#postal.loc[~postal["walktime_mean"].isnull()].plot(
-#        ax=base, 
-#        column="walktime_mean", 
-#        cmap="OrRd", 
-#        linewidth=0.8,
-#        figsize=(24, 12), 
-#        edgecolor="0.8", 
-#        scheme='fisher_jenks',
-#        legend=True)
-
-# annotate
-#annotationFunction(postal, "walktime_mean")
-#plt.tight_layout()
-
-
-
-
-# PLOT PARKTIME MEAN
-#base = postal.plot(linewidth=0.8, edgecolor="0.8", color="white", 
-#                   figsize=(24, 12))
-
-#postal.loc[~postal["parktime_mean"].isnull()].plot(
-#        ax=base, 
-#        column="parktime_mean", 
-#        cmap="OrRd", 
-#        linewidth=0.8,
-#        figsize=(24, 12), 
-#        edgecolor="0.8", 
-#        scheme='fisher_jenks',
-#        legend=True)
-
-# annotate
-#annotationFunction(postal, "parktime_mean")
-#plt.tight_layout()
-
-
+# ratio answer to total pop not useful!
+parkingPlot(postal, "answ_hevakiy", 1) #PLOT ratio answers to total pop
+parkingPlot(postal, "pop_dens", 1) #PLOT pop density
+parkingPlot(postal, "dens_answ", 1) #PLOT ratio answercount to popdensity
 
 
 
@@ -623,3 +386,280 @@ for dictkey, dictvalue in zip(dates.keys(), dates.values()):
 plt.grid(True)
 plt.tight_layout()
 plt.show()
+
+
+
+###################################
+### Respondent specific reports ###
+###################################
+    
+# TESTING, might not go anywhere
+
+# This builds ellipses on HCR map for each unique respondent. The ellipse
+# seems to be places so that it is of minimal distance to all the Points.
+# The Points themselves are centroids of postal code areas inputted by the
+# respondent.
+
+# build base for map
+base = postal.plot(linewidth=0.8, 
+                   edgecolor="0.8", 
+                   color="white", 
+                   figsize=(24, 12))
+
+# View walking area where it takes more time to reach one's car, on map
+x, y = walkingBbox.xy
+base.plot(x, y)
+
+# get unique visitors
+unique_visitors = list(records.ip.unique())
+
+# get areas in Point format for each visitor, then use these Points to 
+# create elliptical area of influence
+for idx, visitor in enumerate(unique_visitors):
+    currentZipcodes = records.zipcode[records.ip.isin([visitor])]
+    currentAreas = postal.geometry[postal.posti_alue.isin(currentZipcodes)].centroid
+    
+    # for testing! for ellipses. idx 820, 700, 900 have many Points!
+    if idx == 700:
+        break
+    
+    # show every 500th map
+    #if idx % 500 == 0:
+    #    currentAreas.plot(ax=base)
+
+# Fit ellipse.
+# This works beautifully in plot if if-statement is brought in to the for loop.
+# Remember to comment out base and currentAreas.plot() down there
+# credit to: https://stackoverflow.com/a/47876498/9455395
+if(len(currentAreas) > 1):
+    theseX = currentAreas.x
+    theseY = currentAreas.y
+    xmean, ymean = theseX.mean(), theseY.mean()
+    theseX -= xmean
+    theseY -= ymean
+    
+    U, S, V = np.linalg.svd(np.stack((theseX, theseY)))
+    
+    # alkuperäinen: np.sqrt(2 / N). 140 oli jossain vaiheessa hyvä kun N = 300
+    tt = np.linspace(0, 2 * np.pi, 1000)
+    circle = np.stack((np.cos(tt), np.sin(tt)))    # unit circle
+    transform = np.sqrt(2 / len(currentAreas)) * U.dot(np.diag(S))   # transformation matrix
+    fit = transform.dot(circle) + np.array([[xmean], [ymean]])
+    
+    # initiate zipcodes as background
+    base = postal.plot(linewidth=0.8, 
+                       edgecolor="0.8", 
+                       color="white", 
+                       figsize=(24, 12))
+    currentAreas.plot(ax=base) # the original Points
+    
+    # fit ellipse
+    plt.plot(fit[0, :], fit[1, :], 'r')
+    plt.show()
+    
+    
+    
+#####################
+### OUTLIER STUFF ###
+#####################
+#https://medium.com/datadriveninvestor/finding-outliers-in-dataset-using-python-efc3fce6ce32
+#https://towardsdatascience.com/ways-to-detect-and-remove-the-outliers-404d16608dba
+plt.scatter(records.index, records.parktime)
+plt.scatter(records.index, records.walktime)
+plt.scatter(records.parktime, records.walktime)
+
+# z-score
+outlier_datapoints = detect_outlier(records.parktime)
+
+# iqr
+#dataset = records.parktime
+dataset = records.walktime
+
+dataset = sorted(dataset)
+q1, q3 = np.percentile(dataset, [25,75])
+
+iqr = q3 - q1
+lower_bound = q1 - (1.5 * iqr) 
+upper_bound = q3 + (1.5 * iqr) 
+
+# outlier graph
+import seaborn as sns
+sns.boxplot(x=records["parktime"])
+
+
+
+# TOISEN SIVUN MEININKI, KESKEN
+from scipy import stats
+z = np.abs(stats.zscore(
+        records[records.columns.difference(['timestamp', "ip", "zipcode"])]))
+
+# test removing outlier data
+boston_df_out = boston_df_o1[~((boston_df_o1 < (Q1 - 1.5 * IQR)) | (boston_df_o1 > (Q3 + 1.5 * IQR))).any(axis=1)]
+
+
+
+###############################
+#### Crosstabs test Pandas ####
+###############################
+
+#KATO TOI EKA
+#https://www.datacamp.com/community/tutorials/categorical-data
+#https://www.youtube.com/watch?v=-kTaxac-l7o
+#https://statistics.laerd.com/statistical-guides/types-of-variable.php
+#https://dfrieds.com/data-analysis/crosstabs-python-pandas
+# Try to emulate SPSS Crosstabs --> nominal by interval --> Eta
+pd.crosstab(index=records["timeofday"], columns=records["parkspot"]).rename(
+        columns={1: "Side of road", 2: "lot", 3: "garage", 4: "private_reserved", 
+                 5: "other"})
+
+pd.crosstab(index=records["timeofday"], columns=records["parkspot"]).unstack().reset_index().rename(
+    columns={1: "Side of road", 2: "lot", 3: "garage", 4: "private_reserved", 
+             5: "other"})
+
+
+    
+#####################
+### ONE-WAY ANOVA ###
+#####################
+    
+#https://pythonfordatascience.org/anova-python/
+#https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.f_oneway.html
+#https://ariepratama.github.io/How-to-Use-1-Way-Anova-in-Python/
+#https://reneshbedre.github.io/blog/anova.html
+#https://raiswell.rbind.io/post/one-way-anova-in-python/
+#https://plot.ly/python/v3/anova/
+#http://pytolearn.csd.auth.gr/d1-hyptest/12/anova-one.html
+    
+    
+
+################################
+### REGRESSION LINE TESTING  ###
+### STATISTICAL SIGNIFICANCE ###
+################################
+#likert-problematiikka
+# https://www.theanalysisfactor.com/can-likert-scale-data-ever-be-continuous/
+# https://www.researchgate.net/post/Can_we_use_Likert_scale_data_in_multiple_regression_analysis
+# https://www.researchgate.net/post/How_can_I_assess_statistical_significance_of_Likert_scale
+# https://www.dummies.com/education/math/statistics/how-to-interpret-a-correlation-coefficient-r/
+# https://statistics.laerd.com/statistical-guides/types-of-variable.php
+
+from scipy import stats
+rho, pval = stats.spearmanr(records.likert, records.parktime)
+rho, pval = stats.spearmanr(records.parktime, records.timeofday) #pieni pval!
+rho, pval = stats.spearmanr(records.parkspot, records.walktime)
+
+np.random.seed(0)
+x = np.random.rand(100, 1)
+y = 2 + 3 * x + np.random.rand(100, 1)
+plt.scatter(x, y, s=10)
+plt.xlabel('liikert/x')
+plt.ylabel('parkkitiem/y')
+plt.show()
+
+plt.scatter(records.likert, records.parktime, s=10)
+plt.xlabel('liikert/x')
+plt.ylabel('parkkitiem/y')
+plt.show()
+
+
+
+#######################
+#### Let's try Principal component analysis ####
+#######################
+
+# distributing the dataset into two components X and Y 
+X = records.iloc[:, 5:9].values 
+y = records.iloc[:, 9].values
+
+# Splitting the X and Y into the Training set and Testing set 
+from sklearn.model_selection import train_test_split 
+from sklearn.preprocessing import StandardScaler 
+from sklearn.decomposition import PCA 
+from sklearn.linear_model import LogisticRegression     
+from sklearn.metrics import confusion_matrix 
+from matplotlib.colors import ListedColormap 
+
+X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size = 0.2, random_state = 0) 
+
+# performing preprocessing part 
+sc = StandardScaler() 
+  
+X_train = sc.fit_transform(X_train) 
+X_test = sc.transform(X_test) 
+
+# Applying PCA function on training and testing set of X component 
+pca = PCA(n_components = 2) 
+  
+X_train = pca.fit_transform(X_train) 
+X_test = pca.transform(X_test) 
+  
+explained_variance = pca.explained_variance_ratio_ 
+
+# Fitting Logistic Regression To the training set 
+classifier = LogisticRegression(random_state = 0) 
+classifier.fit(X_train, y_train) 
+
+# Predicting the test set result using predict function under LogisticRegression  
+y_pred = classifier.predict(X_test) 
+
+# making confusion matrix between test set of Y and predicted value. 
+cm = confusion_matrix(y_test, y_pred) 
+
+
+
+# Predicting the training set result through scatter plot  
+X_set, y_set = X_train, y_train 
+X1, X2 = np.meshgrid(np.arange(start = X_set[:, 0].min() - 1, 
+                     stop = X_set[:, 0].max() + 1, step = 0.01), 
+                     np.arange(start = X_set[:, 1].min() - 1, 
+                     stop = X_set[:, 1].max() + 1, step = 0.01)) 
+  
+plt.contourf(X1, X2, classifier.predict(np.array([X1.ravel(), 
+             X2.ravel()]).T).reshape(X1.shape), alpha = 0.75, 
+             cmap = ListedColormap(('yellow', 'white', 'aquamarine'))) 
+  
+plt.xlim(X1.min(), X1.max()) 
+plt.ylim(X2.min(), X2.max()) 
+  
+for i, j in enumerate(np.unique(y_set)): 
+    plt.scatter(X_set[y_set == j, 0], X_set[y_set == j, 1], 
+                c = ListedColormap(('red', 'green', 'blue'))(i), label = j) 
+  
+plt.title('Logistic Regression (Training set)') 
+plt.xlabel('PC1') # for Xlabel 
+plt.ylabel('PC2') # for Ylabel 
+plt.legend() # to show legend 
+  
+# show scatter plot 
+plt.show() 
+
+
+
+# Visualising the Test set results through scatter plot 
+X_set, y_set = X_test, y_test 
+  
+X1, X2 = np.meshgrid(np.arange(start = X_set[:, 0].min() - 1, 
+                     stop = X_set[:, 0].max() + 1, step = 0.01), 
+                     np.arange(start = X_set[:, 1].min() - 1, 
+                     stop = X_set[:, 1].max() + 1, step = 0.01)) 
+  
+plt.contourf(X1, X2, classifier.predict(np.array([X1.ravel(), 
+             X2.ravel()]).T).reshape(X1.shape), alpha = 0.75, 
+             cmap = ListedColormap(('yellow', 'white', 'aquamarine')))  
+  
+plt.xlim(X1.min(), X1.max()) 
+plt.ylim(X2.min(), X2.max()) 
+  
+for i, j in enumerate(np.unique(y_set)): 
+    plt.scatter(X_set[y_set == j, 0], X_set[y_set == j, 1], 
+                c = ListedColormap(('red', 'green', 'blue'))(i), label = j) 
+  
+# title for scatter plot 
+plt.title('Logistic Regression (Test set)')  
+plt.xlabel('PC1') # for Xlabel 
+plt.ylabel('PC2') # for Ylabel 
+plt.legend() 
+  
+# show scatter plot 
+plt.show() 
