@@ -7,27 +7,40 @@
 # by Sampo Vesanen
 
 # Reference material for the tests
-# https://en.wikipedia.org/wiki/One-way_analysis_of_variance
-# https://stats.stackexchange.com/a/124618/262051
-# https://rcompanion.org/handbook/E_01.html
-# https://www.st-andrews.ac.uk/media/capod/students/mathssupport/OrdinalexampleR.pdf
-# https://www.r-bloggers.com/box-plot-with-r-tutorial/
-# http://www.biostathandbook.com/kruskalwallis.html
+#https://en.wikipedia.org/wiki/One-way_analysis_of_variance
+#https://stats.stackexchange.com/a/124618/262051
+#https://rcompanion.org/handbook/E_01.html
+#https://www.st-andrews.ac.uk/media/capod/students/mathssupport/OrdinalexampleR.pdf
+#https://www.r-bloggers.com/box-plot-with-r-tutorial/
+#http://www.biostathandbook.com/kruskalwallis.html
+
+# Descriptive statistics
+#https://www.fsd.uta.fi/menetelmaopetus/varianssi/harjoitus1.html
+#http://www.sthda.com/english/wiki/one-way-anova-test-in-r
+#https://datascienceplus.com/oneway-anova-explanation-and-example-in-r-part-1/
+#http://www.sthda.com/english/wiki/compare-multiple-sample-variances-in-r
+
+# Standard error
+#https://stackoverflow.com/a/41029914/9455395
+
+# Confidence intervals for mean
+#https://www.r-bloggers.com/compare-regression-results-to-a-specific-factor-level-in-r/
 
 
 
 #### Initialise ####
 rm(list = ls())
 
-# These enable Brown-Forsythe test
-#install.packages("onewaytests")
+#install.packages("onewaytests") # brown-forsythe
 #install.packages("car")
+#install.packages("plotrix") # std.error
+#install.packages("moments") # quantile
 
 # Libraries
 library(onewaytests)
 library(car)
-
-
+library(plotrix)
+library(moments)
 
 #### Preparation ####
 
@@ -69,50 +82,76 @@ thesisdata["timestamp"] <- lapply(thesisdata["timestamp"], timefunc)
 
 
 
-#### I will attempt to reconstruct SPSS tests for anova ####
-# https://www.fsd.uta.fi/menetelmaopetus/varianssi/harjoitus1.html
-# Quite successful!
-
-# http://www.sthda.com/english/wiki/one-way-anova-test-in-r
-# https://datascienceplus.com/oneway-anova-explanation-and-example-in-r-part-1/
-# http://www.sthda.com/english/wiki/compare-multiple-sample-variances-in-r
+#### Descriptive statistics ####
 
 # SPSS -> Analyze -> Compare means --> One-way anova 
 # In "Options" select: Descriptive, Gomogeinity of variance test (Levene), 
 # Brown-Forsythe
 
-# One-way anova descriptives, describe() 
+# One-way anova descriptives, describe()
 # Order of columns in SPSS: "N", "Mean", "Std. Deviation", "Std. Error",
 # "95 % Confidence Interval for Mean" ("Lower Bound", "Upper Bound"), "Minimum",
 # "Maximum"
-ple <- describe(walktime ~ timeofday, thesisdata[-c(1,2,3,4)])
+desc <- describe(walktime ~ timeofday, thesisdata[-c(1,2,3,4)])
 
-# Std. Error
-#install.packages("plotrix")
-library(plotrix)
-aggregate(walktime ~ timeofday, data = thesisdata, 
-          FUN = function(x) c(mean = mean(x), "Std. Error" = std.error(x)))
+### Std. Error
+# clumsily calculate mean, so that we can preserve column names in the next
+# phase
+stder <- aggregate(walktime ~ timeofday, data = thesisdata,
+                   FUN = function(x) c(mean = mean(x), "Std.Error" = std.error(x)))
+
+# Remove column mean 
+stder <- subset(stder[[2]], select = -mean)
+desc <- cbind(desc, stder)
 
 # Confidence intervals
-# https://www.r-bloggers.com/compare-regression-results-to-a-specific-factor-level-in-r/
-aggregate(walktime ~ timeofday, data = thesisdata, 
-          FUN = function(x) c("Lower Bound" = mean(x) - 2 * std.error(x), 
-                              "Upper Bound" = mean(x) + 2 * std.error(x)))
+confs <- aggregate(
+        walktime ~ timeofday, data = thesisdata, 
+        FUN = function(x) c("CI for mean, Lower Bound" = mean(x) - 2 * std.error(x), 
+                            "CI for mean, Upper Bound" = mean(x) + 2 * std.error(x)))
+confs <- confs[[2]]
+desc <- cbind(desc, confs)
+
+# reorder to SPSS order
+desc <- desc[c("n", "Median", "Mean", "Std.Dev", "Std.Error", 
+               "CI for mean, Lower Bound", "CI for mean, Upper Bound", "Min", 
+               "Max", "25th", "75th", "Skewness", "Kurtosis", "NA")]
+
+# Add total row. We will add total values for all columns in this inconvenient
+# manner.
+vect <- c()
+vect[1] <- sapply(1, function(x) sum(desc[, x]))
+vect[2] <- sapply(2, function(x) median(desc[, x]))
+vect[3] <- sapply(3, function(x) mean(desc[, x]))
+vect[4] <- sd(thesisdata$walktime)
+vect[5] <- std.error(thesisdata$walktime)
+vect[6] <- mean(thesisdata$walktime) - 2 * std.error(thesisdata$walktime)
+vect[7] <- mean(thesisdata$walktime) + 2 * std.error(thesisdata$walktime)
+vect[8] <- min(thesisdata$walktime)
+vect[9] <- max(thesisdata$walktime)
+vect[10] <- quantile(thesisdata$walktime)[2]
+vect[11] <- quantile(thesisdata$walktime)[4]
+vect[12] <- skewness(thesisdata$walktime)
+vect[13] <- kurtosis(thesisdata$walktime)
+vect[13] <- sapply(14, function(x) sum(is.na(desc[, x])))
+
+# Add all values vector to desc, then name the new row and round all values in
+# desc.
+desc <- rbind(desc, vect)
+row.names(desc)[5] <- "Total"
+desc <- round(desc, 3)
 
 
 
-# Levene test
-# samat tulokset carista ja lawstatista
+#### Levene test ####
 leveneTest(walktime ~ timeofday, thesisdata, center = mean) #car
-#library("lawstat")
-#levene.test(thesisdata$walktime, thesisdata$timeofday) #lawstat
 
-# Oneway ANOVA
+#### One-way ANOVA ####
 res.aov <- aov(walktime ~ timeofday, data = thesisdata)
 summary(res.aov)
-#TukeyHSD(res.aov)
 
-# Brown-Forsythe test
+#### Brown-Forsythe test #### 
+# Need to remove first four columns for this to work
 bf.test(walktime ~ timeofday, data = thesisdata[-c(1,2,3,4)])
 
 
