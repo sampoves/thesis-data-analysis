@@ -43,27 +43,27 @@ thesisdata <- read.csv(file = datapath,
                 header = TRUE, sep = ",")
 
 # Name factor levels. These factor levels break some functionality down there
-levels(thesisdata$parkspot) <- list("side of street" = 1,
-                             "lot" = 2,
-                             "garage" = 3,
-                             "private-reserved" = 4,
-                             "other" = 5)
+levels(thesisdata$parkspot) <- list("On the side of street" = 1,
+                                    "Parking lot" = 2,
+                                    "Parking garage" = 3,
+                                    "Private or reserved" = 4,
+                                    "other" = 5)
 
- levels(thesisdata$likert) <- list("Extremely familiar" = 1,
-                           "Moderately" = 2,
-                           "Somewhat " = 3,
-                           "Slightly" = 4,
-                           "Not at all" = 5)
+levels(thesisdata$likert) <- list("Extremely familiar" = 1,
+                                  "Moderately familiar" = 2,
+                                  "Somewhat familiar" = 3,
+                                  "Slightly familiar" = 4,
+                                  "Not at all familiar" = 5)
 
-  levels(thesisdata$timeofday) <- list("Weekday, rush hour" = 1,
-                              "Weekday, other than" = 2,
-                              "Weekend" = 3,
-                              "Can't specify" = 4)
+levels(thesisdata$timeofday) <- list("Weekday, rush hour" = 1,
+                                     "Weekday, other than rush hour" = 2,
+                                     "Weekend" = 3,
+                                     "Can't specify, no usual time" = 4)
 
 # Remove two columns "X" and "index"
 thesisdata <- subset(thesisdata, select = -c(X, index))
 
-# timestampify
+# Timestampify
 timefunc <- function(x) strptime(x, "%Y-%m-%d %H:%M:%S", tz = "Europe/Helsinki")
 thesisdata["timestamp"] <- lapply(thesisdata["timestamp"], timefunc)
 
@@ -82,7 +82,24 @@ thesisdata["timestamp"] <- lapply(thesisdata["timestamp"], timefunc)
 # Brown-Forsythe
 
 # One-way anova descriptives, describe() 
-describe(walktime ~ timeofday, thesisdata[-c(1,2,3,4)])
+# Order of columns in SPSS: "N", "Mean", "Std. Deviation", "Std. Error",
+# "95 % Confidence Interval for Mean" ("Lower Bound", "Upper Bound"), "Minimum",
+# "Maximum"
+ple <- describe(walktime ~ timeofday, thesisdata[-c(1,2,3,4)])
+
+# Std. Error
+#install.packages("plotrix")
+library(plotrix)
+aggregate(walktime ~ timeofday, data = thesisdata, 
+          FUN = function(x) c(mean = mean(x), "Std. Error" = std.error(x)))
+
+# Confidence intervals
+# https://www.r-bloggers.com/compare-regression-results-to-a-specific-factor-level-in-r/
+aggregate(walktime ~ timeofday, data = thesisdata, 
+          FUN = function(x) c("Lower Bound" = mean(x) - 2 * std.error(x), 
+                              "Upper Bound" = mean(x) + 2 * std.error(x)))
+
+
 
 # Levene test
 # samat tulokset carista ja lawstatista
