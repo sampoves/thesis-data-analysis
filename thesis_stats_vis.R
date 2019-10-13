@@ -5,9 +5,9 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
+# 13.10.2019
 
 # Reference material for the tests
-#https://en.wikipedia.org/wiki/One-way_analysis_of_variance
 #https://stats.stackexchange.com/a/124618/262051
 #https://rcompanion.org/handbook/E_01.html
 #https://www.st-andrews.ac.uk/media/capod/students/mathssupport/OrdinalexampleR.pdf
@@ -26,6 +26,9 @@
 # Confidence intervals for mean
 #https://www.r-bloggers.com/compare-regression-results-to-a-specific-factor-level-in-r/
 
+# One-way ANOVA
+#https://en.wikipedia.org/wiki/One-way_analysis_of_variance
+
 
 
 #### Initialise ####
@@ -42,25 +45,29 @@ library(car)
 library(plotrix)
 library(moments)
 
+
+
 #### Preparation ####
 
 # Working path
 wd <- "C:/Sampon/Maantiede/Master of the Universe"
 datapath <- file.path(wd, "pythonrecords.csv")
+source(file.path(wd, "python/thesis_stats_vis_funcs.R"))
 
-# Read in csv
+# Read in csv data. Define column types
 thesisdata <- read.csv(file = datapath,
                 colClasses = c(zipcode = "character", ip = "character",
                                timeofday = "factor", parkspot = "factor",
                                likert = "factor"),
                 header = TRUE, sep = ",")
 
-# Name factor levels. These factor levels break some functionality down there
+# Name factor levels. These factor levels break some functionality I wrote
+# earlier
 levels(thesisdata$parkspot) <- list("On the side of street" = 1,
                                     "Parking lot" = 2,
                                     "Parking garage" = 3,
                                     "Private or reserved" = 4,
-                                    "other" = 5)
+                                    "Other" = 5)
 
 levels(thesisdata$likert) <- list("Extremely familiar" = 1,
                                   "Moderately familiar" = 2,
@@ -82,10 +89,29 @@ thesisdata["timestamp"] <- lapply(thesisdata["timestamp"], timefunc)
 
 
 
+#### Run tests with GetANOVA() ####
+
+# Get walktime by timeofday
+GetANOVA(walktime ~ timeofday, thesisdata$walktime, thesisdata$timeofday,
+         thesisdata)
+
+# Get walktime by timeofday, remove "Can't specify"
+GetANOVA(walktime ~ timeofday, thesisdata$walktime, thesisdata$timeofday,
+         thesisdata[-which(as.integer(thesisdata$timeofday) == 4), ])
+
+# parktime by parkspot
+GetANOVA(parktime ~ parkspot, thesisdata$parktime, thesisdata$parkspot,
+         thesisdata)
+
+
+
+
+
 #### Descriptive statistics ####
 
+# In SPSS, follow these steps to get equal results
 # SPSS -> Analyze -> Compare means --> One-way anova 
-# In "Options" select: Descriptive, Gomogeinity of variance test (Levene), 
+# In "Options" select: Descriptive, Homogeinity of variance test (Levene), 
 # Brown-Forsythe
 
 # One-way anova descriptives, describe()
@@ -104,7 +130,7 @@ stder <- aggregate(walktime ~ timeofday, data = thesisdata,
 stder <- subset(stder[[2]], select = -mean)
 desc <- cbind(desc, stder)
 
-# Confidence intervals
+# Confidence intervals for mean
 confs <- aggregate(
         walktime ~ timeofday, data = thesisdata, 
         FUN = function(x) c("CI for mean, Lower Bound" = mean(x) - 2 * std.error(x), 
@@ -112,7 +138,7 @@ confs <- aggregate(
 confs <- confs[[2]]
 desc <- cbind(desc, confs)
 
-# reorder to SPSS order
+# Reorder to SPSS order
 desc <- desc[c("n", "Median", "Mean", "Std.Dev", "Std.Error", 
                "CI for mean, Lower Bound", "CI for mean, Upper Bound", "Min", 
                "Max", "25th", "75th", "Skewness", "Kurtosis", "NA")]
@@ -144,15 +170,23 @@ desc <- round(desc, 3)
 
 
 #### Levene test ####
-leveneTest(walktime ~ timeofday, thesisdata, center = mean) #car
+levene <- leveneTest(walktime ~ timeofday, thesisdata, center = mean) #car
 
 #### One-way ANOVA ####
 res.aov <- aov(walktime ~ timeofday, data = thesisdata)
-summary(res.aov)
+anovares <- summary(res.aov)
 
 #### Brown-Forsythe test #### 
 # Need to remove first four columns for this to work
+brownf <- bf.test(walktime ~ timeofday, data = thesisdata[-c(1,2,3,4)])
+
+
+cat("Descriptive Statistics")
+print(desc)
+print(levene)
+print(anovares)
 bf.test(walktime ~ timeofday, data = thesisdata[-c(1,2,3,4)])
+
 
 
 
