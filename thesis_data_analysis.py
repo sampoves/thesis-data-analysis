@@ -5,6 +5,7 @@ Created on Fri May 10 00:07:36 2019
 @author: Sampo Vesanen
 
 Sampo Vesanen Thesis survey datacrunch
+"Parking of private cars and spatial accessibility in Helsinki Capital Region"
 
 TODO:
     - Respondent specific reports
@@ -26,8 +27,12 @@ import matplotlib.pyplot as plt
 from matplotlib.pyplot import figure
 from datetime import timedelta
 from shapely.geometry import Polygon, MultiPolygon, Point, LinearRing
-import shapely.affinity
-import operator
+#import shapely.affinity
+#import operator
+import scipy.stats as stats
+from scipy.stats import levene
+from statsmodels.formula.api import ols 
+import statsmodels.api as sm
 #import mapclassify #scheme="fisher_jenks" needs mapclassify
 
 
@@ -64,7 +69,11 @@ resarea = gpd.read_file("paavo\pno_dissolve.shp", encoding='utf-8')
 ### PREPARE SOURCE DATA ###
 ###########################
 
-# Timestamps to datetime format
+# Remove column "Unnamed: 0"
+records = records.drop(columns=["Unnamed: 0"])
+visitors = visitors.drop(columns=["Unnamed: 0"])
+
+# Timestamps to datetime 
 records["timestamp"] = convertToDatetime(records, "timestamp")
 visitors["ts_first"] = convertToDatetimeVar2(visitors, "ts_first")
 visitors["ts_latest"] = convertToDatetimeVar2(visitors, "ts_latest")
@@ -84,8 +93,6 @@ visitors = visitors.iloc[1:]
 
  # 82.102.24.252, a confirmed VPN visit by author
 visitors = visitors.drop([3753])
-
-
 
 
 
@@ -327,6 +334,129 @@ records.to_csv(wd + "records.csv")
 
 
 
+################################
+### Divisions by postal code ###
+################################
+
+# Helsinki
+# Piirijako
+# Immediate center: Kruununhaka Kluuvi Kaartinkaupunki Kamppi Punavuori
+hkiCenter = ["00170", "00100", "00130", "00120"]
+postal[postal.posti_alue.isin(hkiCenter)].plot()
+
+# Souther kantakaupunki: 
+# Eira Ullanlinna Kaivopuisto Katajanokka Länsisatama 
+# Ruoholahti Suomenlinna Länsisaaret
+# We are going to exclude Suomenlinna and Länsisaaret
+hkiCenterSouth = ["00150", "00140", "00160", "00180", "00220"]
+postal[postal.posti_alue.isin(hkiCenterSouth)].plot()
+
+# West: Etu-Töölö Taka-Töölö Meilahti Ruskeasuo Pasila Laakso
+hkiCenterWest = ["00260", "00250", "00290", "00270", "00280", "00240", "00520"]
+postal[postal.posti_alue.isin(hkiCenterWest)].plot()
+
+# East: Sörnäinen Kallio Alppiharju Mustikkamaa-Korkeasaari Hermanni Vallila
+hkiCenterEast = ["00500", "00530", "00510", "00570", "00580", "00550"]
+postal[postal.posti_alue.isin(hkiCenterEast)].plot()
+
+# North center: Toukola Kumpula Käpylä Koskela Vanhakaupunki
+hkiCenterNorth = ["00560", "00610", "00600"]
+postal[postal.posti_alue.isin(hkiCenterNorth)].plot()
+
+# All of the centers
+postal[postal.posti_alue.isin(hkiCenter + hkiCenterSouth + hkiCenterWest + 
+                              hkiCenterEast + hkiCenterNorth)].plot()
+
+# Espoo
+#Suur-Leppävaara
+# Karakallio Kilo Laaksolahti Leppävaara Lintuvaara Lippajärvi Sepänkylä 
+# Viherlaakso
+espLeppavaara = ["02620", "02610", "02600", "02650", "02660", "02710", "02750"]
+postal[postal.posti_alue.isin(espLeppavaara)].plot()
+
+#Suur-Tapiola
+# Haukilahden, Laajalahden, Mankkaan, Niittykummun, Otaniemen, Pohjois-Tapiolan, 
+# Tapiolan ja Westendin
+espTapiola = ["02710", "02140", "02180", "02200", "02150", "02100", "02130",
+              "02120", "02160"]
+postal[postal.posti_alue.isin(espTapiola)].plot()
+
+#Suur-Matinkylä
+# Henttaan, Matinkylän ja Olarin kaupunginosista.
+espMatinkyla = ["02250", "02210", "02230"]
+postal[postal.posti_alue.isin(espMatinkyla)].plot()
+
+#Suur-Espoonlahti
+# Espoonlahden, Soukan, Saunalahden, Nöykkiön, Latokasken, Kaitaan ja 
+# Suvisaariston
+espEspoonlahti = ["02320", "02360", "02300", "02340", "02260", "02380"]
+postal[postal.posti_alue.isin(espEspoonlahti)].plot()
+
+#Suur-Kauklahti 
+# Espoonkartanon, Kauklahden, Kurttilan ja Vanttilan
+espKauklahti = ["02780"]
+postal[postal.posti_alue.isin(espKauklahti)].plot()
+
+#Vanha-Espoo
+# Espoon keskuksen, Gumbölen, Högnäsin, Järvenperän, Karhusuon, Karvasmäen, 
+# Kaupunginkallion, Kolmperän, Kunnarlan, Kuurinniityn, Muuralan, Nupurin, 
+# Nuuksion, Siikajärven, Vanhan-Nuuksion ja Ämmässuon
+espVanhaespoo = ["02770", "02810", "02820", "02740", "02940"]
+postal[postal.posti_alue.isin(espVanhaespoo)].plot()
+
+#Pohjois-Espoo
+# Bodomin, Kalajärven, Kunnarlan, Lahnuksen, Lakiston, Luukin, Niipperin, 
+# Perusmäen, Röylän, Vanhakartanon ja Velskolan
+espPohjoisespoo = ["02940", "02970", "02920", "02980"]
+postal[postal.posti_alue.isin(espPohjoisespoo)].plot()
+
+# All of Espoo
+postal[postal.posti_alue.isin(espLeppavaara + espTapiola + espMatinkyla +
+                              espEspoonlahti + espKauklahti + espVanhaespoo +
+                              espPohjoisespoo)].plot()
+
+
+# Muista Kauniainen
+
+
+# Vantaa
+# https://www.vantaa.fi/instancedata/prime_product_julkaisu/vantaa/embeds/vantaawwwstructure/124282_Vantaa_alueittain_2015.pdf
+# Myyrmäen
+vanMyyrmaki = ["01600", "01610", "01620", "01630", "01640", "01650", "01660",
+               "01670", "01680", "01710", "01720", "01770"]
+postal[postal.posti_alue.isin(vanMyyrmaki)].plot()
+
+# Kivistön
+vanKivisto = ["01700", "01730", "01750", "01760"]
+postal[postal.posti_alue.isin(vanKivisto)].plot()
+
+# Aviapoliksen
+vanAviapolis = ["01510", "01520", "01530", "01690", "01740"] 
+postal[postal.posti_alue.isin(vanAviapolis)].plot()
+
+# Tikkurilan
+vanTikkurila = ["01300", "01350", "01370", "01380"]
+postal[postal.posti_alue.isin(vanTikkurila)].plot()
+
+# Koivukylän
+vanKoivukyla = ["01340", "01350", "01360", "01390", "01400", "01420"]
+postal[postal.posti_alue.isin(vanKoivukyla)].plot()
+
+# Korson
+vanKorso = ["01450", "01480"]
+postal[postal.posti_alue.isin(vanKorso)].plot()
+
+# Hakunilan
+vanHakunila = ["01200", "01230", "01260", "01280"]
+postal[postal.posti_alue.isin(vanHakunila)].plot()
+
+# All of Vantaa
+postal[postal.posti_alue.isin(vanMyyrmaki + vanKivisto + vanAviapolis +
+                              vanTikkurila + vanKoivukyla + vanKorso +
+                              vanHakunila)].plot()
+
+
+
 #################
 ### VISUALISE ###
 #################
@@ -464,37 +594,10 @@ if(len(currentAreas) > 1):
 #####################
 #https://medium.com/datadriveninvestor/finding-outliers-in-dataset-using-python-efc3fce6ce32
 #https://towardsdatascience.com/ways-to-detect-and-remove-the-outliers-404d16608dba
-plt.scatter(records.index, records.parktime)
-plt.scatter(records.index, records.walktime)
-plt.scatter(records.parktime, records.walktime)
-
-# z-score
-outlier_datapoints = detect_outlier(records.parktime)
-
-# iqr
-#dataset = records.parktime
-dataset = records.walktime
-
-dataset = sorted(dataset)
-q1, q3 = np.percentile(dataset, [25,75])
-
-iqr = q3 - q1
-lower_bound = q1 - (1.5 * iqr) 
-upper_bound = q3 + (1.5 * iqr) 
 
 # outlier graph
 import seaborn as sns
 sns.boxplot(x=records["parktime"])
-
-
-
-# TOISEN SIVUN MEININKI, KESKEN
-from scipy import stats
-z = np.abs(stats.zscore(
-        records[records.columns.difference(['timestamp', "ip", "zipcode"])]))
-
-# test removing outlier data
-boston_df_out = boston_df_o1[~((boston_df_o1 < (Q1 - 1.5 * IQR)) | (boston_df_o1 > (Q3 + 1.5 * IQR))).any(axis=1)]
 
 
 
@@ -529,137 +632,68 @@ pd.crosstab(index=records["timeofday"], columns=records["parkspot"]).unstack().r
 #https://raiswell.rbind.io/post/one-way-anova-in-python/
 #https://plot.ly/python/v3/anova/
 #http://pytolearn.csd.auth.gr/d1-hyptest/12/anova-one.html
+#https://statistics.laerd.com/statistical-guides/types-of-variable.php
+
+    
+
+# This emulates R and SPSS progression
+# SPSS -> analyze -> compare means --> one-way anova 
+# options: descriptive, homogeinity of variance test (levene), Brown-Forsythe
+    
+### describe: walktime~timeofday
+# ratkaisu: https://www.marsja.se/pandas-python-descriptive-statistics/
+# toimii samalla tavalla ku R
+grouped_data = records.groupby(["timeofday"])
+round(grouped_data['walktime'].describe(), 3)
+    
+### levene
+# ei sama ku R
+levene(records["walktime"], records["timeofday"], center="mean")
+
+### anova
+#stats.f_oneway(records["walktime"], records["timeofday"]) # ei sama ku R
+
+#2
+# ratkaisu: https://pythonfordatascience.org/anova-python/
+# toimii samalla tavalla ku R
+mod = ols('walktime ~ C(timeofday)', data=records).fit()
+#mod = ols('parktime ~ likert', data=records[records.parkspot==1]).fit() #esim
+#mod.summary()
+sm.stats.anova_lm(mod, typ=2)
+
+### brown-forsythe    
+# ei näytä siltä että tätä olis pythonille
     
     
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+import statsmodels.api as sm
+from statsmodels.formula.api import ols    
+import seaborn as sns
 
-################################
-### REGRESSION LINE TESTING  ###
-### STATISTICAL SIGNIFICANCE ###
-################################
-#likert-problematiikka
-# https://www.theanalysisfactor.com/can-likert-scale-data-ever-be-continuous/
-# https://www.researchgate.net/post/Can_we_use_Likert_scale_data_in_multiple_regression_analysis
-# https://www.researchgate.net/post/How_can_I_assess_statistical_significance_of_Likert_scale
-# https://www.dummies.com/education/math/statistics/how-to-interpret-a-correlation-coefficient-r/
-# https://statistics.laerd.com/statistical-guides/types-of-variable.php
+# perus
+f, ax = plt.subplots(figsize=(11,9))
+plt.title('parktime distribution between sample')
+sns.distplot(records.parktime)
 
-from scipy import stats
-rho, pval = stats.spearmanr(records.likert, records.parktime)
-rho, pval = stats.spearmanr(records.parktime, records.timeofday) #pieni pval!
-rho, pval = stats.spearmanr(records.parkspot, records.walktime)
+# adv
+f, ax = plt.subplots(figsize=(11,9))
+sns.distplot(records[records.parkspot == 1].parktime, ax=ax, label='side of street')
+sns.distplot(records[records.parkspot == 2].parktime, ax=ax, label='parking lot')
+sns.distplot(records[records.parkspot == 3].parktime, ax=ax, label='parking gara')
+sns.distplot(records[records.parkspot == 4].parktime, ax=ax, label='priva/reserve')
+plt.title('parktime Distribution for parkspot')
+plt.legend()
 
-np.random.seed(0)
-x = np.random.rand(100, 1)
-y = 2 + 3 * x + np.random.rand(100, 1)
-plt.scatter(x, y, s=10)
-plt.xlabel('liikert/x')
-plt.ylabel('parkkitiem/y')
-plt.show()
-
-plt.scatter(records.likert, records.parktime, s=10)
-plt.xlabel('liikert/x')
-plt.ylabel('parkkitiem/y')
-plt.show()
-
-
-
-#######################
-#### Let's try Principal component analysis ####
-#######################
-
-# distributing the dataset into two components X and Y 
-X = records.iloc[:, 5:9].values 
-y = records.iloc[:, 9].values
-
-# Splitting the X and Y into the Training set and Testing set 
-from sklearn.model_selection import train_test_split 
-from sklearn.preprocessing import StandardScaler 
-from sklearn.decomposition import PCA 
-from sklearn.linear_model import LogisticRegression     
-from sklearn.metrics import confusion_matrix 
-from matplotlib.colors import ListedColormap 
-
-X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size = 0.2, random_state = 0) 
-
-# performing preprocessing part 
-sc = StandardScaler() 
-  
-X_train = sc.fit_transform(X_train) 
-X_test = sc.transform(X_test) 
-
-# Applying PCA function on training and testing set of X component 
-pca = PCA(n_components = 2) 
-  
-X_train = pca.fit_transform(X_train) 
-X_test = pca.transform(X_test) 
-  
-explained_variance = pca.explained_variance_ratio_ 
-
-# Fitting Logistic Regression To the training set 
-classifier = LogisticRegression(random_state = 0) 
-classifier.fit(X_train, y_train) 
-
-# Predicting the test set result using predict function under LogisticRegression  
-y_pred = classifier.predict(X_test) 
-
-# making confusion matrix between test set of Y and predicted value. 
-cm = confusion_matrix(y_test, y_pred) 
-
-
-
-# Predicting the training set result through scatter plot  
-X_set, y_set = X_train, y_train 
-X1, X2 = np.meshgrid(np.arange(start = X_set[:, 0].min() - 1, 
-                     stop = X_set[:, 0].max() + 1, step = 0.01), 
-                     np.arange(start = X_set[:, 1].min() - 1, 
-                     stop = X_set[:, 1].max() + 1, step = 0.01)) 
-  
-plt.contourf(X1, X2, classifier.predict(np.array([X1.ravel(), 
-             X2.ravel()]).T).reshape(X1.shape), alpha = 0.75, 
-             cmap = ListedColormap(('yellow', 'white', 'aquamarine'))) 
-  
-plt.xlim(X1.min(), X1.max()) 
-plt.ylim(X2.min(), X2.max()) 
-  
-for i, j in enumerate(np.unique(y_set)): 
-    plt.scatter(X_set[y_set == j, 0], X_set[y_set == j, 1], 
-                c = ListedColormap(('red', 'green', 'blue'))(i), label = j) 
-  
-plt.title('Logistic Regression (Training set)') 
-plt.xlabel('PC1') # for Xlabel 
-plt.ylabel('PC2') # for Ylabel 
-plt.legend() # to show legend 
-  
-# show scatter plot 
-plt.show() 
-
-
-
-# Visualising the Test set results through scatter plot 
-X_set, y_set = X_test, y_test 
-  
-X1, X2 = np.meshgrid(np.arange(start = X_set[:, 0].min() - 1, 
-                     stop = X_set[:, 0].max() + 1, step = 0.01), 
-                     np.arange(start = X_set[:, 1].min() - 1, 
-                     stop = X_set[:, 1].max() + 1, step = 0.01)) 
-  
-plt.contourf(X1, X2, classifier.predict(np.array([X1.ravel(), 
-             X2.ravel()]).T).reshape(X1.shape), alpha = 0.75, 
-             cmap = ListedColormap(('yellow', 'white', 'aquamarine')))  
-  
-plt.xlim(X1.min(), X1.max()) 
-plt.ylim(X2.min(), X2.max()) 
-  
-for i, j in enumerate(np.unique(y_set)): 
-    plt.scatter(X_set[y_set == j, 0], X_set[y_set == j, 1], 
-                c = ListedColormap(('red', 'green', 'blue'))(i), label = j) 
-  
-# title for scatter plot 
-plt.title('Logistic Regression (Test set)')  
-plt.xlabel('PC1') # for Xlabel 
-plt.ylabel('PC2') # for Ylabel 
-plt.legend() 
-  
-# show scatter plot 
-plt.show() 
+# https://www.marsja.se/four-ways-to-conduct-one-way-anovas-using-python/
+#boxplot
+records.boxplot('parktime', by='timeofday', figsize=(12, 8))
+records.boxplot('parktime', by='parkspot', figsize=(12, 8))
