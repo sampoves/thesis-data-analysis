@@ -62,6 +62,13 @@ visitors = pd.read_csv(visitors_data)
 # Shapefiles
 grid = gpd.read_file("MetropAccess_YKR_grid_EurefFIN.shp", encoding='utf-8')
 resarea = gpd.read_file("paavo\pno_dissolve.shp", encoding='utf-8')
+ykr_vyoh = gpd.read_file(
+        r"C:\Sampon\Maantiede\Master of the Universe\yhdyskuntarakenteenvyoh17\YKRVyohykkeet2017.shp", 
+        encoding='utf-8')
+
+forest = gpd.read_file(r"FI001L3_HELSINKI\ua2012_research_area.shp", 
+                       encoding='utf-8')
+forest = forest[forest["ITEM2012"] == "Forests"] # preserve only forest
 
 
 
@@ -331,6 +338,67 @@ statistics.calculateStats()
 
 # data to csv for R. "pythonrecords.csv"
 records.to_csv(wd + "records.csv")
+
+
+
+#############################################################
+### See percentage of YKR vyöhykkeet in each zipcode area ###
+#############################################################
+
+# Idea is to overlay YKR vyöhykkeet on dataframe postal and see the percentage
+# how much of each zone is included in the zipcode in question. Together with
+# checking out how much forest is there in research area we could find some
+# interesting results.
+
+# These loops work but at this point only print out results
+
+# YKR vyöhykkeet
+# raises futureError
+# this function prevents multiple instances of same zones in the dict
+geom_grouper = lambda x: x.unary_union
+
+for row in postal.iterrows():
+    thisPol = gpd.GeoDataFrame(geometry=[row[1].geometry])
+    thisIntersect = gpd.overlay(thisPol, ykr_vyoh, how='intersection')
+    group = thisIntersect.groupby("vyohselite", as_index=False)["geometry"].agg(
+            {"geometry": geom_grouper})
+    
+    # insert this dict into all zipcode rows
+    dicti = [{"zone type": row2[1].vyohselite, 
+           "area": round(row2[1].geometry.area / thisPol.unary_union.area, 3)} for row2 in group.iterrows()]
+    print("{0} {1} \n{2}\n".format(row[1].posti_alue, row[1].nimi, dicti))
+    
+       
+# testing, where are we at generally
+#ax = postal.plot()
+#thisPol.plot(ax=ax, cmap='OrRd')
+    
+# testing, where are the zones at
+#ax = thisPol.plot()
+#thisIntersect.plot(ax=ax, cmap='OrRd')
+#(thisIntersect.area / thisPol.unary_union.area) * 100
+
+
+
+# Forest
+
+# Reproject the geometries by replacing the values with projected ones
+forest['geometry'] = forest['geometry'].to_crs(epsg=3067)
+
+# Iterate over postal areas and then intersect with forest layer
+for row in postal.iterrows():
+    #print(row[1].geometry.area)
+    #print(row[1].geometry)
+    thisPol = gpd.GeoDataFrame(geometry=[row[1].geometry])
+    thisIntersect = gpd.overlay(thisPol, forest, how='intersection')
+    if thisIntersect.empty == False:
+        forestpercent = thisIntersect.unary_union.area / thisPol.area
+        print("zipcode {0} {1} on {2} % metsää".format(
+                row[1].posti_alue, row[1].nimi, 
+                round(forestpercent[0], 3) * 100))
+    else:
+        print("zipcode {0} {1} is forestless".format(row[1].posti_alue,
+              row[1].nimi))
 
 
 
