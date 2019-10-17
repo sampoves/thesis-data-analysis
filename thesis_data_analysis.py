@@ -281,6 +281,18 @@ visitors = visitors.reset_index()
 ### ADD DATA TO GEODATAFRAMES ###
 #################################
 
+# Reclassify ykr_vyoh. Reclassification is created as in the SYKE website
+#https://www.ymparisto.fi/fi-FI/Elinymparisto_ja_kaavoitus/Yhdyskuntarakenne/Tietoa_yhdyskuntarakenteesta/Yhdyskuntarakenteen_vyohykkeet
+ykr_vyoh["vyohselite"] = ykr_vyoh["vyohselite"].replace(
+        {"keskustan reunavyöhyke/intensiivinen joukkoliikenne": 
+            "keskustan reunavyöhyke", 
+         "keskustan reunavyöhyke/joukkoliikenne": 
+             "keskustan reunavyöhyke",
+         "alakeskuksen jalankulkuvyöhyke/intensiivinen joukkoliikenne": 
+             "alakeskuksen jalankulkuvyöhyke",
+         "alakeskuksen jalankulkuvyöhyke/joukkoliikenne": 
+             "alakeskuksen jalankulkuvyöhyke"})
+
 # Add column "answer count", "parktime mean", and "walktime mean"
 postal["answer_count"] = 0
 postal["parktime_mean"] = 0
@@ -353,20 +365,33 @@ records.to_csv(wd + "records.csv")
 # These loops work but at this point only print out results
 
 # YKR vyöhykkeet
-# raises futureError
-# this function prevents multiple instances of same zones in the dict
+
+# geom_grouper prevents multiple instances of same zones in the dict
 geom_grouper = lambda x: x.unary_union
 
+# Missing: value for area not in any of the classes in ykr_vyoh
 for row in postal.iterrows():
     thisPol = gpd.GeoDataFrame(geometry=[row[1].geometry])
     thisIntersect = gpd.overlay(thisPol, ykr_vyoh, how='intersection')
+    
+    # groupby ensures each zone appears only once
     group = thisIntersect.groupby("vyohselite", as_index=False)["geometry"].agg(
             {"geometry": geom_grouper})
     
+    # This calculates Polygon areas and informs us how indices have to be ordered
+    # to get sorted values
+    area_order = list(
+            group["geometry"].map(lambda p: p.area).sort_values(ascending=False).index)
+    group = group.reindex(area_order)
+    group = group.reset_index()
+    
     # insert this dict into all zipcode rows
-    dicti = [{"zone type": row2[1].vyohselite, 
-           "area": round(row2[1].geometry.area / thisPol.unary_union.area, 3)} for row2 in group.iterrows()]
-    print("{0} {1} \n{2}\n".format(row[1].posti_alue, row[1].nimi, dicti))
+    thisDict = [{
+            "zone type": row2[1].vyohselite,
+            "area": round(row2[1].geometry.area / thisPol.unary_union.area, 3)
+            } for row2 in group.iterrows()]
+    
+    print("{0} {1} \n{2}\n".format(row[1].posti_alue, row[1].nimi, thisDict))
     
        
 # testing, where are we at generally
