@@ -62,13 +62,20 @@ visitors = pd.read_csv(visitors_data)
 # Shapefiles
 grid = gpd.read_file("MetropAccess_YKR_grid_EurefFIN.shp", encoding='utf-8')
 resarea = gpd.read_file("paavo\pno_dissolve.shp", encoding='utf-8')
+
+# import urban zones shapefile and select only relevant area for this study
 ykr_vyoh = gpd.read_file(
         r"C:\Sampon\Maantiede\Master of the Universe\yhdyskuntarakenteenvyoh17\YKRVyohykkeet2017.shp", 
         encoding='utf-8')
+ykr_vyoh = gpd.overlay(ykr_vyoh, 
+                       gpd.GeoDataFrame(geometry=resarea.buffer(500)), 
+                       how="intersection")
 
+# From Urban Atlas 2012 preserve only forests. Select only relevant area for
+# this study
 forest = gpd.read_file(r"FI001L3_HELSINKI\ua2012_research_area.shp", 
                        encoding='utf-8')
-forest = forest[forest["ITEM2012"] == "Forests"] # preserve only forest
+forest = forest[forest["ITEM2012"] == "Forests"]
 
 
 
@@ -109,7 +116,7 @@ visitors = visitors.drop([3753])
 
 # Process Helsinki Capital Region geodataframe from PAAVO data
 muns = ["091", "049", "092", "235"]
-postal = gpd.read_file(r"paavo\2019\pno_tilasto_2019.shp", encoding='utf-8')
+postal = gpd.read_file(r"paavo\2019\pno_tilasto_2019.shp", encoding="utf-8")
 postal = postal[postal.kunta.isin(muns)]
 postal = postal.reset_index().drop(columns=["index"])
 
@@ -241,7 +248,7 @@ for visitor in records.ip.unique():
                  "walktime": lambda x: identicaltest(x), 
                  "timeofday": lambda x: identicaltest(x)})
     
-        # produce report
+        # Produce report
         for idx, row in dupl.drop(["ip"], axis=1).iterrows():
             print(row.to_string(), "\n") # suppress dtype
 
@@ -293,6 +300,18 @@ ykr_vyoh["vyohselite"] = ykr_vyoh["vyohselite"].replace(
          "alakeskuksen jalankulkuvyöhyke/joukkoliikenne": 
              "alakeskuksen jalankulkuvyöhyke"})
 
+# add ykr_vyoh columns
+postal["ykr_kesk_jalan"] = 0
+postal["ykr_kesk_reuna"] = 0
+postal["ykr_int_joukko"] = 0
+postal["ykr_joukkoliik"] = 0
+postal["ykr_alakesk_jalan"] = 0
+postal["ykr_autovyoh"] = 0
+postal["ykr_novalue"] = 0
+
+# add Urban Atlas 2012 forest amount
+postal["ua_forest"] = 0
+    
 # Add column "answer count", "parktime mean", and "walktime mean"
 postal["answer_count"] = 0
 postal["parktime_mean"] = 0
@@ -322,16 +341,16 @@ postal['coords'] = [coords[0] for coords in postal['coords']]
 
 # Ratio: answer_count/total population in postal code
 # NB This is not useful for plotting, think of something else
-postal["answ_hevakiy"] = postal.apply(
-        lambda row: round(row["answer_count"]/row["he_vakiy"], 5), axis=1)
+#postal["answ_hevakiy"] = postal.apply(
+#        lambda row: round(row["answer_count"]/row["he_vakiy"], 5), axis=1)
 
 # population density
-postal["pop_dens"] = postal.apply(
-        lambda row: round(row["he_vakiy"]/(row["pinta_ala"]/1000000), 2), axis=1)
+#postal["pop_dens"] = postal.apply(
+#        lambda row: round(row["he_vakiy"]/(row["pinta_ala"]/1000000), 2), axis=1)
 
 # ratio pop density to answer_count
-postal["dens_answ"] = postal.apply(
-        lambda row: round(row["pop_dens"]/row["answer_count"], 3), axis=1)
+#postal["dens_answ"] = postal.apply(
+#        lambda row: round(row["pop_dens"]/row["answer_count"], 3), axis=1)
 
 
 
@@ -344,37 +363,38 @@ statistics.calculateStats()
 
 
 
-#####################
-### EXPORT TO CSV ###
-#####################
+#####################################################################
+### Set percentage of urban zones and forest in each zipcode area ###
+#####################################################################
 
-# data to csv for R. "pythonrecords.csv"
-records.to_csv(wd + "records.csv")
+# Idea is to overlay yhdyskuntarakenteen vyöhykkeet on dataframe postal and see 
+# the percentage how much of each zone is included in the zipcode in question. 
+# Together with checking out how much forest is there in research area we could 
+# find some interesting results.
 
+# YKR zones
 
-
-#############################################################
-### See percentage of YKR vyöhykkeet in each zipcode area ###
-#############################################################
-
-# Idea is to overlay YKR vyöhykkeet on dataframe postal and see the percentage
-# how much of each zone is included in the zipcode in question. Together with
-# checking out how much forest is there in research area we could find some
-# interesting results.
-
-# These loops work but at this point only print out results
-
-# YKR vyöhykkeet
+# Dictionary key to help allocation of values
+dictKey = {"keskustan jalankulkuvyöhyke": "ykr_kesk_jalan", 
+           "keskustan reunavyöhyke": "ykr_kesk_reuna", 
+           "intensiivinen joukkoliikennevyöhyke": "ykr_int_joukko",
+           "joukkoliikennevyöhyke": "ykr_joukkoliik", 
+           "alakeskuksen jalankulkuvyöhyke": "ykr_alakesk_jalan", 
+           "autovyöhyke": "ykr_autovyoh"}
 
 # geom_grouper prevents multiple instances of same zones in the dict
 geom_grouper = lambda x: x.unary_union
 
-# Missing: value for area not in any of the classes in ykr_vyoh
 for row in postal.iterrows():
-    thisPol = gpd.GeoDataFrame(geometry=[row[1].geometry])
-    thisIntersect = gpd.overlay(thisPol, ykr_vyoh, how='intersection')
     
-    # groupby ensures each zone appears only once
+    # row is tuple, change that to have better readability
+    row = row[1]
+    
+    # Intersect current Polygon with urban zones shapefile
+    thisPol = gpd.GeoDataFrame(geometry=[row.geometry])
+    thisIntersect = gpd.overlay(thisPol, ykr_vyoh, how="intersection")
+    
+    # Groupby ensures each zone appears only once
     group = thisIntersect.groupby("vyohselite", as_index=False)["geometry"].agg(
             {"geometry": geom_grouper})
     
@@ -385,45 +405,66 @@ for row in postal.iterrows():
     group = group.reindex(area_order)
     group = group.reset_index()
     
-    # insert this dict into all zipcode rows
+    # Insert this dict into all zipcode rows
     thisDict = [{
-            "zone type": row2[1].vyohselite,
-            "area": round(row2[1].geometry.area / thisPol.unary_union.area, 3)
-            } for row2 in group.iterrows()]
+        thisRow[1].vyohselite: 
+            round(thisRow[1].geometry.area / thisPol.unary_union.area, 3)
+        } for thisRow in group.iterrows()]
     
-    print("{0} {1} \n{2}\n".format(row[1].posti_alue, row[1].nimi, thisDict))
+    # Print report
+    #print("{0} {1} \n{2}\n".format(row.posti_alue, row.nimi, thisDict))
     
-       
-# testing, where are we at generally
-#ax = postal.plot()
-#thisPol.plot(ax=ax, cmap='OrRd')
+    # iterate thisDict, list of dictionaries to insert values in postal
+    for item in thisDict:
+        for k, v in item.items():
+            
+            # Add data to postal. In .loc square brackets select correct row of 
+            # placement then use dictKey dictionary to tell which column to 
+            # append in. Finally append current value v
+            postal.loc[postal["posti_alue"] == row.posti_alue, dictKey[k]] = v
     
-# testing, where are the zones at
-#ax = thisPol.plot()
-#thisIntersect.plot(ax=ax, cmap='OrRd')
-#(thisIntersect.area / thisPol.unary_union.area) * 100
+# Calculate ykr_novalue
+postal["ykr_novalue"] = postal.apply(
+        lambda row: 1 - (row.ykr_kesk_jalan + row.ykr_kesk_reuna +
+        row.ykr_int_joukko + row.ykr_joukkoliik + 
+        row.ykr_alakesk_jalan + row.ykr_autovyoh), axis=1)
 
 
-
-# Forest
+# Urban Atlas 2012 forest
 
 # Reproject the geometries by replacing the values with projected ones
-forest['geometry'] = forest['geometry'].to_crs(epsg=3067)
+forest["geometry"] = forest["geometry"].to_crs(epsg=3067)
 
 # Iterate over postal areas and then intersect with forest layer
 for row in postal.iterrows():
-    #print(row[1].geometry.area)
-    #print(row[1].geometry)
-    thisPol = gpd.GeoDataFrame(geometry=[row[1].geometry])
-    thisIntersect = gpd.overlay(thisPol, forest, how='intersection')
+    row = row[1]
+    thisPol = gpd.GeoDataFrame(geometry=[row.geometry])
+    thisIntersect = gpd.overlay(thisPol, forest, how="intersection")
     if thisIntersect.empty == False:
         forestpercent = thisIntersect.unary_union.area / thisPol.area
-        print("zipcode {0} {1} on {2} % metsää".format(
-                row[1].posti_alue, row[1].nimi, 
+        
+        # print report
+        print("zipcode {0} {1} is {2} % forest".format(
+                row.posti_alue, row.nimi, 
                 round(forestpercent[0], 3) * 100))
+        
+        # append forest data to column "ua_forest"
+        postal.loc[postal["posti_alue"] == row.posti_alue, "ua_forest"] = round(
+                forestpercent[0], 3)
     else:
-        print("zipcode {0} {1} is forestless".format(row[1].posti_alue,
-              row[1].nimi))
+        # print forestless report
+        print("zipcode {0} {1} is forestless".format(row.posti_alue,
+              row.nimi))
+
+
+
+#####################
+### EXPORT TO CSV ###
+#####################
+
+# data to csv for R. "pythonrecords.csv"
+records.to_csv(wd + "records.csv")
+postal.to_csv(wd + "postal.csv", encoding="Windows-1252")
 
 
 
@@ -509,7 +550,7 @@ postal[postal.posti_alue.isin(espLeppavaara + espTapiola + espMatinkyla +
                               espPohjoisespoo)].plot()
 
 
-# Muista Kauniainen
+# Remember Kauniainen
 
 
 # Vantaa
@@ -704,12 +745,20 @@ sns.boxplot(x=records["parktime"])
 #https://statistics.laerd.com/statistical-guides/types-of-variable.php
 #https://dfrieds.com/data-analysis/crosstabs-python-pandas
 # Try to emulate SPSS Crosstabs --> nominal by interval --> Eta
-pd.crosstab(index=records["timeofday"], columns=records["parkspot"]).rename(
-        columns={1: "Side of road", 2: "lot", 3: "garage", 4: "private_reserved", 
+pd.crosstab(index=records["timeofday"], 
+            columns=records["parkspot"]).rename(
+        columns={1: "Side of road", 
+                 2: "lot", 
+                 3: "garage", 
+                 4: "private_reserved", 
                  5: "other"})
 
-pd.crosstab(index=records["timeofday"], columns=records["parkspot"]).unstack().reset_index().rename(
-    columns={1: "Side of road", 2: "lot", 3: "garage", 4: "private_reserved", 
+pd.crosstab(index=records["timeofday"], 
+            columns=records["parkspot"]).unstack().reset_index().rename(
+    columns={1: "Side of road", 
+             2: "lot", 
+             3: "garage", 
+             4: "private_reserved", 
              5: "other"})
 
 
