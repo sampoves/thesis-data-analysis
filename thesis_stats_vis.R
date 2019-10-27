@@ -52,14 +52,22 @@ library(moments)
 # Working path
 wd <- "C:/Sampon/Maantiede/Master of the Universe"
 datapath <- file.path(wd, "pythonrecords.csv")
+postal_path <- file.path(wd, "pythonpostal.csv")
 source(file.path(wd, "python/thesis_stats_vis_funcs.R"))
 
 # Read in csv data. Define column types
 thesisdata <- read.csv(file = datapath,
                 colClasses = c(zipcode = "character", ip = "character",
                                timeofday = "factor", parkspot = "factor",
-                               likert = "factor"),
+                               likert = "factor", ua_forest = "factor",
+                               ykr_zone = "factor", subdiv = "factor"),
                 header = TRUE, sep = ",")
+
+# Postal code data
+postal <- read.csv(file = postal_path, 
+                   colClasses = c(posti_alue = "factor", kunta = "factor"),
+                   header = TRUE, sep = ",")
+
 
 # Name factor levels. These factor levels break some functionality I wrote
 # earlier
@@ -80,8 +88,9 @@ levels(thesisdata$timeofday) <- list("Weekday, rush hour" = 1,
                                      "Weekend" = 3,
                                      "Can't specify, no usual time" = 4)
 
-# Remove two columns "X" and "index"
+# Remove two columns "X" and "index". X from postal
 thesisdata <- subset(thesisdata, select = -c(X, index))
+postal <- postal[-c(1, 5, 6)]
 
 # Timestampify
 timefunc <- function(x) strptime(x, "%Y-%m-%d %H:%M:%S", tz = "Europe/Helsinki")
@@ -91,19 +100,21 @@ thesisdata["timestamp"] <- lapply(thesisdata["timestamp"], timefunc)
 
 #### Run tests with GetANOVA() ####
 
+# We use GetANOVA() function, which performs multiple analyses with the 
+# information fed to it. 
+
 # Get walktime by timeofday
 GetANOVA(walktime ~ timeofday, thesisdata$walktime, thesisdata$timeofday,
-         thesisdata)
+         thesisdata, c(1, 2, 3, 4))
 
 # Get walktime by timeofday, remove "Can't specify"
 GetANOVA(walktime ~ timeofday, thesisdata$walktime, thesisdata$timeofday,
-         thesisdata[-which(as.integer(thesisdata$timeofday) == 4), ])
+         thesisdata[-which(as.integer(thesisdata$timeofday) == 4), ],
+         c(1, 2, 3, 4))
 
 # parktime by parkspot
 GetANOVA(parktime ~ parkspot, thesisdata$parktime, thesisdata$parkspot,
-         thesisdata)
-
-
+         thesisdata, c(1, 2, 3, 4))
 
 
 
@@ -186,6 +197,7 @@ print(desc)
 print(levene)
 print(anovares)
 bf.test(walktime ~ timeofday, data = thesisdata[-c(1,2,3,4)])
+
 
 
 

@@ -12,10 +12,23 @@ library(onewaytests)
 library(car)
 library(plotrix)
 library(moments)
+library(htmltools)
 
 
 
-GetANOVA <- function(thisFormula, response, explanatory, inputdata){
+vprint <- function(x, ...) {
+  
+  # Use this function to print to RStudio Viewer
+  
+
+  html_print(pre(paste0(capture.output(print(x, ...)), collapse = "\n")), 
+             background = "#7a7a7a")
+}
+
+
+
+GetANOVA <- function(thisFormula, response, explanatory, inputdata, 
+                     columnsToRemove) {
   
   # Get all parts of ANOVA we need in this thesis:
 
@@ -28,6 +41,8 @@ GetANOVA <- function(thisFormula, response, explanatory, inputdata){
   #         response:     column name as string (continuous variable)
   #         explanatory:  column name as string (ordinal variable)
   #         inputdata:    dataframe, inputdata in this thesis
+  #         columnsToRemove: This determines which column indices are to be
+  #                       removed from analyses
 
   
   #### Descriptive statistics ####
@@ -41,13 +56,14 @@ GetANOVA <- function(thisFormula, response, explanatory, inputdata){
   # Order of columns in SPSS: "N", "Mean", "Std. Deviation", "Std. Error",
   # "95 % Confidence Interval for Mean" ("Lower Bound", "Upper Bound"), "Minimum",
   # "Maximum"
-  desc <- describe(thisFormula, inputdata[-c(1,2,3,4)])
+  desc <- describe(thisFormula, inputdata[-columnsToRemove])
   
   ### Std. Error
   # clumsily calculate mean, so that we can preserve column names in the next
   # phase
   stder <- aggregate(thisFormula, data = inputdata,
-                     FUN = function(x) c(mean = mean(x), "Std.Error" = std.error(x)))
+                     FUN = function(x) c(mean = mean(x),
+                                         "Std.Error" = std.error(x)))
   
   # Remove column mean 
   stder <- subset(stder[[2]], select = -mean)
@@ -104,7 +120,8 @@ GetANOVA <- function(thisFormula, response, explanatory, inputdata){
   
   #### Brown-Forsythe test #### 
   # Need to remove first four columns for this to work
-  #brownf <- bf.test(thisFormula, data = inputdata[-c(1,2,3,4)])
+  # not in use, we only need to run this in the printing section
+  #brownf <- bf.test(thisFormula, data = inputdata[-columnsToRemove])
   
   
   
@@ -142,5 +159,5 @@ GetANOVA <- function(thisFormula, response, explanatory, inputdata){
   cat("\n\n-------------------------------------\n")
   cat("# Robust Tests of Equality of Means #")
   cat("\n-------------------------------------\n")
-  bf.test(thisFormula, data = inputdata[-c(1,2,3,4)])
+  bf.test(thisFormula, data = inputdata[-columnsToRemove])
 }
