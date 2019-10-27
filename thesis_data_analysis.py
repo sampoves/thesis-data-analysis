@@ -31,7 +31,6 @@ import scipy.stats as stats
 from scipy.stats import levene
 from statsmodels.formula.api import ols 
 import statsmodels.api as sm
-#import jenkspy
 #import mapclassify #scheme="fisher_jenks" needs mapclassify
 
 
@@ -310,7 +309,7 @@ postal["ykr_novalue"] = 0
 
 # add Urban Atlas 2012 forest amount
 postal["ua_forest"] = 0
-    
+
 # Add column "answer count", "parktime mean", and "walktime mean"
 postal["answer_count"] = 0
 postal["parktime_mean"] = 0
@@ -519,7 +518,6 @@ for idx, row in enumerate(records.iterrows()):
         
         if row[1].ykr_zone == abbr:
             records.loc[idx, "ykr_zone"] = realname
-            print("check")
         
         elif row[1].ykr_zone == "ykr_novalue":
             records.loc[idx, "ykr_zone"] = "novalue"
@@ -529,6 +527,14 @@ for idx, row in enumerate(records.iterrows()):
 ################################
 ### Divisions by postal code ###
 ################################
+
+# Some postal code areas contain localities which are in conflict with the
+# subdivisions. For example, zipcode Lippajärvi-Järvenperä 02940 contains
+# localities Högnäs (belongs to Vanha-Espoo), Lippajärvi (belongs to Suur-
+# Leppävaara). In these cases I will use my own deliberation for
+# classification. The main problem areas are just south and north of Kauniainen
+# (for example Lippajärvi-Järvenperä and Sepänkylä-Kuurinniitty) and just 
+# south of Helsinki-Vantaa airport.
 
 # Helsinki
 # Piirijako
@@ -654,14 +660,6 @@ hkiOster = ["00890"] # Östersundom
 # See Excel sheet for exact place names
 # Suur-, tilasto- ja pienalueiden nimet 1.1.2014
     
-# Some postal code areas contain localities which are in conflict with the
-# subdivisions. For example, zipcode Lippajärvi-Järvenperä 02940 contains
-# localities Högnäs (belongs to Vanha-Espoo), Lippajärvi (belongs to Suur-
-# Leppävaara). In these cases I will use my own deliberation for
-# classification. The main problem areas are just south and north of Kauniainen
-# (for example Lippajärvi-Järvenperä and Sepänkylä-Kuurinniitty) and just 
-# south of Helsinki-Vantaa airport.
-
 #Suur-Leppävaara subdivision
 # Kanta-Leppävaara, Kilo-Karakallio, Laaksolahti, Viherlaakso-Lippajärvi,
 # Sepänkylä
@@ -738,9 +736,9 @@ espPohjoisespoo = ["02970", # Kalajärvi
 #postal[postal.posti_alue.isin(espPohjoisespoo)].plot()
 
 # All of Espoo
-postal[postal.posti_alue.isin(espLeppavaara + espTapiola + espMatinkyla +
-                              espEspoonlahti + espKauklahti + espVanhaespoo +
-                              espPohjoisespoo)].plot()
+#postal[postal.posti_alue.isin(espLeppavaara + espTapiola + espMatinkyla +
+#                              espEspoonlahti + espKauklahti + espVanhaespoo +
+#                              espPohjoisespoo)].plot()
 
 # Kauniainen
 kauniainen = ["02700"]
@@ -819,12 +817,16 @@ vanHakunila = ["01200", # Hakunila
 
 
 # All of Vantaa
-postal[postal.posti_alue.isin(vanMyyrmaki + vanKivisto + vanAviapolis +
-                              vanTikkurila + vanKoivukyla + vanKorso +
-                              vanHakunila)].plot()
+#postal[postal.posti_alue.isin(vanMyyrmaki + vanKivisto + vanAviapolis +
+#                              vanTikkurila + vanKoivukyla + vanKorso +
+#                              vanHakunila)].plot()
 
 
-# Insert "suurpiiri" (we'll call them subdivisions) information to records
+
+# Insert subvision names
+
+# Insert column for "suurpiiri" (we'll call them subdivisions) information 
+# to records
 records["subdiv"] = 0
 
 # This dictionary helps assigning postal codes to dataframe records
@@ -869,7 +871,7 @@ for varname, fullname in subdiv_dict.items():
 #####################
 
 # data to csv for R. "pythonrecords.csv"
-records.to_csv(wd + "records.csv")
+records.to_csv(wd + "records.csv", encoding="Windows-1252")
 postal.to_csv(wd + "postal.csv", encoding="Windows-1252")
 
 
@@ -1111,10 +1113,22 @@ sns.distplot(records.parktime)
 
 # adv
 f, ax = plt.subplots(figsize=(11,9))
-sns.distplot(records[records.parkspot == 1].parktime, ax=ax, label='side of street')
-sns.distplot(records[records.parkspot == 2].parktime, ax=ax, label='parking lot')
-sns.distplot(records[records.parkspot == 3].parktime, ax=ax, label='parking gara')
-sns.distplot(records[records.parkspot == 4].parktime, ax=ax, label='priva/reserve')
+
+sns.distplot(records[records.parkspot == 1].parktime, 
+             ax=ax, 
+             label='side of street')
+
+sns.distplot(records[records.parkspot == 2].parktime, 
+             ax=ax, 
+             label='parking lot')
+
+sns.distplot(records[records.parkspot == 3].parktime, 
+             ax=ax, 
+             label='parking gara')
+sns.distplot(records[records.parkspot == 4].parktime, 
+             ax=ax, 
+             label='priva/reserve')
+
 plt.title('parktime Distribution for parkspot')
 plt.legend()
 
