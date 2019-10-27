@@ -31,7 +31,7 @@ import scipy.stats as stats
 from scipy.stats import levene
 from statsmodels.formula.api import ols 
 import statsmodels.api as sm
-import jenkspy
+#import jenkspy
 #import mapclassify #scheme="fisher_jenks" needs mapclassify
 
 
@@ -73,7 +73,7 @@ ykr_vyoh = gpd.overlay(ykr_vyoh,
 # From Urban Atlas 2012 preserve only forests. Select only relevant area for
 # this study
 forest = gpd.read_file(r"FI001L3_HELSINKI\ua2012_research_area.shp", 
-                       encoding='utf-8')
+                       encoding="utf-8")
 forest = forest[forest["ITEM2012"] == "Forests"]
 
 
@@ -117,7 +117,7 @@ visitors = visitors.drop([3753])
 muns = ["091", "049", "092", "235"]
 postal = gpd.read_file(r"paavo\2019\pno_tilasto_2019.shp", encoding="utf-8")
 postal = postal[postal.kunta.isin(muns)]
-postal = postal.reset_index().drop(columns=["index"])
+postal = postal.reset_index().drop(columns=["index", "euref_x", "euref_y"])
 
 # In the traditional travel time matrix all parking took 0.42 minutes. The
 # team used the bounding box below to define an area in center of Helsinki
@@ -473,9 +473,9 @@ records = pd.merge(records, postal[["zipcode","ua_forest"]], on="zipcode")
 postal = postal.rename(columns={"zipcode": "posti_alue"})
     
 # Calculate jenks breaks for ua_forest. Use breaks to reclassify values
-# in records,
-#http://qingkaikong.blogspot.com/2018/04/python-jenks-natural-breaks.htmlte
-breaks = jenkspy.jenks_breaks(records["ua_forest"], nb_class=5)
+# in records. We will use code created by GitHub user Drewda. This is now
+# commented because calculation time takes about 20 seconds
+#breaks = getJenksBreaks(records["ua_forest"].tolist(), 5)
 
 # See the breaks on plot
 #plt.figure(figsize = (10, 8))
@@ -483,8 +483,8 @@ breaks = jenkspy.jenks_breaks(records["ua_forest"], nb_class=5)
 #for b in breaks:
 #    plt.vlines(b, ymin=0, ymax = max(hist[0]))
 
-# Reclassify using this clumsy nested np.where(). Use values calculated by 
-# jenkspy
+# Reclassify using this clumsy nested np.where(). Use values calculated in
+# getJenksBreaks()
 records["ua_forest"] = np.where(
         records["ua_forest"] < 0.062,
         "Scarce forest", 
@@ -512,17 +512,19 @@ largestYkr = largestYkr.rename(columns={"posti_alue": "zipcode",
 # zipcodes
 records = pd.merge(records, largestYkr, on="zipcode")
 
-
-
-#####################
-### EXPORT TO CSV ###
-#####################
-
-# data to csv for R. "pythonrecords.csv"
-records.to_csv(wd + "records.csv")
-postal.to_csv(wd + "postal.csv", encoding="Windows-1252")
-
-
+# Rename ykr zone records to human readable versions
+for idx, row in enumerate(records.iterrows()):
+    
+    for realname, abbr in dictKey.items():
+        
+        if row[1].ykr_zone == abbr:
+            records.loc[idx, "ykr_zone"] = realname
+            print("check")
+        
+        elif row[1].ykr_zone == "ykr_novalue":
+            records.loc[idx, "ykr_zone"] = "novalue"
+        
+    
 
 ################################
 ### Divisions by postal code ###
@@ -532,7 +534,7 @@ postal.to_csv(wd + "postal.csv", encoding="Windows-1252")
 # Piirijako
 # https://www.avoindata.fi/data/fi/dataset/helsinki-alueittain/resource/9e197c6a-1882-4ad9-a50b-9dc7c49cb75a
 
-# Eteläinen
+# Southern subdivision
 hkiSouth = ["00250", # Taka-Töölö 
             "00260", # Keski-Töölö
             "00100", # Helsinki keskusta - Etu-Töölö
@@ -544,10 +546,12 @@ hkiSouth = ["00250", # Taka-Töölö
             "00130", # Kaartinkaupunki
             "00140", # Kaivopuisto-Ullanlinna
             "00160", # Katajanokka
+            "00150", # Eira-Hernesaari
+            "00190", # Suomenlinna
             "00170"] # Kruununhaka
-postal[postal.posti_alue.isin(hkiSouth)].plot()
+#postal[postal.posti_alue.isin(hkiSouth)].plot()
 
-# Läntinen suurpiiri: 
+# Western subdivision
 hkiWest = ["00290", # Meilahden sairaala-alue
            "00270", # Pohjois-Meilahti
            "00280", # Ruskeasuo
@@ -555,6 +559,7 @@ hkiWest = ["00290", # Meilahden sairaala-alue
            "00350", # Munkkivuori-Niemenmäki
            "00310", # Kivihaka
            "00320", # Etelä-Haaga
+           "00340", # Kuusisaari-Lehtisaari
            "00400", # Pohjois-Haaga
            "00380", # Pitäjänmäen teollisuusalue
            "00360", # Pajamäki
@@ -565,9 +570,9 @@ hkiWest = ["00290", # Meilahden sairaala-alue
            "00420", # Kannelmäki
            "00430", # Maununneva
            "00300"] # Pikku Huopalahti
-postal[postal.posti_alue.isin(hkiWest)].plot()
+#postal[postal.posti_alue.isin(hkiWest)].plot()
 
-# Keskinen
+# Central (Keskinen) subdivision
 hkiCentral = ["00230", # Ilmala 
              "00240", # Länsi-Pasila 
              "00610", # Käpylä 
@@ -580,9 +585,9 @@ hkiCentral = ["00230", # Ilmala
              "00530", # Kallio
              "00540", # Kalasatama
              "00580"] # Verkkosaari
-postal[postal.posti_alue.isin(hkiCentral)].plot()
+#postal[postal.posti_alue.isin(hkiCentral)].plot()
 
-# Pohjoinen
+# Norther subdivision
 hkiNorth = ["00690", # Tuomarinkylä-Torpparinmäki 
             "00670", # Paloheinä
             "00660", # Länsi-Pakila
@@ -591,9 +596,9 @@ hkiNorth = ["00690", # Tuomarinkylä-Torpparinmäki
             "00620", # Metsälä-Etelä-Oulunkylä
             "00650", # Veräjämäki
             "00640"] # Oulunkylä-Patola
-postal[postal.posti_alue.isin(hkiNorth)].plot()
+#postal[postal.posti_alue.isin(hkiNorth)].plot()
 
-# Koillinen
+# Northeastern subdivision
 hkiNortheast = ["00740", # Siltamäki
                 "00750", # Puistola
                 "00760", # Suurmetsä
@@ -604,9 +609,9 @@ hkiNortheast = ["00740", # Siltamäki
                 "00710", # Pihlajamäki
                 "00790", # Viikki
                 "00700"] # Malmi
-postal[postal.posti_alue.isin(hkiNortheast)].plot()
+#postal[postal.posti_alue.isin(hkiNortheast)].plot()
 
-# Kaakkoinen
+# Southeastern subdivision
 hkiSoutheast = ["00800", # Länsi-Herttoniemi 
                 "00880", # Roihupellon teollisuusalue
                 "00820", # Roihuvuori
@@ -618,9 +623,9 @@ hkiSoutheast = ["00800", # Länsi-Herttoniemi
                 "00850", # Jollas
                 "00860", # Santahamina                
                 "00840"] # Laajasalo
-postal[postal.posti_alue.isin(hkiSoutheast)].plot()
+#postal[postal.posti_alue.isin(hkiSoutheast)].plot()
 
-# Itäinen
+# Eastern subdivision
 hkiEast = ["00940", # Kontula
            "00970", # Mellunmäki
            "00920", # Myllypuro
@@ -631,17 +636,17 @@ hkiEast = ["00940", # Kontula
            "00900", # Puotinharju 
            "00910", # Puotila            
            "00930"] # Itäkeskus-Marjaniemi
-postal[postal.posti_alue.isin(hkiEast)].plot()
+#postal[postal.posti_alue.isin(hkiEast)].plot()
 
-# Östersundom
+# Östersundom subdivision
 hkiOster = ["00890"] # Östersundom
-postal[postal.posti_alue.isin(hkiOster)].plot()
+#postal[postal.posti_alue.isin(hkiOster)].plot()
 
 
-# All of the centers
-postal[postal.posti_alue.isin(hkiSouth + hkiWest + hkiCentral + hkiNorth +
-                              hkiNortheast + hkiSoutheast + hkiEast +
-                              hkiOster)].plot()
+# All of the centers in Helsinki
+#postal[postal.posti_alue.isin(hkiSouth + hkiWest + hkiCentral + hkiNorth +
+#                              hkiNortheast + hkiSoutheast + hkiEast +
+#                              hkiOster)].plot()
 
 
 # Espoo
@@ -649,7 +654,15 @@ postal[postal.posti_alue.isin(hkiSouth + hkiWest + hkiCentral + hkiNorth +
 # See Excel sheet for exact place names
 # Suur-, tilasto- ja pienalueiden nimet 1.1.2014
     
-#Suur-Leppävaara
+# Some postal code areas contain localities which are in conflict with the
+# subdivisions. For example, zipcode Lippajärvi-Järvenperä 02940 contains
+# localities Högnäs (belongs to Vanha-Espoo), Lippajärvi (belongs to Suur-
+# Leppävaara). In these cases I will use my own deliberation for
+# classification. The main problem areas are just south and north of Kauniainen
+# (for example Lippajärvi-Järvenperä and Sepänkylä-Kuurinniitty) and just 
+# south of Helsinki-Vantaa airport.
+
+#Suur-Leppävaara subdivision
 # Kanta-Leppävaara, Kilo-Karakallio, Laaksolahti, Viherlaakso-Lippajärvi,
 # Sepänkylä
 espLeppavaara = ["02620", # Karakallio
@@ -662,14 +675,11 @@ espLeppavaara = ["02620", # Karakallio
                  "02730", # Jupperi
                  "02630", # Nihtisilta
                  "02680"] # Uusmäki
-# Konfliktit!
-# Sepänkylä(kuuluu)-Kuurinniitty 02750
-# Lippajärvi(kuuluu)-Järvenperä 02940
-postal[postal.posti_alue.isin(espLeppavaara)].plot()
+#postal[postal.posti_alue.isin(espLeppavaara)].plot()
 
-#Suur-Tapiola
+#Suur-Tapiola subdivision
 # Kanta-Tapiola, Otaniemi, Haukilahti-Westend, Mankkaa, Laajalahti
-espTapiola = ["02710", # Haukilahti
+espTapiola = ["02170", # Haukilahti
               "02140", # Laajalahti
               "02180", # Mankkaa
               "02200", # Niittykumpu
@@ -679,20 +689,18 @@ espTapiola = ["02710", # Haukilahti
               "02110", # Otsolahti
               "02120", # Länsikorkee-Suvikumpu
               "02160"] # Westend
-postal[postal.posti_alue.isin(espTapiola)].plot()
-# Konfliktit
-# Ruukinranta kuuluu Etelä-Leppävaaraan
+#postal[postal.posti_alue.isin(espTapiola)].plot()
 
-#Suur-Matinkylä
+#Suur-Matinkylä subdivision
 # Matinkylä, Olari, Henttaa-Suurpelto
 espMatinkyla = ["02250", # Henttaa
                 "02240", # Friisilä
                 "02210", # Olari
-                "02290", # Puolarmetsän sairaala, oma lisäys
+                "02290", # Puolarmetsän sairaala, own placement
                 "02230"] # Matinkylä
-postal[postal.posti_alue.isin(espMatinkyla)].plot()
+#postal[postal.posti_alue.isin(espMatinkyla)].plot()
 
-#Suur-Espoonlahti
+#Suur-Espoonlahti subdivision
 # Kanta-Espoonlahti, Saunalahti, Nöykkiö-Latokaski, Kaitaa, Suvisaaristo
 espEspoonlahti = ["02320", # Espoonlahti
                   "02360", # Soukka
@@ -703,49 +711,43 @@ espEspoonlahti = ["02320", # Espoonlahti
                   "02260", # Kaitaa
                   "02280", # Malminmäki-Eestinlaakso
                   "02380"] # Suvisaaristo
-postal[postal.posti_alue.isin(espEspoonlahti)].plot()
-# Konfliktit
-# Saunaniemi kuuluu Kauklahteen
+#postal[postal.posti_alue.isin(espEspoonlahti)].plot()
 
-#Suur-Kauklahti 
+#Suur-Kauklahti subdivision
 # Kanta-Kauklahti, Kurttila-Vanttila
 espKauklahti = ["02780"] # Kauklahti and all others
-postal[postal.posti_alue.isin(espKauklahti)].plot()
+#postal[postal.posti_alue.isin(espKauklahti)].plot()
 
-#Vanha-Espoo
+#Vanha-Espoo subdivision
 # Kanta-Espoo, Muurala-Gumböle, Bemböle, Nuuksio-Nupuri
 espVanhaespoo = ["02770", # Espoon keskus
                  "02810", # Gumböle-Karhusuo
                  "02820", # Nupuri-Nuuksio
                  "02760", # Tuomarila-Suvela
+                 "02940", # Lippajärvi-Järvenperä, own placement
                  "02740", # Bemböle-Pakankylä
+                 "02750", # Sepänkylä-Kuurinniitty, own placement
                  "02860"] # Siikajärvi
-postal[postal.posti_alue.isin(espVanhaespoo)].plot()
-# Konfliktit
-# Ymmersta+Kuurinniitty kuuluu Sepänkylä-Kuurinniittyyn
-# Järvenperä+Högnäs kuuluu Lippajärvi-Järvenperään
+#postal[postal.posti_alue.isin(espVanhaespoo)].plot()
 
-#Pohjois-Espoo
+#Pohjois-Espoo subdivision
 # Vanhakartano-Röylä, Kalajärvi-Lakisto
 espPohjoisespoo = ["02970", # Kalajärvi
                    "02920", # Niipperi
                    "02980"] # Lakisto
-postal[postal.posti_alue.isin(espPohjoisespoo)].plot()
-# Konfliktit
-# Röylä kuuluu Lippajärvi-Järvenperään
+#postal[postal.posti_alue.isin(espPohjoisespoo)].plot()
 
 # All of Espoo
 postal[postal.posti_alue.isin(espLeppavaara + espTapiola + espMatinkyla +
                               espEspoonlahti + espKauklahti + espVanhaespoo +
                               espPohjoisespoo)].plot()
 
-
-# Remember Kauniainen
-
+# Kauniainen
+kauniainen = ["02700"]
 
 # Vantaa
 # https://www.vantaa.fi/instancedata/prime_product_julkaisu/vantaa/embeds/vantaawwwstructure/124282_Vantaa_alueittain_2015.pdf
-# Myyrmäen
+# Myyrmäki subdivision
 # Linnainen, Hämevaara, Hämeenkylä, Vapaala, Varisto, Myyrmäki, Kaivoksela,
 # Martinlaakso, Vantaanlaakso, Askisto, Petikko
 vanMyyrmaki = ["01600", # Myyrmäki
@@ -759,71 +761,116 @@ vanMyyrmaki = ["01600", # Myyrmäki
                "01680", # Askisto
                "01710", # Pähkinärinne
                "01720", # Petikko
-               "01770"] # Martinlaakson teollisuusalue, omalisäys
-postal[postal.posti_alue.isin(vanMyyrmaki)].plot()
+               "01770"] # Martinlaakson teollisuusalue, own placement
+#postal[postal.posti_alue.isin(vanMyyrmaki)].plot()
 
-# Kivistön
+# Kivistö subdivision
 # Piispankylä, Keimola, Kivistö, Lapinkylä, Myllymäki, Vestra, Luhtaanmäki,
 # Riipilä, Seutula, Kiila
 vanKivisto = ["01700", # Kivistö
               "01730", # Vantaanpuisto
               "01750", # Keimola
               "01760"] # Seutula
-postal[postal.posti_alue.isin(vanKivisto)].plot()
+#postal[postal.posti_alue.isin(vanKivisto)].plot()
 
 # Aviapoliksen
 # Ylästö, Viinikkala, Tammisto, Pakkala, Veromies, Lentokenttä
 vanAviapolis = ["01520", # Tammisto
                 "01530", # Veromiehenkylä
                 "01690", # Ylästö
+                "01510", # Kirkonkylä-Veromäki, my own placement
                 "01740"] # Tuupakan teollisuusalue
-postal[postal.posti_alue.isin(vanAviapolis)].plot()
-#konflikt
-# Pakkala kuuluu Kirkonkylä-Veromäkeen
+#postal[postal.posti_alue.isin(vanAviapolis)].plot()
 
-# Tikkurilan
+# Tikkurila subdivision
 # Hiekkaharju, Tikkurila, Jokiniemi, Viertola, Kuninkaala, Simonkylä,
 # Hakkila, Ruskeasanta, Koivuhaka, Helsingin pitäjän kirkonkylä
 vanTikkurila = ["01300", # Tikkurila
                 "01350", # Hiekkaharju
                 "01370", # Jokiniemi
                 "01380"] # Kuusikko-Hakkila
-postal[postal.posti_alue.isin(vanTikkurila)].plot()
-# Konflikt
-# Ruskeasanta kuuluu Ruskeasanta-Ilolaan
-# Helsingin pitäjän kirkonkylä+Koivuhaka kuuluu Kirkonkylä-Veromäkeen
+#postal[postal.posti_alue.isin(vanTikkurila)].plot()
 
-
-# Koivukylän
+# Koivukylä subdivision
 # Koivukylä, Ilola, Asola, Rekola, Havukoski, Päiväkumpu
 vanKoivukyla = ["01360", # Koivukylä-Havukoski
                 "01400", # Rekola
-                "01340", # Leinelä, omalisäys
+                "01340", # Leinelä, my own placement
+                "01390", # Ruskeasanta-Ilola, my own placement
                 "01420"] # Päiväkumpu
-postal[postal.posti_alue.isin(vanKoivukyla)].plot()
-# Konflikt
-# Ilola kuuluu Ruskeasanta-Ilolaan
+#postal[postal.posti_alue.isin(vanKoivukyla)].plot()
 
-# Korson
+# Korso subdivision
 # Matari, Korso, Mikkola, Metsola, Leppäkorpi, Jokivarsi, Nikinmäki, Vierumäki,
 # Vallinoja
 vanKorso = ["01450", # Korso
             "01480"] # Mikkola
-postal[postal.posti_alue.isin(vanKorso)].plot()
+#postal[postal.posti_alue.isin(vanKorso)].plot()
 
-# Hakunilan
+# Hakunila subdivision
 # Länsisalmi, Länsimäki, Ojanko, Vaarala, Hakunila, Rajakylä, Itä-Hakkila,
 # Kuninkaanmäki, Sotunki
 vanHakunila = ["01200", # Hakunila
                "01230", # Vaarala
                "01260", # Itä-Hakkila
                "01280"] # Länsimäki
-postal[postal.posti_alue.isin(vanHakunila)].plot()
+#postal[postal.posti_alue.isin(vanHakunila)].plot()
+
+
 
 # All of Vantaa
 postal[postal.posti_alue.isin(vanMyyrmaki + vanKivisto + vanAviapolis +
                               vanTikkurila + vanKoivukyla + vanKorso +
                               vanHakunila)].plot()
+
+
+# Insert "suurpiiri" (we'll call them subdivisions) information to records
+records["subdiv"] = 0
+
+# This dictionary helps assigning postal codes to dataframe records
+subdiv_dict = {"hkiSouth": "Helsinki Southern",
+               "hkiWest": "Helsinki Western",
+               "hkiCentral": "Helsinki Central",
+               "hkiNorth": "Helsinki Northern",
+               "hkiNortheast": "Helsinki Northeastern",
+               "hkiSoutheast": "Helsinki Southeastern",
+               "hkiEast": "Helsinki Eastern",
+               "hkiOster": "Helsinki Östersundom",
+               "espLeppavaara": "Espoo Suur-Leppävaara",
+               "espTapiola": "Espoo Suur-Tapiola",
+               "espMatinkyla": "Espoo Suur-Matinkylä",
+               "espEspoonlahti": "Espoo Suur-Espoonlahti",
+               "espKauklahti": "Espoo Suur-Kauklahti",
+               "espVanhaespoo": "Espoo Vanha-Espoo",
+               "espPohjoisespoo": "Espoo Pohjois-Espoo",
+               "vanMyyrmaki": "Vantaa Myyrmäki",
+               "vanKivisto": "Vantaa Kivistö",
+               "vanAviapolis": "Vantaa Aviapolis",
+               "vanTikkurila": "Vantaa Tikkurila",
+               "vanKoivukyla": "Vantaa Koivukylä",
+               "vanKorso": "Vantaa Korso",
+               "vanHakunila": "Vantaa Hakunila",
+               "kauniainen": "Kauniainen"}
+
+# Using dictionary subdiv_dict and lists of zipcodes, assign subdivision names
+# to dataframe records.
+for varname, fullname in subdiv_dict.items():
+
+    for idx, row in enumerate(records.iterrows()):
+        thisZip = row[1].zipcode
+        
+        if thisZip in eval(varname):
+            records.loc[idx, "subdiv"] = fullname
+    
+
+
+#####################
+### EXPORT TO CSV ###
+#####################
+
+# data to csv for R. "pythonrecords.csv"
+records.to_csv(wd + "records.csv")
+postal.to_csv(wd + "postal.csv", encoding="Windows-1252")
 
 
 
@@ -850,10 +897,10 @@ parkingPlot(postal, "dens_answ", 1) #PLOT ratio answercount to popdensity
 ########################################################
 fig, ax = plt.subplots()
 ax.plot_date(visitors["ts_first"], visitors.index)
-ax.annotate('local max', 
+ax.annotate("local max", 
             xy=("2019-05-22", 191), 
             xytext=("2019-05-30", 1500),
-            arrowprops=dict(facecolor='black', shrink=0.05),)
+            arrowprops=dict(facecolor="black", shrink=0.05), )
 plt.grid(True)
 plt.tight_layout()
 plt.show()
