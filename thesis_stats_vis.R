@@ -44,6 +44,7 @@ library(onewaytests)
 library(car)
 library(plotrix)
 library(moments)
+library(tcltk)
 
 
 
@@ -116,87 +117,13 @@ GetANOVA(walktime ~ timeofday, thesisdata$walktime, thesisdata$timeofday,
 GetANOVA(parktime ~ parkspot, thesisdata$parktime, thesisdata$parkspot,
          thesisdata, c(1, 2, 3, 4))
 
+# parktime by subdivision
+GetANOVA(parktime ~ subdiv, thesisdata$parktime, thesisdata$subdiv,
+         thesisdata, c(1, 2, 3, 4))
 
-
-#### Descriptive statistics ####
-
-# In SPSS, follow these steps to get equal results
-# SPSS -> Analyze -> Compare means --> One-way anova 
-# In "Options" select: Descriptive, Homogeinity of variance test (Levene), 
-# Brown-Forsythe
-
-# One-way anova descriptives, describe()
-# Order of columns in SPSS: "N", "Mean", "Std. Deviation", "Std. Error",
-# "95 % Confidence Interval for Mean" ("Lower Bound", "Upper Bound"), "Minimum",
-# "Maximum"
-desc <- describe(walktime ~ timeofday, thesisdata[-c(1,2,3,4)])
-
-### Std. Error
-# clumsily calculate mean, so that we can preserve column names in the next
-# phase
-stder <- aggregate(walktime ~ timeofday, data = thesisdata,
-                   FUN = function(x) c(mean = mean(x), "Std.Error" = std.error(x)))
-
-# Remove column mean 
-stder <- subset(stder[[2]], select = -mean)
-desc <- cbind(desc, stder)
-
-# Confidence intervals for mean
-confs <- aggregate(
-        walktime ~ timeofday, data = thesisdata, 
-        FUN = function(x) c("CI for mean, Lower Bound" = mean(x) - 2 * std.error(x), 
-                            "CI for mean, Upper Bound" = mean(x) + 2 * std.error(x)))
-confs <- confs[[2]]
-desc <- cbind(desc, confs)
-
-# Reorder to SPSS order
-desc <- desc[c("n", "Median", "Mean", "Std.Dev", "Std.Error", 
-               "CI for mean, Lower Bound", "CI for mean, Upper Bound", "Min", 
-               "Max", "25th", "75th", "Skewness", "Kurtosis", "NA")]
-
-# Add total row. We will add total values for all columns in this inconvenient
-# manner.
-vect <- c()
-vect[1] <- sapply(1, function(x) sum(desc[, x]))
-vect[2] <- sapply(2, function(x) median(desc[, x]))
-vect[3] <- sapply(3, function(x) mean(desc[, x]))
-vect[4] <- sd(thesisdata$walktime)
-vect[5] <- std.error(thesisdata$walktime)
-vect[6] <- mean(thesisdata$walktime) - 2 * std.error(thesisdata$walktime)
-vect[7] <- mean(thesisdata$walktime) + 2 * std.error(thesisdata$walktime)
-vect[8] <- min(thesisdata$walktime)
-vect[9] <- max(thesisdata$walktime)
-vect[10] <- quantile(thesisdata$walktime)[2]
-vect[11] <- quantile(thesisdata$walktime)[4]
-vect[12] <- skewness(thesisdata$walktime)
-vect[13] <- kurtosis(thesisdata$walktime)
-vect[13] <- sapply(14, function(x) sum(is.na(desc[, x])))
-
-# Add all values vector to desc, then name the new row and round all values in
-# desc.
-desc <- rbind(desc, vect)
-row.names(desc)[5] <- "Total"
-desc <- round(desc, 3)
-
-
-
-#### Levene test ####
-levene <- leveneTest(walktime ~ timeofday, thesisdata, center = mean) #car
-
-#### One-way ANOVA ####
-res.aov <- aov(walktime ~ timeofday, data = thesisdata)
-anovares <- summary(res.aov)
-
-#### Brown-Forsythe test #### 
-# Need to remove first four columns for this to work
-brownf <- bf.test(walktime ~ timeofday, data = thesisdata[-c(1,2,3,4)])
-
-
-cat("Descriptive Statistics")
-print(desc)
-print(levene)
-print(anovares)
-bf.test(walktime ~ timeofday, data = thesisdata[-c(1,2,3,4)])
+# walktime by ykr zone
+GetANOVA(walktime ~ ykr_zone, thesisdata$walktime, thesisdata$ykr_zone,
+         thesisdata, c(1, 2, 3, 4))
 
 
 
@@ -204,19 +131,161 @@ bf.test(walktime ~ timeofday, data = thesisdata[-c(1,2,3,4)])
 
 
 
-#### Kruskal Wallis test ####
-# "The most common use of the Kruskal-Wallis test is when you have one nominal 
-# variable and one measurement variable"
+# Tcl tk is so hard
+# Try a tcktk window solution to printing, highly experimental
+desc <- describe(walktime ~ timeofday, thesisdata[-c(1, 2, 3, 4)])
 
-# http://www.biostathandbook.com/kruskalwallis.html
-# measurement variable ~ nominal variable
-kruskal.test(parktime ~ parkspot, data = thesisdata)
+tt <- tktoplevel()
+txtWidget <- tktext(tt, height=75, width=200)
+tkpack(txtWidget)
+tkinsert(txtWidget, 
+         "end", 
+         paste("\n--------------------------\n# Descriptive Statistics #",
+               "\n--------------------------\n",
+               "If N is distributed somewhat equally, Levene test is not required.",
+               "\n",
+               desc),
+         collapse="\n")
 
-# anova
-anova(lm(parktime ~ likert, data = thesisdata))
 
-# chi-square test EI TOIMI
-chisq.test(table(thesisdata$walktime, thesisdata$likert))
+
+# 2
+# THIS WAS HARD!
+
+# https://tkdocs.com/tutorial/grid.html
+# https://www.tutorialspoint.com/tcl-tk/tk_text_widget.htm
+# https://stackoverflow.com/a/32724993/9455395
+# https://stackoverflow.com/a/2398906/9455395
+# https://www.tcl.tk/community/hobbs/tcl/capp/tkTable/tkTable.html
+# https://stackoverflow.com/a/48361639/9455395
+# https://stat.ethz.ch/pipermail/r-help/2003-July/036982.html
+# https://www.tutorialspoint.com/tcl-tk/tk_widgets_overview.htm
+# https://www.mishcon.com/assets/managed/docs/downloads/doc_2322/tkref803-bklt-ltr.pdf
+
+require(tcltk)
+tclRequire("Tktable")
+
+toTclArray <- function(dsn, dig = 2) {
+        
+  # http://r.789695.n4.nabble.com/Tck-tk-help-td1837711.html
+  # Converts Data Frame/Matrix to a Tcl Array for Use in Displaying Tables 
+  # dsn is the data set name 
+  # dig is the number of digits to round to
+        
+  tclarray1 <- tclArray() 
+  
+  # iterate rows
+  for (row_id in 0:(dim(dsn)[1])) {
+          
+    # iterate columns
+    for (col_id in 0:(dim(dsn)[2] - 1)) {
+            
+      # First row is set to column names to be used as labels 
+      if (row_id == 0) {
+              
+        # col_id + 1 makes sure the first row is for rownames
+        tclarray1[[row_id, col_id + 1]] <- colnames(dsn)[col_id + 1] # new +1!
+
+      } else {
+        tem <- dsn[row_id, col_id + 1]
+        
+        # Generate rownames as ordinary cells
+        if(col_id == 0) {
+          tclarray1[[row_id, col_id]] <- rownames(desc)[row_id]
+        }
+        
+        # col_id + 1 make sure the first row is for rownames
+        tclarray1[[row_id, col_id + 1]] <- ifelse(is.na(tem), ".", # new +1!
+                                                  ifelse(is.numeric(tem),
+                                                         round(tem, digits = dig),
+                                                         as.character(tem)))
+      }
+    }
+  }
+  return (tclarray1) 
+}
+
+temptable <- toTclArray(desc)
+
+
+
+root <- tktoplevel()
+tktitle(tt) <- "jeejee"
+frame <- tkframe(root, borderwidth = 5, relief = "sunken", width = 200, height = 500)
+namelabel <- tklabel(root,
+                     text = paste("--------------------------\n# Descriptive Statistics #",
+                                  "\n--------------------------\n",
+                                  "If N is distributed somewhat equally, Levene test is not required."))
+table1 <- tkwidget(root, "table",
+                   width = 4500,
+                   height = 2200,
+                   variable = temptable,
+                   rows = dim(desc)[1] + 1,
+                   cols = dim(desc)[2],
+                   titlerows = 1,
+                   titlecols = 1,
+                   colstretchmode = "all",
+                   state = "disabled", # prevent editing of data
+                   selectmode = "extended",
+                   resizeborders = "none", # prevent resizing
+                   colwidth = 10)
+
+# txtWidget <- tktext(root,
+#                     height = 6, 
+#                     width = 80,
+#                     relief = "flat",
+#                     background = "lightgrey")
+# tkinsert(txtWidget,
+#          "end",
+#          paste("--------------------------\n# Descriptive Statistics #",
+#                "\n--------------------------\n",
+#                "If N is distributed somewhat equally, Levene test is not required."),
+#          collapse="\n")
+
+tkgrid(namelabel, 
+       column = 0, 
+       row = 0)
+
+# tkgrid(txtWidget,
+#        column = 0,
+#        row = 0,
+#        pady = 5,
+#        padx = 5)
+
+tkgrid(table1,
+       column = 0,
+       row = 1,
+       pady = 20,
+       padx = 30)
+
+# Change color of cell
+tcl(table1, "tag", "celltag", "OneOne", "1,1")
+tcl(table1, "tag", "configure", "OneOne", background="red")
+
+# try to resize specific column
+#tcl(table1, "tag", "coltag", "col0", "1")
+#tcl(table1, "tag", "configure", "col0", background="blue")
+
+# try to resize specific column
+tcl(table1, "tag", "coltag", "col0", "1")
+tcl(table1, "tag", "configure", "col0", borderwidth=3)
+
+# try to resize specific column
+tcl(table1, "tag", "coltag", "col03", "1")
+tcl(table1, "tag", "cget", "col03", "configure")
+#tcl(table1, "tag", "configure", "col03", cget=3)
+
+
+
+# KableExtra
+
+library(knitr)
+library(kableExtra)
+
+desc %>%
+  kable() %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", 
+                                      "responsive"))
 
 
 
@@ -235,7 +304,7 @@ barplot(table(thesisdata$likert, thesisdata$parkspot), beside = T,
         args.legend = list(x = 30, y = 1000, cex = 0.8),
         col = c("pink", "light blue", "red", "blue", "green"))
 
-# How time of day compared to parkspot
+# time of day compared to parkspot
 barplot(table(thesisdata$timeofday, thesisdata$parkspot), beside = T,
         cex.names = 0.7, 
         names = c("Side of the road", "lot", "garage", "reserved/private", 
@@ -245,7 +314,7 @@ barplot(table(thesisdata$timeofday, thesisdata$parkspot), beside = T,
         args.legend = list(x = 25, y = 900, cex = 0.8),
         col = c("pink", "light blue", "red", "blue"))
 
-# How parktime compared to timeofday
+# parktime compared to timeofday
 barplot(table(thesisdata$parkspot, thesisdata$timeofday), beside = T,
         cex.names = 0.7, 
         names = c("Weekday, rush hour", "Weekday, other than rush hour", 
@@ -258,14 +327,14 @@ barplot(table(thesisdata$parkspot, thesisdata$timeofday), beside = T,
 
 
 #### Visualise 2 ####
-# Histograms
-hist(thesisdata$likert)
-hist(thesisdata$timeofday)
-hist(thesisdata$parkspot)
+# Histograms. Only works with numeric data
+hist(thesisdata$walktime)
+hist(thesisdata$parktime)
 
 
 
-# T-Test
+# Boxplots
+
 # parktime compared to likert
 boxplot(parktime ~ likert, 
         data = thesisdata, 
@@ -301,7 +370,3 @@ boxplot(walktime ~ timeofday,
         data = thesisdata, 
         names = c("Weekday, rush hour", "Weekday, other than rush hour", 
                   "Weekend", "None of the above, no usual time"))
-
-
-
-t.test(walktime ~ likert, data = thesisdata)
