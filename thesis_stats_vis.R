@@ -222,6 +222,17 @@ server <- function(input, output, session){
   bordered = TRUE,
   rownames = TRUE)
   
+  output$levene <- renderTable({
+    thisFormula <- as.formula(paste(input$resp, '~', input$expl))
+    inputdata <- thesisdata[!thesisdata[[colname]] %in% c(input$checkGroup), -c(1, 2, 3, 4)]
+    
+    levene <- leveneTest(thisFormula, inputdata, center = mean) #car
+    leveneVal <- levene[[3]][1]
+
+    t(as.data.frame(do.call(rbind, levene)))
+  }, digits = 6,
+  rownames = TRUE)
+  
   output$formu <- renderText({
     paste(input$resp, "~", input$expl, "lista:", input$checkGroup)
   })
@@ -251,7 +262,13 @@ ui <- shinyUI(fluidPage(
   
     mainPanel(
       h3("Descriptive statistics"),
+      br("If N is distributed somewhat equally, Levene test is not required."),
       tableOutput("descri"),
+      hr(),
+      h3("Test of Homogeneity of Variances"),
+      tableOutput("levene"),
+      br("---"),
+      br("Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1"),
       textOutput("formu"),
     )
   )
@@ -260,14 +277,24 @@ shinyApp(ui = ui, server = server, options = list("test.mode"))
 
 
 
+# LEVENETESTING
+obj <-  t.test(Group_A, Group_B)
 
+HTML(
+  paste0("t = ", round(levenet[[3]],3), '<br/>', 
+         "df = ", round(levenet[[2]],3), '<br/>',
+         "p-value = ", round(levenet[[3]],5))
+)
 
+levenet <- leveneTest(walktime ~ timeofday, thesisdata, center = mean)
+t(as.data.frame(do.call(rbind, levenet)))
 
+# signif star
+je2 <- read.table(textConnection(capture.output(levenet)[3]), fill = TRUE)
 
-
-
-
-
+# signif.codes
+je <- read.table(textConnection(capture.output(levenet)[6]), fill = TRUE)
+apply(je, 1, paste, collapse=" ")
 
 
 
