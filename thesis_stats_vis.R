@@ -156,6 +156,7 @@ server <- function(input, output, session){
     )
   })
 
+  # DESCRIPTIVE STATISTICS
   output$descri <- renderTable({
     
     # Render descriptive statistics
@@ -222,14 +223,38 @@ server <- function(input, output, session){
   bordered = TRUE,
   rownames = TRUE)
   
+  # LEVENE TEST
   output$levene <- renderTable({
+    
+    colname <- input$expl
     thisFormula <- as.formula(paste(input$resp, '~', input$expl))
-    inputdata <- thesisdata[!thesisdata[[colname]] %in% c(input$checkGroup), -c(1, 2, 3, 4)]
+    inputdata <- thesisdata[!thesisdata[[colname]] %in% c(input$checkGroup), ]
     
     levene <- leveneTest(thisFormula, inputdata, center = mean) #car
-    leveneVal <- levene[[3]][1]
+    #leveneVal <- levene[[3]][1]
 
-    t(as.data.frame(do.call(rbind, levene)))
+    # transpose
+    res <- t(as.data.frame(do.call(rbind, levene)))
+    
+    # get signif.star
+    signif_star <- read.table(textConnection(capture.output(levene)[3]), fill = TRUE)[[5]]
+    
+    # test if [[5]] has probability value in it. if so, get [[6]]
+    if (is.double(signif_star)) {
+      signif_star <- read.table(textConnection(capture.output(levene)[3]), fill = TRUE)[[6]]
+    }
+    
+    signif_star <- c(as.character(signif_star), NA)
+    res <- cbind(res, signif_star)
+    rownames(res) <- c("group", "NA")
+    
+    # signif.codes
+    #signig_codes <- read.table(textConnection(capture.output(levenet)[6]), fill = TRUE)
+    #signig_codes <- apply(signig_codes, 1, paste, collapse = " ")
+
+    # show
+    res
+    
   }, digits = 6,
   rownames = TRUE)
   
@@ -277,6 +302,9 @@ shinyApp(ui = ui, server = server, options = list("test.mode"))
 
 
 
+
+
+
 # LEVENETESTING
 obj <-  t.test(Group_A, Group_B)
 
@@ -286,15 +314,29 @@ HTML(
          "p-value = ", round(levenet[[3]],5))
 )
 
-levenet <- leveneTest(walktime ~ timeofday, thesisdata, center = mean)
-t(as.data.frame(do.call(rbind, levenet)))
+
+
+# test levene
+#levenet <- leveneTest(walktime ~ timeofday, thesisdata, center = mean)
+levenet <- leveneTest(parktime ~ parkspot, thesisdata, center = mean)
+
+leveneTest(
+  parktime ~ subdiv, 
+  thesisdata[!thesisdata$subdiv %in% c("Helsinki Southern", "Kauniainen", "Helsinki Northern", "Helsinki Western"),])
+leveneTest(parktime ~ subdiv, thesisdata)
+
+# transpose, add column
+jje <- t(as.data.frame(do.call(rbind, levenet)))
+#jje <- cbind(jje, c("**", NA))
 
 # signif star
-je2 <- read.table(textConnection(capture.output(levenet)[3]), fill = TRUE)
+je2 <- read.table(textConnection(capture.output(levenet)[3]), fill = TRUE)[[5]]
+je2 <- read.table(textConnection(capture.output(levenet)[3]), fill = TRUE)[[6]]
+je2 <- as.character(je2)
 
 # signif.codes
 je <- read.table(textConnection(capture.output(levenet)[6]), fill = TRUE)
-apply(je, 1, paste, collapse=" ")
+je <- apply(je, 1, paste, collapse=" ")
 
 
 
