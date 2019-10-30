@@ -44,8 +44,8 @@ library(onewaytests)
 library(car)
 library(plotrix)
 library(moments)
-library(tcltk)
-
+library(knitr)
+library(kableExtra)
 
 
 #### Preparation ####
@@ -131,161 +131,146 @@ GetANOVA(walktime ~ ykr_zone, thesisdata$walktime, thesisdata$ykr_zone,
 
 
 
-# Tcl tk is so hard
-# Try a tcktk window solution to printing, highly experimental
+
+# KableExtra test
+# https://cran.r-project.org/web/packages/kableExtra/vignettes/awesome_table_in_html.html
 desc <- describe(walktime ~ timeofday, thesisdata[-c(1, 2, 3, 4)])
 
-tt <- tktoplevel()
-txtWidget <- tktext(tt, height=75, width=200)
-tkpack(txtWidget)
-tkinsert(txtWidget, 
-         "end", 
-         paste("\n--------------------------\n# Descriptive Statistics #",
-               "\n--------------------------\n",
-               "If N is distributed somewhat equally, Levene test is not required.",
-               "\n",
-               desc),
-         collapse="\n")
 
 
 
-# 2
-# THIS WAS HARD!
 
-# https://tkdocs.com/tutorial/grid.html
-# https://www.tutorialspoint.com/tcl-tk/tk_text_widget.htm
-# https://stackoverflow.com/a/32724993/9455395
-# https://stackoverflow.com/a/2398906/9455395
-# https://www.tcl.tk/community/hobbs/tcl/capp/tkTable/tkTable.html
-# https://stackoverflow.com/a/48361639/9455395
-# https://stat.ethz.ch/pipermail/r-help/2003-July/036982.html
-# https://www.tutorialspoint.com/tcl-tk/tk_widgets_overview.htm
-# https://www.mishcon.com/assets/managed/docs/downloads/doc_2322/tkref803-bklt-ltr.pdf
+# TOIMII
+#https://shiny.rstudio.com/tutorial/written-tutorial/lesson4/
+#install.packages("shiny")
+library(shiny)
+library(stats)
 
-require(tcltk)
-tclRequire("Tktable")
+# ui = fluidPage(
+#   fluidRow(column(1, HTML(kable(desc))),
+#            column(24, HTML(kable(desc))))
+# )
+# shinyApp(ui = ui, server = server)
 
-toTclArray <- function(dsn, dig = 2) {
-        
-  # http://r.789695.n4.nabble.com/Tck-tk-help-td1837711.html
-  # Converts Data Frame/Matrix to a Tcl Array for Use in Displaying Tables 
-  # dsn is the data set name 
-  # dig is the number of digits to round to
-        
-  tclarray1 <- tclArray() 
+
+
+server <- function(input, output){
   
-  # iterate rows
-  for (row_id in 0:(dim(dsn)[1])) {
-          
-    # iterate columns
-    for (col_id in 0:(dim(dsn)[2] - 1)) {
-            
-      # First row is set to column names to be used as labels 
-      if (row_id == 0) {
-              
-        # col_id + 1 makes sure the first row is for rownames
-        tclarray1[[row_id, col_id + 1]] <- colnames(dsn)[col_id + 1] # new +1!
-
-      } else {
-        tem <- dsn[row_id, col_id + 1]
-        
-        # Generate rownames as ordinary cells
-        if(col_id == 0) {
-          tclarray1[[row_id, col_id]] <- rownames(desc)[row_id]
-        }
-        
-        # col_id + 1 make sure the first row is for rownames
-        tclarray1[[row_id, col_id + 1]] <- ifelse(is.na(tem), ".", # new +1!
-                                                  ifelse(is.numeric(tem),
-                                                         round(tem, digits = dig),
-                                                         as.character(tem)))
-      }
-    }
-  }
-  return (tclarray1) 
+  output$mytable <- renderTable({
+    describe(as.formula(paste(input$resp, '~', input$expl)), thesisdata[-c(1, 2, 3, 4)])
+  }, striped = TRUE,
+  hover = TRUE,
+  bordered = TRUE,
+  rownames = TRUE)
+  
+  output$formu <- renderText({
+    paste(input$resp, "~", input$expl)
+  })
 }
 
-temptable <- toTclArray(desc)
+ui <- shinyUI(fluidPage(
+  
+  titlePanel("thing"),
+  
+  sidebarLayout(
+    sidebarPanel(
+      
+      #walktime or parktime
+      selectInput("resp", 
+                 "response (continuous)", 
+                 names(thesisdata[-c(1, 2, 3, 4, 5, 6, 9, 10, 11, 12)])),
+     
+      # all others
+      selectInput("expl", 
+                 "explanatory (ordinal)", 
+                 names(thesisdata[-c(1, 2, 3, 4, 7, 8)]))
+    ),
+  
+    mainPanel(
+      h3("Descriptive statistics"),
+      tableOutput("mytable"),
+      textOutput("formu"),
+    )
+  )
+))
+
+shinyApp(ui = ui, server = server, options = list("test.mode"))
 
 
 
-root <- tktoplevel()
-tktitle(tt) <- "jeejee"
-frame <- tkframe(root, borderwidth = 5, relief = "sunken", width = 200, height = 500)
-namelabel <- tklabel(root,
-                     text = paste("--------------------------\n# Descriptive Statistics #",
-                                  "\n--------------------------\n",
-                                  "If N is distributed somewhat equally, Levene test is not required."))
-table1 <- tkwidget(root, "table",
-                   width = 4500,
-                   height = 2200,
-                   variable = temptable,
-                   rows = dim(desc)[1] + 1,
-                   cols = dim(desc)[2],
-                   titlerows = 1,
-                   titlecols = 1,
-                   colstretchmode = "all",
-                   state = "disabled", # prevent editing of data
-                   selectmode = "extended",
-                   resizeborders = "none", # prevent resizing
-                   colwidth = 10)
-
-# txtWidget <- tktext(root,
-#                     height = 6, 
-#                     width = 80,
-#                     relief = "flat",
-#                     background = "lightgrey")
-# tkinsert(txtWidget,
-#          "end",
-#          paste("--------------------------\n# Descriptive Statistics #",
-#                "\n--------------------------\n",
-#                "If N is distributed somewhat equally, Levene test is not required."),
-#          collapse="\n")
-
-tkgrid(namelabel, 
-       column = 0, 
-       row = 0)
-
-# tkgrid(txtWidget,
-#        column = 0,
-#        row = 0,
-#        pady = 5,
-#        padx = 5)
-
-tkgrid(table1,
-       column = 0,
-       row = 1,
-       pady = 20,
-       padx = 30)
-
-# Change color of cell
-tcl(table1, "tag", "celltag", "OneOne", "1,1")
-tcl(table1, "tag", "configure", "OneOne", background="red")
-
-# try to resize specific column
-#tcl(table1, "tag", "coltag", "col0", "1")
-#tcl(table1, "tag", "configure", "col0", background="blue")
-
-# try to resize specific column
-tcl(table1, "tag", "coltag", "col0", "1")
-tcl(table1, "tag", "configure", "col0", borderwidth=3)
-
-# try to resize specific column
-tcl(table1, "tag", "coltag", "col03", "1")
-tcl(table1, "tag", "cget", "col03", "configure")
-#tcl(table1, "tag", "configure", "col03", cget=3)
 
 
 
-# KableExtra
 
-library(knitr)
-library(kableExtra)
+
+
+
+
+
+
+
 
 desc %>%
   kable() %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", 
-                                      "responsive"))
+                                      "responsive"), full_width = F)
+mtcars %>%
+  kable()  %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", 
+                                      "responsive"), full_width = F)
+
+print(kable(desc, format="html") %>% 
+        kable_styling(full_width=FALSE) %>% 
+        collapse_rows(columns=1, valign="top"))
+
+
+
+
+
+
+a <- 1:5
+markobj <- c('---',
+             'title: "test"',
+             'output: html_document',
+             '---',
+             '',
+             '## R Markdown',
+             '',
+             'This is an R Markdown document.',
+             '```{r}',
+             'b <- 11:15',
+             "desc %>% kable() %>% kable_styling(bootstrap_options = c(\"striped\", \"hover\", \"condensed\", \"responsive\"))",
+             "```",
+             "mtcars %>% kable() %>% kable_styling(bootstrap_options = c(\"striped\", \"hover\", \"condensed\", \"responsive\"))")
+
+markdown::markdownToHTML(text = knitr::knit(text = markobj), output = "test.html")
+
+browseURL("test.html")
+
+
+
+# test343
+
+filepath_to_markdown <- file.path(wd, "python/anova_markdown.R")
+
+ANOVAreport <- function(filepath_to_markdowndesc, levene, anovasummary, 
+                        brownforsythe) {
+  
+  testtt <- sprintf(filepath_to_markdown, desc, levene, anovasummary, 
+                    brownforsythe)
+  
+  markdown::markdownToHTML(text = knitr::knit(text = testtt), output = "test.html")
+  browseURL("test.html")
+}
+
+
+
+
+
+
+
+
+
 
 
 
