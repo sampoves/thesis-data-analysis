@@ -137,10 +137,8 @@ GetANOVA(walktime ~ ykr_zone, thesisdata$walktime, thesisdata$ykr_zone,
 
 #library(stats)
 
-#thesisdata[!thesisdata$subdiv == "Helsinki Southern", -c(1,2,3,4)]
 
-# this works outside shiny
-#thesisdata[!thesisdata$subdiv %in% c("Helsinki Southern", "Helsinki Western"), -c(1,2,3,4)]
+
 
 server <- function(input, output, session){
   
@@ -158,13 +156,65 @@ server <- function(input, output, session){
     )
   })
 
-  output$mytable <- renderTable({
-    colname <- input$expl
-    #dataf <- thesisdata[thesisdata[[colname]] %in% input$checkGroup, -c(1,2,3,4)]
-    #dataf
-    desc <- describe(as.formula(paste(input$resp, '~', input$expl)), 
-                    thesisdata[!thesisdata[[colname]] %in% c(input$checkGroup), -c(1, 2, 3, 4)])
+  output$descri <- renderTable({
     
+    # Render descriptive statistics
+    thisFormula <- as.formula(paste(input$resp, '~', input$expl))
+    responsecol <- input$resp
+    response <- thesisdata[[responsecol]]
+    colname <- input$expl
+    inputdata <- thesisdata[!thesisdata[[colname]] %in% c(input$checkGroup), -c(1, 2, 3, 4)]
+    desc <- describe(thisFormula, inputdata)
+    
+    ### Std. Error
+    # clumsily calculate mean, so that we can preserve column names in the next
+    # phase
+    stder <- aggregate(thisFormula, data = inputdata,
+                       FUN = function(x) c(mean = mean(x),
+                                           "Std.Error" = std.error(x)))
+    
+    # Remove column mean 
+    stder <- subset(stder[[2]], select = -mean)
+    desc <- cbind(desc, stder)
+    
+    # Confidence intervals for mean
+    confs <- aggregate(
+      thisFormula, data = inputdata, 
+      FUN = function(x) c("CI for mean, Lower Bound" = mean(x) - 2 * std.error(x), 
+                          "CI for mean, Upper Bound" = mean(x) + 2 * std.error(x)))
+    confs <- confs[[2]]
+    desc <- cbind(desc, confs)
+    
+    # Reorder to SPSS order
+    desc <- desc[c("n", "Median", "Mean", "Std.Dev", "Std.Error", 
+                   "CI for mean, Lower Bound", "CI for mean, Upper Bound", "Min", 
+                   "Max", "25th", "75th", "Skewness", "Kurtosis", "NA")]
+    
+    # Add total row. We will add total values for all columns in this inconvenient
+    # manner.
+    vect <- c()
+    vect[1] <- sapply(1, function(x) sum(desc[, x]))
+    vect[2] <- sapply(2, function(x) median(desc[, x]))
+    vect[3] <- sapply(3, function(x) mean(desc[, x]))
+    vect[4] <- sd(response)
+    vect[5] <- std.error(response)
+    vect[6] <- mean(response) - 2 * std.error(response)
+    vect[7] <- mean(response) + 2 * std.error(response)
+    vect[8] <- min(response)
+    vect[9] <- max(response)
+    vect[10] <- quantile(response)[2]
+    vect[11] <- quantile(response)[4]
+    vect[12] <- skewness(response)
+    vect[13] <- kurtosis(response)
+    vect[13] <- sapply(14, function(x) sum(is.na(desc[, x])))
+    
+    # Add all values vector to desc, then name the new row and round all values in
+    # desc.
+    desc <- rbind(desc, vect)
+    row.names(desc)[nrow(desc)] <- "Total" #last row
+    desc <- round(desc, 3)
+    
+    # show
     desc
   }, 
   striped = TRUE,
@@ -201,7 +251,7 @@ ui <- shinyUI(fluidPage(
   
     mainPanel(
       h3("Descriptive statistics"),
-      tableOutput("mytable"),
+      tableOutput("descri"),
       textOutput("formu"),
     )
   )
