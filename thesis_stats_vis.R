@@ -38,15 +38,14 @@ rm(list = ls())
 #install.packages("car")
 #install.packages("plotrix") # std.error
 #install.packages("moments") # quantile
+#install.packages("shiny")
 
 # Libraries
 library(onewaytests)
 library(car)
 library(plotrix)
 library(moments)
-library(knitr)
-library(kableExtra)
-
+library(shiny)
 
 #### Preparation ####
 
@@ -132,46 +131,55 @@ GetANOVA(walktime ~ ykr_zone, thesisdata$walktime, thesisdata$ykr_zone,
 
 
 
-# KableExtra test
-# https://cran.r-project.org/web/packages/kableExtra/vignettes/awesome_table_in_html.html
-desc <- describe(walktime ~ timeofday, thesisdata[-c(1, 2, 3, 4)])
-
-
-
-
 
 # TOIMII
 #https://shiny.rstudio.com/tutorial/written-tutorial/lesson4/
-#install.packages("shiny")
-library(shiny)
-library(stats)
 
-# ui = fluidPage(
-#   fluidRow(column(1, HTML(kable(desc))),
-#            column(24, HTML(kable(desc))))
-# )
-# shinyApp(ui = ui, server = server)
+#library(stats)
 
+#thesisdata[!thesisdata$subdiv == "Helsinki Southern", -c(1,2,3,4)]
 
+# this works outside shiny
+#thesisdata[!thesisdata$subdiv %in% c("Helsinki Southern", "Helsinki Western"), -c(1,2,3,4)]
 
-server <- function(input, output){
+server <- function(input, output, session){
   
+  observe({
+    x <- input$expl
+
+    updateCheckboxGroupInput(session, "checkGroup", 
+      # choices = unique(thesisdata[, x]),
+      # selected = tail(x, 1)
+      label = NULL, 
+      choiceNames = levels(thesisdata[, x]),
+      choiceValues = levels(thesisdata[, x]),
+      #choices = levels(thesisdata[, x]),
+      #selected = levels(thesisdata[, x]) # all
+    )
+  })
+
   output$mytable <- renderTable({
-    describe(as.formula(paste(input$resp, '~', input$expl)), thesisdata[-c(1, 2, 3, 4)])
-  }, striped = TRUE,
+    colname <- input$expl
+    #dataf <- thesisdata[thesisdata[[colname]] %in% input$checkGroup, -c(1,2,3,4)]
+    #dataf
+    desc <- describe(as.formula(paste(input$resp, '~', input$expl)), 
+                    thesisdata[!thesisdata[[colname]] %in% c(input$checkGroup), -c(1, 2, 3, 4)])
+    
+    desc
+  }, 
+  striped = TRUE,
   hover = TRUE,
   bordered = TRUE,
   rownames = TRUE)
   
   output$formu <- renderText({
-    paste(input$resp, "~", input$expl)
+    paste(input$resp, "~", input$expl, "lista:", input$checkGroup)
   })
 }
 
 ui <- shinyUI(fluidPage(
   
   titlePanel("thing"),
-  
   sidebarLayout(
     sidebarPanel(
       
@@ -179,11 +187,16 @@ ui <- shinyUI(fluidPage(
       selectInput("resp", 
                  "response (continuous)", 
                  names(thesisdata[-c(1, 2, 3, 4, 5, 6, 9, 10, 11, 12)])),
-     
       # all others
       selectInput("expl", 
                  "explanatory (ordinal)", 
-                 names(thesisdata[-c(1, 2, 3, 4, 7, 8)]))
+                 names(thesisdata[-c(1, 2, 3, 4, 7, 8)])),
+      
+      checkboxGroupInput("checkGroup", 
+                         "Select inactive groups",
+                         choiceNames = c("Item A", "Item B", "Item C"),
+                         choiceValues = c("a", "b", "c")),
+      width = 3
     ),
   
     mainPanel(
@@ -193,7 +206,6 @@ ui <- shinyUI(fluidPage(
     )
   )
 ))
-
 shinyApp(ui = ui, server = server, options = list("test.mode"))
 
 
@@ -206,62 +218,6 @@ shinyApp(ui = ui, server = server, options = list("test.mode"))
 
 
 
-
-
-
-
-desc %>%
-  kable() %>%
-  kable_styling(bootstrap_options = c("striped", "hover", "condensed", 
-                                      "responsive"), full_width = F)
-mtcars %>%
-  kable()  %>%
-  kable_styling(bootstrap_options = c("striped", "hover", "condensed", 
-                                      "responsive"), full_width = F)
-
-print(kable(desc, format="html") %>% 
-        kable_styling(full_width=FALSE) %>% 
-        collapse_rows(columns=1, valign="top"))
-
-
-
-
-
-
-a <- 1:5
-markobj <- c('---',
-             'title: "test"',
-             'output: html_document',
-             '---',
-             '',
-             '## R Markdown',
-             '',
-             'This is an R Markdown document.',
-             '```{r}',
-             'b <- 11:15',
-             "desc %>% kable() %>% kable_styling(bootstrap_options = c(\"striped\", \"hover\", \"condensed\", \"responsive\"))",
-             "```",
-             "mtcars %>% kable() %>% kable_styling(bootstrap_options = c(\"striped\", \"hover\", \"condensed\", \"responsive\"))")
-
-markdown::markdownToHTML(text = knitr::knit(text = markobj), output = "test.html")
-
-browseURL("test.html")
-
-
-
-# test343
-
-filepath_to_markdown <- file.path(wd, "python/anova_markdown.R")
-
-ANOVAreport <- function(filepath_to_markdowndesc, levene, anovasummary, 
-                        brownforsythe) {
-  
-  testtt <- sprintf(filepath_to_markdown, desc, levene, anovasummary, 
-                    brownforsythe)
-  
-  markdown::markdownToHTML(text = knitr::knit(text = testtt), output = "test.html")
-  browseURL("test.html")
-}
 
 
 
