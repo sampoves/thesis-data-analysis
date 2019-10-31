@@ -39,6 +39,7 @@ rm(list = ls())
 #install.packages("plotrix") # std.error
 #install.packages("moments") # quantile
 #install.packages("shiny")
+#install.packages("shinythemes")
 
 # Libraries
 library(onewaytests)
@@ -46,6 +47,7 @@ library(car)
 library(plotrix)
 library(moments)
 library(shiny)
+library(shinythemes)
 
 #### Preparation ####
 
@@ -228,31 +230,20 @@ server <- function(input, output, session){
     levene <- leveneTest(thisFormula, inputdata, center = mean) #car
     #leveneVal <- levene[[3]][1]
 
-    # Transpose to present as a table in Shiny
-    #res <- t(as.data.frame(do.call(rbind, levene)))
+    res <- SigTableToShiny(levene, TRUE)
     
-    # get signif.star
-    #signif_star <- read.table(textConnection(capture.output(levene)[3]), fill = TRUE)[[5]]
-    
-    # test if [[5]] has probability value in it. if so, get [[6]]
-    #if (is.double(signif_star)) {
-    #  signif_star <- read.table(textConnection(capture.output(levene)[3]), fill = TRUE)[[6]]
-    #}
-    
-    #signif_star <- c(as.character(signif_star), NA)
-    #res <- cbind(res, signif_star)
-    #rownames(res) <- c("group", "NA")
-    
-    # signif.codes
+    # signif.code row, not in use. Just copied as text to the UI
     #signig_codes <- read.table(textConnection(capture.output(levenet)[6]), fill = TRUE)
     #signig_codes <- apply(signig_codes, 1, paste, collapse = " ")
-
-    res <- SigTableToShiny(levene, TRUE)
     
     # show
     res
     
-  }, digits = 6,
+  }, 
+  digits = 6,
+  striped = TRUE,
+  hover = TRUE,
+  bordered = TRUE,
   rownames = TRUE)
   
   output$anova <- renderTable({
@@ -272,15 +263,45 @@ server <- function(input, output, session){
     # show
     anovasummary
   },
+  digits = 6,
+  striped = TRUE,
+  hover = TRUE,
+  bordered = TRUE,
   rownames = TRUE)
+  
+  output$brownf <- renderPrint({
+    
+    # needed variables
+    colname <- input$expl
+    thisFormula <- as.formula(paste(input$resp, '~', input$expl))
+    inputdata <- thesisdata[!thesisdata[[colname]] %in% c(input$checkGroup), -c(1, 2, 3, 4)]
+    
+    # bf.test() works so that the information we want is only printed to
+    # console. Capture that output and place it in a variable
+    captured <- capture.output(bf.test(thisFormula, data = inputdata), 
+                               file = NULL, 
+                               append = TRUE)
+    cat(captured, sep = "\n")
+  })
   
   output$formu <- renderText({
     paste(input$resp, "~", input$expl)
   })
 }
 
-ui <- shinyUI(fluidPage(
+ui <- shinyUI(fluidPage(theme = shinytheme("slate"),
   
+  # Edit CSS features of Brown-Forsythe test box
+  tags$head(
+    tags$style(HTML("
+      #brownf {
+        color: #c8c8c8;
+        background: #2e3338;
+        border: 1px solid #1c1e22;
+      }"
+    ))
+  ),                      
+                        
   titlePanel("Sampo Vesanen thesis statistics ShinyApp"),
   sidebarLayout(
     sidebarPanel(
@@ -315,6 +336,7 @@ ui <- shinyUI(fluidPage(
       p("Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1"),
       hr(),
       h3("Brown-Forsythe"),
+      verbatimTextOutput("brownf"),
       textOutput("formu"),
     )
   )
@@ -323,132 +345,6 @@ shinyApp(ui = ui, server = server, options = list("test.mode"))
 
 
 
-# SOME SORT OF BUG IN SHINY! LEVENE GIVES SLIGHTLY OFF RESULTS
-# the bug appears if columns are excluded in shiny
-
-# LEVENETESTING
-obj <-  t.test(Group_A, Group_B)
-
-HTML(
-  paste0("t = ", round(levenet[[3]],3), '<br/>', 
-         "df = ", round(levenet[[2]],3), '<br/>',
-         "p-value = ", round(levenet[[3]],5))
-)
-
-
-
-# Troubleshoot levene
-
-# SHINY CODE
-#colname <- input$expl
-#thisFormula <- as.formula(paste(input$resp, '~', input$expl))
-#inputdata <- thesisdata[!thesisdata[[colname]] %in% c(input$checkGroup), ]
-#levene <- leveneTest(thisFormula, inputdata, center = mean)
-
-#levenet <- leveneTest(walktime ~ timeofday, thesisdata, center = mean)
-#levenet <- leveneTest(parktime ~ parkspot, thesisdata, center = mean)
-
-#same as in shiny
-levenet <- leveneTest(parktime ~ likert, thesisdata, center = mean)
-
-#different as in shiny
-leveneTest(
-  parktime ~ likert, 
-  thesisdata[!thesisdata[["likert"]] %in% c("Not at all familiar"), ],
-  center = mean)
-
-
-leveneTest(
-  parktime ~ subdiv, 
-  thesisdata[!thesisdata$subdiv %in% c("Helsinki Southern", "Kauniainen", "Helsinki Northern", "Helsinki Western"),],
-  center = mean)
-leveneTest(parktime ~ subdiv, thesisdata)
-
-
-# signif
-
-# transpose, add column
-jje <- t(as.data.frame(do.call(rbind, levenet)))
-#jje <- cbind(jje, c("**", NA))
-
-# signif star
-je2 <- read.table(textConnection(capture.output(levenet)[3]), fill = TRUE)[[5]]
-je2 <- read.table(textConnection(capture.output(levenet)[3]), fill = TRUE)[[6]]
-je2 <- as.character(je2)
-
-# signif.codes
-je <- read.table(textConnection(capture.output(levenet)[6]), fill = TRUE)
-je <- apply(je, 1, paste, collapse=" ")
-
-
-# TROUBLESHOOT anova
-res.aov <- aov(parktime ~ likert, data = thesisdata)
-anovasummary <- summary(res.aov)
-
-anovasummary
-
-
-
-
-
-
-SigTableToShiny <- function(sigTable, hasHeading) {
-  
-  # Use this function to show significance tables in Shiny. It will be useful
-  # with Levene and ANOVA results. The main functionality here is to include
-  # the elusive signifinance star.
-  
-  # Levene test dataframe requires transposing. Levene table
-  # has an attribute heading while ANOVA doesn't. Use this.
-  if (is.null(attributes(sigTable)$heading)) {
-    # ANOVA
-    res <- as.data.frame(do.call(rbind, sigTable))
-  } else {
-    # Levene
-    res <- t(as.data.frame(do.call(rbind, sigTable)))
-  }
- 
-  # Take into account that the table may have an attribute heading. Ask user
-  # if this is the case
-  if (hasHeading == FALSE){
-    sigTablePosition = 2
-  } else {
-    sigTablePosition = 3
-  }
-    
-  # Get the location of the signif.star
-  signif_ncol <- ncol(read.table(textConnection(
-    capture.output(sigTable)[sigTablePosition]), 
-    fill = TRUE))
-  
-  # get signif.star
-  signif_star <- read.table(textConnection(
-    capture.output(sigTable)[sigTablePosition]), 
-    fill = TRUE)[[signif_ncol]]
-  
-  # repeated_na takes into account that the significance table may have more
-  # rows than two.
-  repeated_na <- rep("NA", nrow(res) - 1)
-  signif_star <- c(as.character(signif_star), repeated_na)
-  
-  # bind column signif_star to result.
-  res <- cbind.data.frame(res, signif_star)
-  
-  # Name rows. Try to detect differences in Levene and ANOVA summary tables.
-  if(is.null(rownames(sigTable[[1]]))){
-    # Levene
-    rownames(res) <- rownames(sigTable)
-  } else {
-    # ANOVA
-    rownames(res) <- rownames(sigTable[[1]])
-  }
-  
-  return(res)
-}
-
-SigTableToShiny(levenet, TRUE)
-SigTableToShiny(anovasummary, FALSE)
-levenet
 
 
 
