@@ -347,6 +347,17 @@ shinyApp(ui = ui, server = server, options = list("test.mode"))
 
 
 
+# insignificant troubleshoot
+levenet <- leveneTest(walktime~likert, 
+                      thesisdata[!thesisdata$likert %in% c("Moderately familiar", "Somewhat familiar", "Slightly familiar"), -c(1,2,3,4)],
+                      center = mean)
+levenet <- leveneTest(walktime~likert, thesisdata[, -c(1,2,3,4)])
+
+res.aov <- aov(walktime~likert, 
+               data = thesisdata[!thesisdata$likert %in% c("Moderately familiar", "Somewhat familiar", "Slightly familiar"), ])
+anovasummary <- summary(res.aov)
+
+
 
 
 

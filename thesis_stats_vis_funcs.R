@@ -198,6 +198,13 @@ SigTableToShiny <- function(sigTable, hasHeading) {
     capture.output(sigTable)[sigTablePosition]), 
     fill = TRUE)[[signif_ncol]]
   
+  # Detect if signif_star is something else than factor. If so, the current
+  # analysis is not significant. Change value to " ". Need levels(), otherwise
+  # is.character() reads the signif_star factor value, which is always a number
+  if(!is.factor(signif_star)){
+    signif_star <- " "
+  }
+  
   # repeated_na takes into account that the significance table may have more
   # rows than two.
   repeated_na <- rep("NA", nrow(res) - 1)
