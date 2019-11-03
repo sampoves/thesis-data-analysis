@@ -29,6 +29,11 @@
 # One-way ANOVA
 #https://en.wikipedia.org/wiki/One-way_analysis_of_variance
 
+# About ANOVA, Levene and BF
+#https://www.statisticshowto.datasciencecentral.com/brown-forsythe-test/
+#https://www.statisticshowto.datasciencecentral.com/levene-test/
+#https://www.statisticshowto.datasciencecentral.com/homoscedasticity/
+
 
 
 #### Initialise ####
@@ -139,8 +144,8 @@ GetANOVA(walktime ~ ykr_zone, thesisdata$walktime, thesisdata$ykr_zone,
 
 
 
-
-
+# NB! Would be beneficial to add a possibility to see results for areas, not
+# just when comparing parktime/walktime to subdiv
 
 # ShinyApp
 server <- function(input, output, session){
@@ -227,6 +232,19 @@ server <- function(input, output, session){
   rownames = TRUE)
   
   
+  #### Histogram for parktime or walktime ####
+  output$hist <- renderPlot({
+    
+    responsecol <- input$resp
+    explanatorycol <- input$expl
+    inputdata <- thesisdata[!thesisdata[[explanatorycol]] %in% c(input$checkGroup), ]
+    
+    hist(inputdata[[responsecol]],
+         main = paste("Histogram for", responsecol),
+         xlab = responsecol)
+  })
+  
+  
   #### Boxplot ####
   output$boxplot <- renderPlot({
     
@@ -235,9 +253,16 @@ server <- function(input, output, session){
     inputdata <- thesisdata[!thesisdata[[explanatorycol]] %in% c(input$checkGroup), ]
     legendnames <- levels(unique(inputdata[[explanatorycol]]))
     
-    # ggplot2
-    p <- ggplot(inputdata, aes_string(x=input$expl, y=input$resp)) + 
-      geom_boxplot()
+    # ggplot2. Rotate labels if enough classes
+    if(length(legendnames) > 5){
+      
+      p <- ggplot(inputdata, aes_string(x=input$expl, y=input$resp)) + 
+        geom_boxplot() + theme(axis.text.x = element_text(size = 12, angle = 45, hjust = 1))
+    } else {
+      
+      p <- ggplot(inputdata, aes_string(x=input$expl, y=input$resp)) + 
+        geom_boxplot()
+    }
     p
     
     # Base graphics
@@ -314,11 +339,9 @@ server <- function(input, output, session){
                                append = TRUE)
     cat(captured, sep = "\n")
   })
-  
-  output$formu <- renderText({
-    paste(input$resp, "~", input$expl)
-  })
 }
+
+
 
 #### ShinyApp UI elements ####
 ui <- shinyUI(fluidPage(theme = shinytheme("slate"),
@@ -350,11 +373,13 @@ ui <- shinyUI(fluidPage(theme = shinytheme("slate"),
       selectInput("resp", 
                  "response (continuous)",
                  names(thesisdata[-c(1, 2, 3, 4, 5, 6, 9, 10, 11, 12)])),
+      
       # all others
       selectInput("expl",
                  "explanatory (ordinal)", 
                  names(thesisdata[-c(1, 2, 3, 4, 7, 8)])),
       
+      # these are changed with the observer function
       checkboxGroupInput("checkGroup", 
                          "Select inactive groups",
                          choiceNames = c("Item A", "Item B", "Item C"),
@@ -367,27 +392,34 @@ ui <- shinyUI(fluidPage(theme = shinytheme("slate"),
       p("If N is distributed somewhat equally, Levene test is not required."),
       tableOutput("descri"),
       hr(),
+      
+      h3("Histogram"),
+      plotOutput("hist"),
+      hr(),
+      
       h3("Boxplot"),
       plotOutput("boxplot", height = "500px"),
       hr(),
+      
       h3("Test of Homogeneity of Variances"),
       p("Levene value needs to be at least 0.05 for ANOVA test to be meaningful. If under 0.05, employ Brown-Forsythe test."),
       tableOutput("levene"),
       p("Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1", 
         style = "font-size:12px"),
       hr(),
+      
       h3("ANOVA"),
       tableOutput("anova"),
       p("Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1", 
         style = "font-size:12px"),
       hr(),
+      
       h3("Brown-Forsythe"),
       verbatimTextOutput("brownf"),
-      textOutput("formu"),
     )
   )
 ))
-shinyApp(ui = ui, server = server, options = list("test.mode"))
+shinyApp(ui = ui, server = server)
 
 
 
@@ -434,68 +466,3 @@ barplot(table(thesisdata$parkspot, thesisdata$timeofday), beside = T,
                         "other"),
         args.legend = list(x = 24, y = 800, cex = 0.8),
         col = c("pink", "light blue", "red", "blue", "green"))
-
-
-
-# TEST
-# How familiar have each parking spots been to respondents?
-barplot(table(thesisdata$likert, thesisdata$parkspot), beside = T,
-        cex.names = 0.7, 
-        names = c("Side of the road", "lot", "garage", "reserved/private", 
-                  "other"),
-        legend.text = c("Extremely familiar", "Moderately familiar", 
-                        "Somewhat familiar", "Slightly familiar", 
-                        "Not at all familiar"),
-        args.legend = list(x = 30, y = 1000, cex = 0.8),
-        col = c("pink", "light blue", "red", "blue", "green"))
-
-
-
-
-
-
-#### Visualise 2 ####
-# Histograms. Only works with numeric data
-hist(thesisdata$walktime)
-hist(thesisdata$parktime)
-
-
-
-# Boxplots
-# OBSOLETEEEEE
-
-# parktime compared to likert
-boxplot(parktime ~ likert, 
-        data = thesisdata, 
-        names = c("Extremely familiar", "Moderately familiar", 
-                  "Somewhat familiar", "Slightly familiar", 
-                  "Not at all familiar"))
-
-# walktime compared to likert
-boxplot(walktime ~ likert, 
-        data = thesisdata, 
-        names = c("Extremely familiar", "Moderately familiar", 
-                  "Somewhat familiar", "Slightly familiar", 
-                  "Not at all familiar"))
-
-# parkspot
-boxplot(parktime ~ parkspot, 
-        data = thesisdata, 
-        names = c("Side of the road", "lot", "garage", "reserved/private", 
-                  "other"))
-
-boxplot(walktime ~ parkspot, 
-        data = thesisdata, 
-        names = c("Side of the road", "lot", "garage", "reserved/private", 
-                  "other"))
-
-#timeofday
-boxplot(parktime ~ timeofday, 
-        data = thesisdata, 
-        names = c("Weekday, rush hour", "Weekday, other than rush hour", 
-                  "Weekend", "None of the above, no usual time"))
-
-boxplot(walktime ~ timeofday, 
-        data = thesisdata, 
-        names = c("Weekday, rush hour", "Weekday, other than rush hour", 
-                  "Weekend", "None of the above, no usual time"))
