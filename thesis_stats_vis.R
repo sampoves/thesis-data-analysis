@@ -48,6 +48,9 @@ library(plotrix)
 library(moments)
 library(shiny)
 library(shinythemes)
+library(ggplot2)
+
+
 
 #### Preparation ####
 
@@ -102,6 +105,8 @@ thesisdata["timestamp"] <- lapply(thesisdata["timestamp"], timefunc)
 
 #### Run tests with GetANOVA() ####
 
+# vauvuavu obsoleteeee
+
 # We use GetANOVA() function, which performs multiple analyses with the 
 # information fed to it. 
 
@@ -134,34 +139,35 @@ GetANOVA(walktime ~ ykr_zone, thesisdata$walktime, thesisdata$ykr_zone,
 
 
 
+
+
+
 # ShinyApp
 server <- function(input, output, session){
   
-  # Listener function. Detect changes in selectInput to modify available
-  # check boxes.
+  #### Listener function ####
+  # Detect changes in selectInput to modify available check boxes.
   observe({
     x <- input$expl
 
     updateCheckboxGroupInput(session, "checkGroup", 
-      # choices = unique(thesisdata[, x]),
-      # selected = tail(x, 1)
       label = NULL, 
       choiceNames = levels(thesisdata[, x]),
       choiceValues = levels(thesisdata[, x]),
-      #choices = levels(thesisdata[, x]),
-      #selected = levels(thesisdata[, x]) # all
     )
   })
 
-  # DESCRIPTIVE STATISTICS
+  #### Descriptive statistics ####
   output$descri <- renderTable({
     
-    # Render descriptive statistics
+    # Vital variables
     thisFormula <- as.formula(paste(input$resp, '~', input$expl))
     responsecol <- input$resp
     response <- thesisdata[[responsecol]]
     colname <- input$expl
     inputdata <- thesisdata[!thesisdata[[colname]] %in% c(input$checkGroup), -c(1, 2, 3, 4)]
+    
+    # Basic descriptive statistics
     desc <- describe(thisFormula, inputdata)
     
     ### Std. Error
@@ -212,7 +218,7 @@ server <- function(input, output, session){
     row.names(desc)[nrow(desc)] <- "Total" #last row
     desc <- round(desc, 3)
     
-    # show
+    # Show
     desc
   }, 
   striped = TRUE,
@@ -220,7 +226,29 @@ server <- function(input, output, session){
   bordered = TRUE,
   rownames = TRUE)
   
-  # LEVENE TEST
+  
+  #### Boxplot ####
+  output$boxplot <- renderPlot({
+    
+    thisFormula <- as.formula(paste(input$resp, '~', input$expl))
+    explanatorycol <- input$expl
+    inputdata <- thesisdata[!thesisdata[[explanatorycol]] %in% c(input$checkGroup), ]
+    legendnames <- levels(unique(inputdata[[explanatorycol]]))
+    
+    # ggplot2
+    p <- ggplot(inputdata, aes_string(x=input$expl, y=input$resp)) + 
+      geom_boxplot()
+    p
+    
+    # Base graphics
+    #boxplot(thisFormula, 
+    #        data = inputdata, 
+    #        names = legendnames,
+    #        col = rainbow(length(legendnames)))
+  })
+
+  
+  #### Levene test ####
   output$levene <- renderTable({
     
     colname <- input$expl
@@ -245,7 +273,9 @@ server <- function(input, output, session){
   hover = TRUE,
   bordered = TRUE,
   rownames = TRUE)
+
   
+  #### One-way ANOVA ####
   output$anova <- renderTable({
     
     # needed variables
@@ -253,14 +283,14 @@ server <- function(input, output, session){
     thisFormula <- as.formula(paste(input$resp, '~', input$expl))
     inputdata <- thesisdata[!thesisdata[[colname]] %in% c(input$checkGroup), ]
     
-    #### One-way ANOVA ####
+    #### One-way ANOVA #
     res.aov <- aov(thisFormula, data = inputdata)
     anovasummary <- summary(res.aov)
     
     # Use this function to communicate table correctly to Shiny
     anovasummary <- SigTableToShiny(anovasummary, FALSE)
     
-    # show
+    # Show
     anovasummary
   },
   digits = 6,
@@ -269,6 +299,7 @@ server <- function(input, output, session){
   bordered = TRUE,
   rownames = TRUE)
   
+  ### Brown-Forsythe test ####
   output$brownf <- renderPrint({
     
     # needed variables
@@ -289,8 +320,10 @@ server <- function(input, output, session){
   })
 }
 
+#### ShinyApp UI elements ####
 ui <- shinyUI(fluidPage(theme = shinytheme("slate"),
   
+                        
   # Edit CSS features of Brown-Forsythe test box
   tags$head(
     tags$style(HTML("
@@ -300,8 +333,15 @@ ui <- shinyUI(fluidPage(theme = shinytheme("slate"),
         border: 1px solid #1c1e22;
       }"
     ))
-  ),                      
-                        
+  ),                    
+  
+  tags$div(
+    tags$style(HTML("
+      #descri {
+        overflow-x: scroll;
+      }"))
+  ),
+                     
   titlePanel("Sampo Vesanen thesis statistics ShinyApp"),
   sidebarLayout(
     sidebarPanel(
@@ -327,13 +367,19 @@ ui <- shinyUI(fluidPage(theme = shinytheme("slate"),
       p("If N is distributed somewhat equally, Levene test is not required."),
       tableOutput("descri"),
       hr(),
+      h3("Boxplot"),
+      plotOutput("boxplot", height = "500px"),
+      hr(),
       h3("Test of Homogeneity of Variances"),
+      p("Levene value needs to be at least 0.05 for ANOVA test to be meaningful. If under 0.05, employ Brown-Forsythe test."),
       tableOutput("levene"),
-      p("Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1"),
+      p("Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1", 
+        style = "font-size:12px"),
       hr(),
       h3("ANOVA"),
       tableOutput("anova"),
-      p("Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1"),
+      p("Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1", 
+        style = "font-size:12px"),
       hr(),
       h3("Brown-Forsythe"),
       verbatimTextOutput("brownf"),
@@ -347,15 +393,7 @@ shinyApp(ui = ui, server = server, options = list("test.mode"))
 
 
 
-# insignificant troubleshoot
-levenet <- leveneTest(walktime~likert, 
-                      thesisdata[!thesisdata$likert %in% c("Moderately familiar", "Somewhat familiar", "Slightly familiar"), -c(1,2,3,4)],
-                      center = mean)
-levenet <- leveneTest(walktime~likert, thesisdata[, -c(1,2,3,4)])
 
-res.aov <- aov(walktime~likert, 
-               data = thesisdata[!thesisdata$likert %in% c("Moderately familiar", "Somewhat familiar", "Slightly familiar"), ])
-anovasummary <- summary(res.aov)
 
 
 
@@ -364,7 +402,6 @@ anovasummary <- summary(res.aov)
 
 
 #### Visualise ####
-
 boxplot(likert ~ parktime, data = thesisdata)
 
 # How familiar have each parking spots been to respondents?
@@ -400,6 +437,23 @@ barplot(table(thesisdata$parkspot, thesisdata$timeofday), beside = T,
 
 
 
+# TEST
+# How familiar have each parking spots been to respondents?
+barplot(table(thesisdata$likert, thesisdata$parkspot), beside = T,
+        cex.names = 0.7, 
+        names = c("Side of the road", "lot", "garage", "reserved/private", 
+                  "other"),
+        legend.text = c("Extremely familiar", "Moderately familiar", 
+                        "Somewhat familiar", "Slightly familiar", 
+                        "Not at all familiar"),
+        args.legend = list(x = 30, y = 1000, cex = 0.8),
+        col = c("pink", "light blue", "red", "blue", "green"))
+
+
+
+
+
+
 #### Visualise 2 ####
 # Histograms. Only works with numeric data
 hist(thesisdata$walktime)
@@ -408,6 +462,7 @@ hist(thesisdata$parktime)
 
 
 # Boxplots
+# OBSOLETEEEEE
 
 # parktime compared to likert
 boxplot(parktime ~ likert, 
