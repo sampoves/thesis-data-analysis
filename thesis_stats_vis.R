@@ -144,8 +144,6 @@ GetANOVA(walktime ~ ykr_zone, thesisdata$walktime, thesisdata$ykr_zone,
 
 
 
-# NB! Would be beneficial to add a possibility to see results for areas, not
-# just when comparing parktime/walktime to subdiv
 
 # ShinyApp
 server <- function(input, output, session){
@@ -170,8 +168,11 @@ server <- function(input, output, session){
     responsecol <- input$resp
     response <- thesisdata[[responsecol]]
     colname <- input$expl
-    inputdata <- thesisdata[!thesisdata[[colname]] %in% c(input$checkGroup), -c(1, 2, 3, 4)]
     
+    # take subdiv checkbox group into account
+    inputdata <- thesisdata[!thesisdata[[colname]] %in% c(input$checkGroup), -c(1, 2, 3, 4)]
+    inputdata <- inputdata[!inputdata$subdiv %in% c(input$subdivGroup), ]
+
     # Basic descriptive statistics
     desc <- describe(thisFormula, inputdata)
     
@@ -237,7 +238,9 @@ server <- function(input, output, session){
     
     responsecol <- input$resp
     explanatorycol <- input$expl
+    
     inputdata <- thesisdata[!thesisdata[[explanatorycol]] %in% c(input$checkGroup), ]
+    inputdata <- inputdata[!inputdata$subdiv %in% c(input$subdivGroup), ]
     
     hist(inputdata[[responsecol]],
          main = paste("Histogram for", responsecol),
@@ -250,7 +253,10 @@ server <- function(input, output, session){
     
     thisFormula <- as.formula(paste(input$resp, '~', input$expl))
     explanatorycol <- input$expl
+    
     inputdata <- thesisdata[!thesisdata[[explanatorycol]] %in% c(input$checkGroup), ]
+    inputdata <- inputdata[!inputdata$subdiv %in% c(input$subdivGroup), ]
+    
     legendnames <- levels(unique(inputdata[[explanatorycol]]))
     
     # ggplot2. Rotate labels if enough classes
@@ -278,7 +284,9 @@ server <- function(input, output, session){
     
     colname <- input$expl
     thisFormula <- as.formula(paste(input$resp, '~', input$expl))
+    
     inputdata <- thesisdata[!thesisdata[[colname]] %in% c(input$checkGroup), ]
+    inputdata <- inputdata[!inputdata$subdiv %in% c(input$subdivGroup), ]
     
     levene <- leveneTest(thisFormula, inputdata, center = mean) #car
     #leveneVal <- levene[[3]][1]
@@ -306,7 +314,9 @@ server <- function(input, output, session){
     # needed variables
     colname <- input$expl
     thisFormula <- as.formula(paste(input$resp, '~', input$expl))
+    
     inputdata <- thesisdata[!thesisdata[[colname]] %in% c(input$checkGroup), ]
+    inputdata <- inputdata[!inputdata$subdiv %in% c(input$subdivGroup), ]
     
     #### One-way ANOVA #
     res.aov <- aov(thisFormula, data = inputdata)
@@ -330,7 +340,9 @@ server <- function(input, output, session){
     # needed variables
     colname <- input$expl
     thisFormula <- as.formula(paste(input$resp, '~', input$expl))
+    
     inputdata <- thesisdata[!thesisdata[[colname]] %in% c(input$checkGroup), -c(1, 2, 3, 4)]
+    inputdata <- inputdata[!inputdata$subdiv %in% c(input$subdivGroup), ]
     
     # bf.test() works so that the information we want is only printed to
     # console. Capture that output and place it in a variable
@@ -346,24 +358,27 @@ server <- function(input, output, session){
 #### ShinyApp UI elements ####
 ui <- shinyUI(fluidPage(theme = shinytheme("slate"),
   
-                        
-  # Edit CSS features of Brown-Forsythe test box
+  # Edit various CSS features such as the Brown-Forsythe test box
   tags$head(
     tags$style(HTML("
       #brownf {
         color: #c8c8c8;
         background: #2e3338;
         border: 1px solid #1c1e22;
+      }
+      #descri {
+        overflow-x: auto;
+        max-height: 80vh;
+      }
+      form.well {
+        position: fixed;
+        overflow: visible;
+        overflow-y: auto;
+        max-height: 80vh;
+        max-width: 80vh;
       }"
     ))
   ),                    
-  
-  tags$div(
-    tags$style(HTML("
-      #descri {
-        overflow-x: scroll;
-      }"))
-  ),
                      
   titlePanel("Sampo Vesanen thesis statistics ShinyApp"),
   sidebarLayout(
@@ -384,6 +399,10 @@ ui <- shinyUI(fluidPage(theme = shinytheme("slate"),
                          "Select inactive groups",
                          choiceNames = c("Item A", "Item B", "Item C"),
                          choiceValues = c("a", "b", "c")),
+      checkboxGroupInput("subdivGroup",
+                         "Select inactive subdivisions",
+                         choiceNames = sort(as.character(unique(thesisdata$subdiv))),
+                         choiceValues = sort(as.character(unique(thesisdata$subdiv)))),
       width = 3
     ),
   
