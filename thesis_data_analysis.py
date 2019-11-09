@@ -214,9 +214,6 @@ for idx, geom in enumerate(postal.geometry):
 # GOT IT; BECAUSE THE BORDERS OF ZIPCODES ARE AMBIGUOUS, this code does not
 # test for to which zipcode it should belong to, probably records two zipcodes
 # for one ykr-id 
-
-# SOMEHOW UTILISE MAINLAND
-
 from rtree import index
 
 # Save crs to be used here
@@ -236,6 +233,7 @@ idx = index.Index()
 for i, featA in grid.iterrows():
     idx.insert(i, featA["geometry"].bounds)
 
+# This runs for 8 minutes! 20 000 results. Wrong. Investigate
 for i2, featB in postal.iterrows():
 
     # Test for potential intersection with each feature of the other feature 
@@ -244,9 +242,9 @@ for i2, featB in postal.iterrows():
         # Confirm intersection
 
         if featB["geometry"].intersects(grid.loc[intersect_maybe]["geometry"]):
-            
-            # Test for presence of area which is not research area (sea, 
-            # neighboring municipalities)
+                
+            # Test current grid cell for presence of area which is not research 
+            # area (sea, neighboring municipalities)
             if grid.loc[intersect_maybe]["geometry"].intersects(
                     exteriors.geometry[0]):
                 
@@ -269,18 +267,72 @@ for i2, featB in postal.iterrows():
                 # current zipcode area is the largest feature
                 cellMinusExt = gpd.overlay(thisGridCell, exteriors, 
                                            how="difference")
+                
+                # If the area of cellPieceArea is smaller than half of the
+                # entire gridCellArea, do not accept that as result. Move on.
+                cellMinusExtArea = 0 if cellMinusExt.empty == True else cellMinusExt.area.values[0]
+                cellPieceArea = 0 if thisCellPiece.empty == True else thisCellPiece.area.values[0]
+                
+                if cellPieceArea / cellMinusExtArea > 0.5:
+                    fc_intersect.append(
+                            [grid.loc[intersect_maybe].YKR_ID, featB.posti_alue])
+                
+                # conclusion. Next cycle
+                next
             
-            #thisCell = grid.loc[[intersect_maybe]]
-            #thisCell = gpd.overlay(grid.loc[[intersect_maybe]], exteriors, 
-            #                       how="difference")
+            # FROM HERE FORWARD UNFINISHED!
             
+            # create mainland without the current zipcode. Use it to test if
+            # there are neighboring zipcodes in current grid cell
+            reduced_mainland = gpd.overlay(gpd.GeoDataFrame(geometry=[mainland]),
+                                           gpd.GeoDataFrame(geometry=[featB.geometry]),
+                                           how="symmetric_difference")
+            
+            # Test for presence of other zipcode areas in current grid cell
+            if grid.loc[intersect_maybe]["geometry"].intersects(
+                    reduced_mainland.geometry[0]):
+                
+                # thisGridCell is the entire current grid cell which
+                # intersects current zipcode area. It is inevitably shaped like
+                # a square and may contain exterior areas
+                thisGridCell = grid.loc[[intersect_maybe]]
+                
+                # thisCellPiece is the current piece of grid in the current
+                # zipcode area. Does not include exteriors of other zip code
+                # areas
+                thisCellPiece = gpd.overlay(
+                        thisGridCell,
+                        gpd.GeoDataFrame(geometry=[featB.geometry]),
+                        how="intersection")
+                
+                # If the area of cellPieceArea is smaller than half of the
+                # entire gridCellArea, do not accept that as result. Move on.
+                gridCellArea = 0 if thisGridCell.empty == True else thisGridCell.area.values[0]
+                cellPieceArea = 0 if thisCellPiece.empty == True else thisCellPiece.area.values[0]
+                
+                if cellPieceArea / gridCellArea > 0.5:
+                    fc_intersect.append(
+                            [grid.loc[intersect_maybe].YKR_ID, featB.posti_alue])
+                
+                #conclusiom
+                next
+                
+            # Default course of action, grid cell completely within zipcode area
+            fc_intersect.append(
+                    [grid.loc[intersect_maybe].YKR_ID, featB.posti_alue])
 
-            fc_intersect.append([grid.loc[intersect_maybe].YKR_ID, featB.posti_alue])
+# 20000 results, why
+#test
+testdf = pd.DataFrame.from_records(fc_intersect)
+testdf.columns = ["ykr", "count"]
+grouped = testdf.groupby(["ykr"]).agg({"ykr": "count"})
+
+
 
 
 # teesttt
 plot_polygon([mainland, thisGridCell, cellAllZips, cellMinusExt])
-plot_polygon([cellAllZips, cellMinusExt])
+plot_polygon([cellAllZips, thisCellPiece, cellMinusExt])
 
 
 # current piece of this zipcode
