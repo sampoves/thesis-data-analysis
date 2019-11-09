@@ -209,109 +209,6 @@ for idx, geom in enumerate(postal.geometry):
 ### GIVE GRID CELLS ZIPCODES ###
 ################################
 
-# A lot of grid cell testing
-
-crs = grid.crs
-
-for idx in grid.index:
-    thisCell = grid.loc[idx, "geometry"]
-    thisCell = gpd.GeoDataFrame(geometry=[thisCell])
-    thisCell.crs = crs
-    inters = gpd.overlay(grid, thisCell, how="intersection")
-    break
-
-
-#test
-grid["posti_alue"] = 0    
-
-delCol = postal.columns[1:107]
-
-
-crs = grid.crs
-for idx, zipcode in postal.iterrows():
-    zipcode = gpd.GeoDataFrame(zipcode, crs=crs).transpose().reset_index()
-    
-    for cellid, cell in grid.iterrows():
-        print(cellid)
-        cell = gpd.GeoDataFrame(cell, crs=crs).transpose().reset_index()
-        
-        if cell.geometry[0].intersects(zipcode.geometry[0]) == True:
-            print("pell")
-            thisIntersection = gpd.overlay(zipcode, cell, how="intersection")
-            break
-
-
-
-
-
-prle = gpd.overlay(postal[postal["posti_alue"] == "00560"], grid, 
-                   how="intersection").drop(delCol, axis=1)
-prle = gpd.overlay(grid, postal[postal["posti_alue"] == "00560"], 
-                   how="intersection").drop(delCol, axis=1)
-
-
-
-
-
-
-## UUS TEST
-crs = postal.crs
-for idx, row in postal.iterrows():
-    thisGdf = gpd.GeoDataFrame(crs=crs, geometry=[row.geometry])
-    #thisInt = gpd.overlay(thisGdf, grid)
-
-
-plef = grid[grid.contains(thisGdf) == True]
-plef = thisGdf[thisGdf.(grid) == True]
-
-plef = grid.contains(thisGdf)
-plef = thisGdf.intersection(grid)
-
-plot_polygon([grid.unary_union, thisGdf])
-
-
-
-
-
-
-
-
-
-
-grid["posti_alue"] = grid.apply(
-        lambda row: row[["geometry"]], axis=1)
-
-# MELKEIN TOIMII, TOSI HIDAS
-def pelle(x):
-
-    cell = gpd.GeoDataFrame(geometry=[x.geometry])
-    thisInters = gpd.overlay(postal, cell, how="intersection")
-    
-    result = "NA"
-    if len(thisInters) != 0:
-        
-        if len(thisInters) > 1:
-            # get largest area from the cell
-            largest = thisInters.area.nlargest(1, keep="all")
-            largest = largest.index.values.astype(int)[0]
-        else:
-            largest = 0
-            
-        result = thisInters.posti_alue.values[largest]
-
-    return result
-
-grid["posti_alue"] = 0 
-grid["posti_alue"] = grid.apply(lambda x: pelle(x), axis=1)
-
-
-
-
-
-
-
-
-
 # newest test, RTREE ENABLED
 # SEEMS TO WORK SOMEHOW, BUT WHY 16000 ROWS?! MORE THAN GRID 13231
 # GOT IT; BECAUSE THE BORDERS OF ZIPCODES ARE AMBIGUOUS, this code does not
@@ -322,12 +219,14 @@ grid["posti_alue"] = grid.apply(lambda x: pelle(x), axis=1)
 
 from rtree import index
 
+# Save crs to be used here
+crs = grid.crs
+
 # Get mainland envelope, then symmetric diffence to produce exteriors MultiPolygon
 exteriors = mainland.envelope.buffer(1000)
 exteriors = gpd.overlay(gpd.GeoDataFrame(geometry=[exteriors]), 
                         gpd.GeoDataFrame(geometry=[mainland]), 
                         how="symmetric_difference")
-
 
 # List to collect pairs of intersecting features
 fc_intersect = []
@@ -346,26 +245,43 @@ for i2, featB in postal.iterrows():
 
         if featB["geometry"].intersects(grid.loc[intersect_maybe]["geometry"]):
             
+            # Test for presence of area which is not research area (sea, 
+            # neighboring municipalities)
+            if grid.loc[intersect_maybe]["geometry"].intersects(
+                    exteriors.geometry[0]):
+                
+                # thisGridCell is the entire current grid cell which
+                # intersects current zipcode area. It is inevitably shaped like
+                # a square and may contain exterior areas
+                thisGridCell = grid.loc[[intersect_maybe]]
+                
+                # thisCellPiece is the current piece of grid in the current
+                # zipcode area. Does not include exteriors of other zip code
+                # areas
+                thisCellPiece = gpd.overlay(
+                        thisGridCell,
+                        gpd.GeoDataFrame(geometry=[featB.geometry]),
+                        how="intersection")
+                
+                # cellMinusExt is the entire current grid cell with 
+                # all possible zipcode areas but does not include exterior 
+                # areas. Use these to test if current piece of grid cell in 
+                # current zipcode area is the largest feature
+                cellMinusExt = gpd.overlay(thisGridCell, exteriors, 
+                                           how="difference")
             
-            print("\n")
-            print("Postal, zipcode {0}, {1}".format(featB["posti_alue"],
-                  featB["nimi"]))
-            print("Matched with {0}".format(grid.loc[intersect_maybe]["YKR_ID"]))
+            #thisCell = grid.loc[[intersect_maybe]]
+            #thisCell = gpd.overlay(grid.loc[[intersect_maybe]], exteriors, 
+            #                       how="difference")
+            
 
             fc_intersect.append([grid.loc[intersect_maybe].YKR_ID, featB.posti_alue])
 
 
-# test weird 16000
-for i, p in fc_intersect:
-    print(i, p)
-    
-testtt = [i for i, p in fc_intersect]
-dupbl = list(set([x for x in testtt if testtt.count(x) > 1]))
+# teesttt
+plot_polygon([mainland, thisGridCell, cellAllZips, cellMinusExt])
+plot_polygon([cellAllZips, cellMinusExt])
 
-# 143 is suvisaar
-postal.loc[143, "geometry"].intersects(grid.loc[13184]["geometry"])
-pelle = gpd.overlay(postal.loc[[143]], grid.loc[[13184]], 
-                    how="intersection")
 
 # current piece of this zipcode
 postal.loc[143, "geometry"].intersects(grid.loc[13105]["geometry"])
@@ -379,29 +295,6 @@ plot_polygon([maapala, pelle])
 
 
 
-
-
-
-
-# newest test, WORKS I THINK! really unoptimised
-grid["posti_alue"] = 0   
-
-for cellid in grid.index:
-    print(cellid, end="\r")
-    cell = grid.iloc[[cellid]]
-    thisInters = gpd.overlay(postal, cell, how="intersection")
-    
-    if len(thisInters) != 0:
-        
-        if len(thisInters) > 1:
-            # get largest area from the cell
-            largest = thisInters.area.nlargest(1, keep="all")
-            largest = largest.index.values.astype(int)[0]
-        else:
-            largest = 0
-            
-        # apply the postal code with most area into the current cell
-        grid.loc[cellid, "posti_alue"] = thisInters.posti_alue_1.values[largest]
 
 
 
