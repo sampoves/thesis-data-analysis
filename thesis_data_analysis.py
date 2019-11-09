@@ -8,13 +8,12 @@ Sampo Vesanen Thesis survey datacrunch
 "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 
 TODO:
-    - Respondent specific reports
     - Geographic analyses (Can't get geoplot to work)
     - Detect outliers
-    - Descriptive statistics, correlation charts
-    - Plot records compared to population and area in zipcodes
 
 Important questions etc
+    - Respondent specific reports (probably not useful)
+    - fix crs mismatches
     - See how long user took to first visit survey and answer to the survey
     - Have same IPs sent records for same areas more than once?
 """
@@ -205,6 +204,212 @@ for idx, geom in enumerate(postal.geometry):
             
 
 
+
+################################
+### GIVE GRID CELLS ZIPCODES ###
+################################
+
+# A lot of grid cell testing
+
+crs = grid.crs
+
+for idx in grid.index:
+    thisCell = grid.loc[idx, "geometry"]
+    thisCell = gpd.GeoDataFrame(geometry=[thisCell])
+    thisCell.crs = crs
+    inters = gpd.overlay(grid, thisCell, how="intersection")
+    break
+
+
+#test
+grid["posti_alue"] = 0    
+
+delCol = postal.columns[1:107]
+
+
+crs = grid.crs
+for idx, zipcode in postal.iterrows():
+    zipcode = gpd.GeoDataFrame(zipcode, crs=crs).transpose().reset_index()
+    
+    for cellid, cell in grid.iterrows():
+        print(cellid)
+        cell = gpd.GeoDataFrame(cell, crs=crs).transpose().reset_index()
+        
+        if cell.geometry[0].intersects(zipcode.geometry[0]) == True:
+            print("pell")
+            thisIntersection = gpd.overlay(zipcode, cell, how="intersection")
+            break
+
+
+
+
+
+prle = gpd.overlay(postal[postal["posti_alue"] == "00560"], grid, 
+                   how="intersection").drop(delCol, axis=1)
+prle = gpd.overlay(grid, postal[postal["posti_alue"] == "00560"], 
+                   how="intersection").drop(delCol, axis=1)
+
+
+
+
+
+
+## UUS TEST
+crs = postal.crs
+for idx, row in postal.iterrows():
+    thisGdf = gpd.GeoDataFrame(crs=crs, geometry=[row.geometry])
+    #thisInt = gpd.overlay(thisGdf, grid)
+
+
+plef = grid[grid.contains(thisGdf) == True]
+plef = thisGdf[thisGdf.(grid) == True]
+
+plef = grid.contains(thisGdf)
+plef = thisGdf.intersection(grid)
+
+plot_polygon([grid.unary_union, thisGdf])
+
+
+
+
+
+
+
+
+
+
+grid["posti_alue"] = grid.apply(
+        lambda row: row[["geometry"]], axis=1)
+
+# MELKEIN TOIMII, TOSI HIDAS
+def pelle(x):
+
+    cell = gpd.GeoDataFrame(geometry=[x.geometry])
+    thisInters = gpd.overlay(postal, cell, how="intersection")
+    
+    result = "NA"
+    if len(thisInters) != 0:
+        
+        if len(thisInters) > 1:
+            # get largest area from the cell
+            largest = thisInters.area.nlargest(1, keep="all")
+            largest = largest.index.values.astype(int)[0]
+        else:
+            largest = 0
+            
+        result = thisInters.posti_alue.values[largest]
+
+    return result
+
+grid["posti_alue"] = 0 
+grid["posti_alue"] = grid.apply(lambda x: pelle(x), axis=1)
+
+
+
+
+
+
+
+
+
+# newest test, RTREE ENABLED
+# SEEMS TO WORK SOMEHOW, BUT WHY 16000 ROWS?! MORE THAN GRID 13231
+# GOT IT; BECAUSE THE BORDERS OF ZIPCODES ARE AMBIGUOUS, this code does not
+# test for to which zipcode it should belong to, probably records two zipcodes
+# for one ykr-id 
+
+# SOMEHOW UTILISE MAINLAND
+
+from rtree import index
+
+# Get mainland envelope, then symmetric diffence to produce exteriors MultiPolygon
+exteriors = mainland.envelope.buffer(1000)
+exteriors = gpd.overlay(gpd.GeoDataFrame(geometry=[exteriors]), 
+                        gpd.GeoDataFrame(geometry=[mainland]), 
+                        how="symmetric_difference")
+
+
+# List to collect pairs of intersecting features
+fc_intersect = []
+
+# Instantiate index class
+idx = index.Index()
+for i, featA in grid.iterrows():
+    idx.insert(i, featA["geometry"].bounds)
+
+for i2, featB in postal.iterrows():
+
+    # Test for potential intersection with each feature of the other feature 
+    # collection
+    for intersect_maybe in idx.intersection(featB["geometry"].bounds):
+        # Confirm intersection
+
+        if featB["geometry"].intersects(grid.loc[intersect_maybe]["geometry"]):
+            
+            
+            print("\n")
+            print("Postal, zipcode {0}, {1}".format(featB["posti_alue"],
+                  featB["nimi"]))
+            print("Matched with {0}".format(grid.loc[intersect_maybe]["YKR_ID"]))
+
+            fc_intersect.append([grid.loc[intersect_maybe].YKR_ID, featB.posti_alue])
+
+
+# test weird 16000
+for i, p in fc_intersect:
+    print(i, p)
+    
+testtt = [i for i, p in fc_intersect]
+dupbl = list(set([x for x in testtt if testtt.count(x) > 1]))
+
+# 143 is suvisaar
+postal.loc[143, "geometry"].intersects(grid.loc[13184]["geometry"])
+pelle = gpd.overlay(postal.loc[[143]], grid.loc[[13184]], 
+                    how="intersection")
+
+# current piece of this zipcode
+postal.loc[143, "geometry"].intersects(grid.loc[13105]["geometry"])
+pelle = gpd.overlay(postal.loc[[143]], grid.loc[[13105]], 
+                    how="intersection")
+
+# the entire piece of land in this grid cell, can be of many zipcodes
+maapala = gpd.overlay(grid.loc[[13105]], exteriors, how="difference")
+plot_polygon([maapala, pelle])
+
+
+
+
+
+
+
+
+# newest test, WORKS I THINK! really unoptimised
+grid["posti_alue"] = 0   
+
+for cellid in grid.index:
+    print(cellid, end="\r")
+    cell = grid.iloc[[cellid]]
+    thisInters = gpd.overlay(postal, cell, how="intersection")
+    
+    if len(thisInters) != 0:
+        
+        if len(thisInters) > 1:
+            # get largest area from the cell
+            largest = thisInters.area.nlargest(1, keep="all")
+            largest = largest.index.values.astype(int)[0]
+        else:
+            largest = 0
+            
+        # apply the postal code with most area into the current cell
+        grid.loc[cellid, "posti_alue"] = thisInters.posti_alue_1.values[largest]
+
+
+
+
+
+
+
+
 ############################
 ### RESPONDENT BEHAVIOUR ###
 ############################
@@ -248,12 +453,13 @@ for visitor in records.ip.unique():
     
         # Produce report
         for idx, row in dupl.drop(["ip"], axis=1).iterrows():
-            print(row.to_string(), "\n") # suppress dtype
+            print(row.to_string(), "\n") # suppress showing of dtype
 
 
-# Remove illegal answers. At this time any value equal or above 90 is deemed 
-# illegal. invalid starts at 6 as at this point I have removed 3 of my own 
-# records and 3 others which were reported to me as false. See above.
+
+# Remove illegal answers. At this time any value equal or above 60 minutes is 
+# deemed illegal. Value invalid starts at 6 as at this point I have removed 3 
+# of my own records and 3 others which were reported to me as false. See above.
 delList = []
 illegal = []
 invalid = 6
@@ -261,20 +467,20 @@ invalid = 6
 for idx, (park_value, walk_value, ip_value) in enumerate(
         zip(records["parktime"], records["walktime"], records["ip"])):
     
-    if (park_value >= 90 or walk_value >= 90):
+    if (park_value >= 60 or walk_value >= 60):
         print("Illegal walktime or parktime detected:", idx, park_value, 
               walk_value)
         delList.append(idx)
         illegal.append(ip_value)
         invalid += 1
  
-# Illegal contains all ips which have 99 as answers. illegal_df shows all
-# records made by these ip addresses
+# Illegal contains all IPs which have values equal or above 60 as answers. 
+# illegal_df shows all records made by these IP addresses
 illegal = list(set(illegal))
 illegal_df = records[records["ip"].isin(illegal)]
 
-# Drop the records which have 99 as answer. Drop the ip addresses from visitors
-# as well.
+# Drop the records which have values equal or above 60 as answer. Drop the IP 
+# addresses from visitors as well.
 records = records.drop(records.index[delList])
 records = records.reset_index()
 visitors = visitors[~visitors["ip"].isin(illegal)]
@@ -315,19 +521,19 @@ postal["answer_count"] = 0
 postal["parktime_mean"] = 0
 postal["walktime_mean"] = 0
 
-# Calculate answers
+# Calculate answer count for each zipcode area
 for zipcode in records.zipcode:
     for idx, postal_zip in enumerate(postal.posti_alue):
         if postal_zip == zipcode:
             postal.loc[idx, "answer_count"] += 1
 
-# Calculate mean to postal.parktime_mean
+# Calculate parktime mean to postal.parktime_mean
 for idx, postal_zip in enumerate(postal.posti_alue):
     this_mean = records.loc[
             records['zipcode'] == postal_zip]["parktime"].mean()
     postal.loc[idx, "parktime_mean"] = round(this_mean, 2)
 
-# Calculate mean to postal.walktime_mean
+# Calculate walktime mean to postal.walktime_mean
 for idx, postal_zip in enumerate(postal.posti_alue):
     this_mean = records.loc[
             records['zipcode'] == postal_zip]["walktime"].mean()
@@ -337,18 +543,9 @@ for idx, postal_zip in enumerate(postal.posti_alue):
 postal['coords'] = postal['geometry'].apply(lambda x: x.representative_point().coords[:])
 postal['coords'] = [coords[0] for coords in postal['coords']]
 
-# Ratio: answer_count/total population in postal code
-# NB This is not useful for plotting, think of something else
-#postal["answ_hevakiy"] = postal.apply(
-#        lambda row: round(row["answer_count"]/row["he_vakiy"], 5), axis=1)
-
 # population density
 #postal["pop_dens"] = postal.apply(
 #        lambda row: round(row["he_vakiy"]/(row["pinta_ala"]/1000000), 2), axis=1)
-
-# ratio pop density to answer_count
-#postal["dens_answ"] = postal.apply(
-#        lambda row: round(row["pop_dens"]/row["answer_count"], 3), axis=1)
 
 
 
@@ -421,7 +618,7 @@ for row in postal.iterrows():
             # append in. Finally append current value v
             postal.loc[postal["posti_alue"] == row.posti_alue, dictKey[k]] = v
     
-# Calculate ykr_novalue.
+# Calculate ykr_novalue
 postal["ykr_novalue"] = postal.apply(
         lambda row: 1 - (row.ykr_kesk_jalan + row.ykr_kesk_reuna +
         row.ykr_int_joukko + row.ykr_joukkoliik + 
@@ -823,7 +1020,7 @@ vanHakunila = ["01200", # Hakunila
 
 
 
-# Insert subvision names
+# Insert subvision names to records
 
 # Insert column for "suurpiiri" (we'll call them subdivisions) information 
 # to records
@@ -866,13 +1063,131 @@ for varname, fullname in subdiv_dict.items():
     
 
 
-#####################
-### EXPORT TO CSV ###
-#####################
+#######################################
+### UTILISE TRAVEL-TIME MATRIX 2018 ###
+#######################################
 
-# data to csv for R. "pythonrecords.csv"
-records.to_csv(wd + "records.csv", encoding="Windows-1252")
-postal.to_csv(wd + "postal.csv", encoding="Windows-1252")
+# https://gis.stackexchange.com/questions/80367/how-to-convert-6-7-digit-coordinates-to-degrees-latitude-longitude
+# utm easthing and northing
+
+# this code is meant to compare 2018 travel time matrix results to my results
+# Get origin and destination points from TTM data, then compare to zipcodes
+# mean in my data
+
+# 0,73 min parkkipaikan etsimisaika. 43,8 s
+
+from pyproj import Proj, transform
+import reverse_geocoder as rg
+
+# Origin and destination in YKR_id
+origin = "5838783"
+destination = "5838787"
+traveltimepath = r"C:\Sampon\Maantiede\Master of the Universe\HelsinkiTravelTimeMatrix2018\{0}xxx\travel_times_to_ {1}.txt".format(
+        destination[:4], destination)
+
+# get destination txt file and columns not about private cars
+destfile = pd.read_csv(traveltimepath, sep=";")
+destfile["from_id"] = pd.to_numeric(destfile["from_id"])
+delCol = list(destfile.columns[2:13])
+destfile = destfile.drop(delCol, axis=1)
+
+# read ykr-grid into GeoDataFrame, then find geometry of the destination
+# TÄÄ TEHDÄÄN SKRIPTIN ALUSSA, DELAA TÄÄ JOSSAIN VÄLIS
+#grid = gpd.read_file(
+#        wd + r"\MetropAccess_YKR_grid_EurefFIN.shp")
+
+grid["YKR_ID"] = pd.to_numeric(grid["YKR_ID"])
+
+destGeom = grid.loc[grid["YKR_ID"] == int(destination)].reset_index()
+origGeom = grid.loc[grid["YKR_ID"] == int(origin)].reset_index()
+
+destGeom = destGeom.centroid.geometry[0]
+origGeom = origGeom.centroid.geometry[0]
+
+# this offline reverse geocoder is kind of useless!
+#def pointToLatLon(point):
+#    '''
+#    Get Shapely Point coordinates as tuple, in YX order for geolocator
+#    '''
+#    x, y = tuple(point.coords)[0]
+#    
+#    # Nominatim. These lines could be inside function
+#    myProj = Proj(init="epsg:3067", proj="utm", zone=35)
+#    lon, lat = myProj(x, y, inverse=True)
+#    
+#    return (lat, lon)
+    
+#destCoords = pointToLatLon(destGeom)
+#origCoords = pointToLatLon(origGeom)
+
+# use reverse_geocoder
+#match = rg.search(destCoords)
+#destMatch = match[0]["name"]
+
+#match = rg.search(origCoords)
+#origMatch = match[0]["name"]
+
+# get correct row
+thisRow = postal.loc[postal.intersects(origGeom)]
+
+# try to add mean parktime and walktime for rush hour and non-rush hour.
+# problems arise when small n causes values be unexpected: like keimola here.
+# IF 0.73min IS THE USED PARKING TIME, WHAT IS THE USED WALKING TIME IN THE
+# TRAVELTIME MATRIX?
+
+# in data:
+# 1 is rushhour
+# 2 is weekday other than rushhour
+# 3 weekend, 4 anything
+thisZipcode = records.loc[records.zipcode == thisRow.posti_alue.values[0]]
+thisDict = {
+        "car_r_t": thisZipcode.loc[thisZipcode.timeofday == 1]["parktime"].mean(),
+        "car_m_t": thisZipcode.loc[thisZipcode.timeofday == 2]["parktime"].mean(),
+        "car_sl_t": thisZipcode["parktime"].mean()}
+
+# match origin and destination
+res = destfile.loc[destfile["from_id"] == int(origin)].reset_index()
+res = res.drop(columns=["index"])
+res = pd.concat([res]*2, ignore_index=True) # copy row
+
+# we will assume rush hour = rush hour, midday = other than rush hour
+
+
+
+
+
+
+
+res = res.loc[res.index[0]]
+
+# report
+#print("From YKR id {0} ({1}) to YKR id {2} ({3})".format(
+#        res[0], origMatch, res[1], destMatch))
+print("Origin is located in {0}. Destination in {1}".format(
+        postal.loc[postal.intersects(origGeom), "nimi"].values[0],
+        postal.loc[postal.intersects(destGeom), "nimi"].values[0]))
+print("\n--- Travel time matrix 2018 ----")
+print("\nEntire travel time in rush hour traffic: {0} min".format(res[2]))
+print("Distance in meters in rush hour traffic: {0} km".format(res[3] / 1000))
+print("\nEntire travel time in midday traffic: {0} min".format(res[4]))
+print("Distance in meters in midday traffic: {0} km".format(res[5] / 1000))
+print("Entire travel time following speed limits without any additional impedances: {0} min".format(
+        res[6]))
+print("\n --- Sampo Vesanen thesis ---")
+
+
+# plot these two Points
+base = grid.plot(linewidth=0.8, 
+                 edgecolor="0.8", 
+                 color="white",
+                 figsize=(16, 12))
+postal.plot(ax=base,
+            linewidth=0.8,
+            edgecolor="black",
+            facecolor="none")
+gpd.GeoDataFrame(geometry=[origGeom]).plot(ax=base)
+gpd.GeoDataFrame(geometry=[destGeom]).plot(ax=base)
+plt.tight_layout()
 
 
 
@@ -1106,33 +1421,44 @@ import statsmodels.api as sm
 from statsmodels.formula.api import ols    
 import seaborn as sns
 
-# perus
-f, ax = plt.subplots(figsize=(11,9))
-plt.title('parktime distribution between sample')
+# basic
+f, ax = plt.subplots(figsize=(11, 9))
+plt.title("parktime distribution between sample")
 sns.distplot(records.parktime)
 
-# adv
-f, ax = plt.subplots(figsize=(11,9))
+# advanced
+f, ax = plt.subplots(figsize=(11, 9))
 
 sns.distplot(records[records.parkspot == 1].parktime, 
              ax=ax, 
-             label='side of street')
+             label="side of street")
 
 sns.distplot(records[records.parkspot == 2].parktime, 
              ax=ax, 
-             label='parking lot')
+             label="parking lot")
 
 sns.distplot(records[records.parkspot == 3].parktime, 
              ax=ax, 
-             label='parking gara')
+             label="parking gara")
+
 sns.distplot(records[records.parkspot == 4].parktime, 
              ax=ax, 
-             label='priva/reserve')
+             label="priva/reserve")
 
-plt.title('parktime Distribution for parkspot')
+plt.title("parktime Distribution for parkspot")
 plt.legend()
 
 # https://www.marsja.se/four-ways-to-conduct-one-way-anovas-using-python/
 #boxplot
-records.boxplot('parktime', by='timeofday', figsize=(12, 8))
-records.boxplot('parktime', by='parkspot', figsize=(12, 8))
+records.boxplot("parktime", by="timeofday", figsize=(12, 8))
+records.boxplot("parktime", by="parkspot", figsize=(12, 8))
+
+
+
+#####################
+### EXPORT TO CSV ###
+#####################
+
+# data to csv for R. "pythonrecords.csv"
+records.to_csv(wd + "records.csv", encoding="Windows-1252")
+postal.to_csv(wd + "postal.csv", encoding="Windows-1252")
