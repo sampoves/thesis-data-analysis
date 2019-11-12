@@ -30,6 +30,7 @@ import scipy.stats as stats
 from scipy.stats import levene
 from statsmodels.formula.api import ols 
 import statsmodels.api as sm
+from rtree import index
 #import mapclassify #scheme="fisher_jenks" needs mapclassify
 
 
@@ -209,252 +210,8 @@ for idx, geom in enumerate(postal.geometry):
 ### GIVE GRID CELLS ZIPCODES ###
 ################################
 
-# newest test, RTREE ENABLED
-# SEEMS TO WORK SOMEHOW, BUT WHY 16000 ROWS?! MORE THAN GRID 13231
-# GOT IT; BECAUSE THE BORDERS OF ZIPCODES ARE AMBIGUOUS, this code does not
-# test for to which zipcode it should belong to, probably records two zipcodes
-# for one ykr-id 
-from rtree import index
-
-# Save crs to be used here
-crs = grid.crs
-
-# Get mainland envelope, then symmetric diffence to produce exteriors MultiPolygon
-exteriors = mainland.envelope.buffer(1000)
-exteriors = gpd.overlay(gpd.GeoDataFrame(geometry=[exteriors]), 
-                        gpd.GeoDataFrame(geometry=[mainland]), 
-                        how="symmetric_difference")
-exteriors.crs = crs
-
-# List to collect pairs of intersecting features
-fc_intersect = []
-
-# Instantiate index class
-idx = index.Index()
-for i, featA in grid.iterrows():
-    idx.insert(i, featA["geometry"].bounds)
-
-# This runs for 8 minutes! 20 000 results. Wrong. Investigate
-for i2, featB in postal.iterrows():
-    
-    print("\nCurrent zipcode is {0}, {1}".format(
-            featB.loc["posti_alue"], featB.loc["nimi"]))
-
-    # Test for potential intersection with each feature of the other feature 
-    # collection
-    for intersect_maybe in idx.intersection(featB["geometry"].bounds):
-        # Confirm intersection
-
-        if featB["geometry"].intersects(grid.loc[intersect_maybe]["geometry"]):
-            
-            print("-- Intersection found in grid cell {0}, YKRID {1}".format(
-                    intersect_maybe,
-                    grid.loc[intersect_maybe]["YKR_ID"]))
-                
-            # create mainland without the current zipcode. Use it to test if
-            # there are neighboring zipcodes in current grid cell
-            reduced_mainland = gpd.overlay(gpd.GeoDataFrame(geometry=[mainland]),
-                                           gpd.GeoDataFrame(geometry=[featB.geometry]),
-                                           how="symmetric_difference")
-            
-            # Test current grid cell for presence of area which is not research 
-            # area (sea, neighboring municipalities)
-            if grid.loc[intersect_maybe]["geometry"].intersects(
-                    exteriors.geometry[0]):
-                
-                print("---- grid cell intersects with exterior")
-                
-                # this code is needed because there are pieces of coast line
-                # there one cell is shared by two zipcodes
-
-                
-                # thisGridCell is the entire current grid cell which
-                # intersects current zipcode area. It is inevitably shaped like
-                # a square and may contain exterior areas
-                thisGridCell = grid.loc[[intersect_maybe]]
-                
-                # thisCellPiece is the current piece of grid in the current
-                # zipcode area. Does not include exteriors of other zip code
-                # areas
-                thisCellPiece = gpd.overlay(
-                        thisGridCell,
-                        gpd.GeoDataFrame(geometry=[featB.geometry]),
-                        how="intersection")
-                
-                # cellMinusExt is the entire current grid cell with 
-                # all possible zipcode areas but does not include exterior 
-                # areas. Use these to test if current piece of grid cell in 
-                # current zipcode area is the largest feature
-                cellMinusExt = gpd.overlay(thisGridCell, exteriors, 
-                                           how="difference")
-                
-                # If the area of cellPieceArea is smaller than half of the
-                # entire gridCellArea, do not accept that as result. Move on.
-                cellMinusExtArea = 0 if cellMinusExt.empty == True else cellMinusExt.area.values[0]
-                cellPieceArea = 0 if thisCellPiece.empty == True else thisCellPiece.area.values[0]
-                
-               
-                if cellPieceArea / cellMinusExtArea > 0.5:
-                    fc_intersect.append(
-                            [grid.loc[intersect_maybe].YKR_ID, featB.posti_alue])
-                    next
-                
-                # conclusion. Next cycle
-                else:
-                    print("------ grid cell ")
-                    next
-              
-            # Test for presence of other zipcode areas in current grid cell
-            if grid.loc[intersect_maybe]["geometry"].intersects(
-                    reduced_mainland.geometry[0]):
-                
-                print("---- grid cell intersects with another zipcode area")
-                
-                # thisGridCell is the entire current grid cell which
-                # intersects current zipcode area. It is inevitably shaped like
-                # a square and may contain exterior areas
-                thisGridCell = grid.loc[[intersect_maybe]]
-                
-                # thisCellPiece is the current piece of grid in the current
-                # zipcode area. Does not include exteriors of other zip code
-                # areas
-                thisCellPiece = gpd.overlay(
-                        thisGridCell,
-                        gpd.GeoDataFrame(geometry=[featB.geometry]),
-                        how="intersection")
-                
-                # If the area of cellPieceArea is smaller than half of the
-                # entire gridCellArea, do not accept that as result. Move on.
-                gridCellArea = 0 if thisGridCell.empty == True else thisGridCell.area.values[0]
-                cellPieceArea = 0 if thisCellPiece.empty == True else thisCellPiece.area.values[0]
-                
-                if cellPieceArea / gridCellArea > 0.5:
-                    fc_intersect.append(
-                            [grid.loc[intersect_maybe].YKR_ID, featB.posti_alue])
-                    next
-                
-                #conclusion
-                else:
-                    next
-                
-            print("---- Grid cell completely within zipcode area")
-                
-            # Default course of action, grid cell completely within zipcode area
-            fc_intersect.append(
-                    [grid.loc[intersect_maybe].YKR_ID, featB.posti_alue])
-
-# 20000 results, why
-#test
-testdf = pd.DataFrame.from_records(fc_intersect)
-testdf.columns = ["ykr", "count"]
-grouped = testdf.groupby(["ykr"]).agg({"ykr": "count"})
-
-
-
-
-
-
-# teesttt
-plot_polygon([mainland, thisGridCell, cellAllZips, cellMinusExt])
-plot_polygon([cellAllZips, thisCellPiece, cellMinusExt])
-
-
-# current piece of this zipcode
-postal.loc[143, "geometry"].intersects(grid.loc[13105]["geometry"])
-pelle = gpd.overlay(postal.loc[[143]], grid.loc[[13105]], 
-                    how="intersection")
-
-# the entire piece of land in this grid cell, can be of many zipcodes
-maapala = gpd.overlay(grid.loc[[13105]], exteriors, how="difference")
-plot_polygon([maapala, pelle])
-
-
-
-
-
-
-
-
-# TEST 2000
-
-from shapely.geometry import shape
-
-# convert to lists of shapely geometries
-zipcodes = [shape(poly) for poly in postal.geometry]
-gridcells = [shape(poly) for poly in grid.geometry]
-
-# intersections with references to the original polygon layer
-for i, poly in enumerate(zipcodes):
-    for cell in gridcells:
-        if poly.intersects(cell):
-            print("pf")
-            #print poly_layer[i]
-
-
-# MEGA SJOIN
-# sjoin could work
-
-# all intersections, still problems with partitions
-delCol = postal.columns[2:106]
-intersections = gpd.sjoin(grid, postal.drop(columns=delCol), how="inner", op="intersects")
-grouped = intersections.groupby(["YKR_ID"]).agg({"YKR_ID": "count"})
-
-# test more
-# exterior border
-ext_ints = gpd.sjoin(grid,
-                     gpd.GeoDataFrame(crs=crs, geometry=[mainland.boundary]),
-                     how="inner", op="intersects")
-
-# all borders of zipcode areas, including exterior borders
-border_ints = gpd.sjoin(grid, 
-                        gpd.GeoDataFrame(geometry=postal.boundary.geometry),
-                        how="inner", op="intersects")
-
-# both is all zipcode borders without exterior borders
-both = gpd.overlay(border_ints, ext_ints, how="difference")
-
-
-
-# NEWTEST 03030303030
-# https://gis.stackexchange.com/a/227433/122733
-for i, ziparea in postal.iterrows():
-    
-    thisZip = gpd.GeoDataFrame(crs=crs, geometry=[ziparea.geometry])
-    these = gpd.sjoin(grid, thisZip, how="inner", op="intersects")
-    
-    # test if current ziparea intersects areas outside research area
-    if ziparea.geometry.intersects(exteriors.geometry[0]):
-        print("klfds")
-        
-        
-        testt = gpd.sjoin(grid, thisZip, how="inner", op="intersects")
-
-    
-## newer test 20042334    
-
-# test postal area boundaries with grid cells. test exterior boundaries and
-# zipcode boundaries. maybe keep track which ykrids have been checked out
-
-#hidas
-ple = gpd.GeoDataFrame(crs=crs, geometry=[postal.boundary.unary_union])
-testf = gpd.sjoin(grid, ple, how="inner", op="intersects")
-    
-    
-
-
-
-
-
-
-
-
-
-
-
-
 # THIS WORKS! is far as I have testeddd
 ### TAAS UUS TEEST
-from rtree import index
 
 # kirjoita muistiin, että mikä ykr-koodi on saanu minkäkin aluesumman
 # col (total area of zipcode) <-- tässä kaikki maa, tärkeä reunapolygoneille
@@ -492,10 +249,14 @@ for idx, cell in grid.iterrows():
 
 
 # initiate listing for grid cells
-grid_areas = gpd.GeoDataFrame(columns=["ykr", "zipcode", "largest_area", 
+grid_areas = gpd.GeoDataFrame(columns=["YKR_ID", "zipcode", "largest_area", 
                                        "total_area"])
 
 # kind of works?! 12 000 results in maybe 6 minutes
+
+import time
+start_time = time.time()
+    
 i = 0
 for postal_idx, postalarea in postal.iterrows():
     print("now processing {0}".format(postalarea.nimi))
@@ -518,19 +279,20 @@ for postal_idx, postalarea in postal.iterrows():
             
             # test if cell ykr-id already exists in grid_areas
             grid_ykr = grid.loc[intersection_maybe].YKR_ID
-            if grid_areas[grid_areas["ykr"].isin([grid_ykr])].empty == True:
+            
+            if grid_areas[grid_areas["YKR_ID"].isin([grid_ykr])].empty == True:
                 
                 # this YKR_ID does not yet exist
-                grid_areas.loc[i, "ykr"] = grid.loc[intersection_maybe].YKR_ID
+                grid_areas.loc[i, "YKR_ID"] = grid.loc[intersection_maybe].YKR_ID
                 grid_areas.loc[i, "zipcode"] = postalarea.posti_alue
                 grid_areas.loc[i, "largest_area"] = cellarea
                 grid_areas.loc[i, "total_area"] = cellarea
                 i += 1
                 
-            #if grid_areas.YKR_ID == grid.loc[intersection_maybe].YKR_ID:
             else:   
-                # this is the location of the ykr_id
-                found_idx = grid_areas.index[grid_areas.ykr == grid.loc[intersection_maybe].YKR_ID][0]
+                # The current YKR_ID was found in grid_areas 
+                # This is the location of the located pre-existing ykr_id
+                found_idx = grid_areas.index[grid_areas.YKR_ID == grid.loc[intersection_maybe].YKR_ID][0]
                 
                 # in this case the ykr id has been iterated over in some previous
                 # iteration of a postal area. Only add to largest_area if larger
@@ -541,65 +303,32 @@ for postal_idx, postalarea in postal.iterrows():
                     
                 grid_areas.loc[found_idx, "total_area"] += cellarea
 
+print("--- %m minutes %s seconds ---" % (time.time() - start_time))
 
-grid_areas.rename(columns={"ykr": "YKR_ID"}, inplace=True)
-grid[~grid["YKR_ID"].isin(grid_areas["YKR_ID"].tolist())]
+# add ykr-ids which don't occur in grid_areas. These are the cells outside 
+# PAAVO postal code areas
+grid_areas2 = grid_areas.copy()
+notPresent = list(np.setdiff1d(list(grid.YKR_ID), list(grid_areas.YKR_ID)))
 
+for cell_id in notPresent:
+    grid_areas2 = grid_areas2.append(
+        {"YKR_ID": np.int64(cell_id), 
+         "zipcode": "99999"}, 
+        ignore_index=True)
+
+
+
+
+
+
+
+# testin
 # here we see that ykr ids which were missing from grid_areas are ones which
 # are completely outside PAAVO zipcode delineation
+grid[~grid["YKR_ID"].isin(grid_areas["YKR_ID"].tolist())]
+
 plot_polygon([mainland, grid[~grid["YKR_ID"].isin(grid_areas["YKR_ID"].tolist())]])
 plot_polygon([grid, grid[~grid["YKR_ID"].isin(grid_areas["YKR_ID"].tolist())]])
-
-
-       
-     
-            
-
-
-
-
-
-
-
-# List to collect pairs of intersecting features
-fc_intersect = []
-
-# Instantiate index class
-grid_index = index.Index()
-for idx, featA in grid.iterrows():
-    grid_index.insert(idx, featA["geometry"].bounds)
-
-
-
-for idx, postalarea in postal.iterrows():
-    
-    # Here rtree index only iterates through grid cells which are located 
-    # inside the bounds of current postalarea. We get a list of potential
-    # intersections in this area
-    for intersect_maybe in grid_index.intersection(postalarea["geometry"].bounds):        
-        
-        # Confirm intersection
-        if postalarea["geometry"].intersects(grid.loc[intersect_maybe]["geometry"]):
-            
-            if round(grid.loc[intersect_maybe]["geometry"].area) == 62500:
-                
-                # append data that this cell is guaranteed full cell.
-                # NOTE, all full grid cells
-                fc_intersect.append(
-                        [grid.loc[intersect_maybe].YKR_ID, 
-                         postalarea.posti_alue])
-                
-                # found full, delete from index
-                grid_index.delete(intersect_maybe, 
-                                  grid.loc[intersect_maybe]["geometry"].bounds)
-                
-    break
-
-
-testdf = pd.DataFrame.from_records(fc_intersect)
-grid[grid["YKR_ID"].isin(testdf[0])].plot() #yes in testdf
-grid[~grid["YKR_ID"].isin(testdf[0])].plot() #not in testdf
-
 
 
 
