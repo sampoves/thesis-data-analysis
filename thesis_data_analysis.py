@@ -237,26 +237,19 @@ for idx, geom in enumerate(postal.geometry):
 #plot_polygon([borderInter, exteriorInter])
 #plot_polygon([exteriorInter])
 
+import time
+start_time = time.time()
 
 # Instantiate index class
 grid_index = index.Index()
 for idx, cell in grid.iterrows():
     grid_index.insert(idx, cell["geometry"].bounds)
 
-#int_index = index.Index()
-#for idx, cell in interiorBorderInter.iterrows():
-#    int_index.insert(idx, cell["geometry"].bounds)
-
-
 # initiate listing for grid cells
 grid_areas = gpd.GeoDataFrame(columns=["YKR_ID", "zipcode", "largest_area", 
                                        "total_area"])
 
 # kind of works?! 12 000 results in maybe 6 minutes
-
-import time
-start_time = time.time()
-    
 i = 0
 for postal_idx, postalarea in postal.iterrows():
     print("now processing {0}".format(postalarea.nimi))
@@ -303,7 +296,7 @@ for postal_idx, postalarea in postal.iterrows():
                     
                 grid_areas.loc[found_idx, "total_area"] += cellarea
 
-print("--- %m minutes %s seconds ---" % (time.time() - start_time))
+print("--- %s seconds ---" % (time.time() - start_time))
 
 # add ykr-ids which don't occur in grid_areas. These are the cells outside 
 # PAAVO postal code areas
@@ -322,13 +315,79 @@ for cell_id in notPresent:
 
 
 
-# testin
-# here we see that ykr ids which were missing from grid_areas are ones which
-# are completely outside PAAVO zipcode delineation
-grid[~grid["YKR_ID"].isin(grid_areas["YKR_ID"].tolist())]
 
-plot_polygon([mainland, grid[~grid["YKR_ID"].isin(grid_areas["YKR_ID"].tolist())]])
-plot_polygon([grid, grid[~grid["YKR_ID"].isin(grid_areas["YKR_ID"].tolist())]])
+
+# NEWTEST FASTTT
+# much faster
+import time
+start_time = time.time()
+
+# establish zipcode data
+grid_areas3 = gpd.GeoDataFrame(columns=["YKR_ID", "zipcode", "largest_area", 
+                                       "total_area"])
+crs = grid.crs
+spatial_index = grid.sindex
+
+i = 0
+for idx, postalarea in postal.iterrows():   
+    print("now processing {0}".format(postalarea.nimi))
+    
+    possible_matches_index = list(
+            spatial_index.intersection(postalarea.geometry.bounds))
+    possible_matches = grid.iloc[possible_matches_index]
+    precise_matches = possible_matches[
+            possible_matches.intersects(postalarea.geometry)]
+    
+    thisZip = gpd.overlay(precise_matches,
+                        gpd.GeoDataFrame(crs=crs, geometry=[postalarea.geometry]),
+                        how="intersection")
+    thisZip["area1"] = thisZip.area
+
+
+    for inner_idx, row in thisZip.iterrows():
+
+        # this YKR_ID does not yet exist
+        if grid_areas3[grid_areas3["YKR_ID"].isin([row.YKR_ID])].empty == True:
+
+            grid_areas3.loc[i, "YKR_ID"] = row.YKR_ID
+            grid_areas3.loc[i, "zipcode"] = postalarea.posti_alue
+            grid_areas3.loc[i, "largest_area"] = row.area1
+            grid_areas3.loc[i, "total_area"] = row.area1
+            i += 1
+            
+        # The current YKR_ID was found in grid_areas 
+        else:   
+
+            # This is the location of the located pre-existing ykr_id
+            found_idx = grid_areas3.index[grid_areas3.YKR_ID == row.YKR_ID][0]
+            
+            # in this case the ykr id has been iterated over in some previous
+            # iteration of a postal area. Only add to largest_area if larger
+            # than before and add to total_area
+            if row.area1 > grid_areas3.loc[found_idx, "largest_area"]:
+                grid_areas3.loc[found_idx, "largest_area"] = row.area1
+                grid_areas3.loc[found_idx, "zipcode"] = postalarea.posti_alue
+                
+            grid_areas3.loc[found_idx, "total_area"] += row.area1
+
+print("--- %s seconds ---" % (time.time() - start_time))
+
+
+# result
+grid[grid["YKR_ID"].isin(list(grid_areas3["YKR_ID"]))].plot()
+
+# add ykr-ids which don't occur in grid_areas. These are the cells outside 
+# PAAVO postal code areas
+notPresent = list(np.setdiff1d(list(grid.YKR_ID), list(grid_areas3.YKR_ID)))
+
+for cell_id in notPresent:
+    grid_areas3 = grid_areas3.append(
+        {"YKR_ID": np.int64(cell_id), 
+         "zipcode": "99999"}, 
+        ignore_index=True)
+
+#compare slow and fast. they are identical as far as this works
+set(grid_areas2["largest_area"]).difference(set(grid_areas3["largest_area"]))
 
 
 
