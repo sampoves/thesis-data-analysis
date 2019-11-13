@@ -7,11 +7,8 @@ Created on Fri May 10 00:07:36 2019
 Sampo Vesanen Thesis survey datacrunch
 "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 
-TODO:
+TODO, maybe
     - Geographic analyses (Can't get geoplot to work)
-    - Detect outliers
-
-Important questions etc
     - Respondent specific reports (probably not useful)
     - fix crs mismatches
     - See how long user took to first visit survey and answer to the survey
@@ -54,17 +51,18 @@ from thesis_data_analysis_funcs import *
 ###################
 
 # Survey data. Lambda x to preserve leading zeros
-records = pd.read_csv(records_data, converters={'zipcode': lambda x: str(x)})
+records = pd.read_csv(records_data, converters={"zipcode": lambda x: str(x)})
 visitors = pd.read_csv(visitors_data)
 
 # Shapefiles
-grid = gpd.read_file("MetropAccess_YKR_grid_EurefFIN.shp", encoding='utf-8')
-resarea = gpd.read_file("paavo\pno_dissolve.shp", encoding='utf-8')
+grid = gpd.read_file("MetropAccess_YKR_grid_EurefFIN.shp", encoding="utf-8")
+resarea = gpd.read_file("paavo\pno_dissolve.shp", encoding="utf-8")
+postal = gpd.read_file(r"paavo\2019\pno_tilasto_2019.shp", encoding="utf-8")
 
-# import urban zones shapefile and select only relevant area for this study
+# Import urban zones shapefile and select only relevant area for this study
 ykr_vyoh = gpd.read_file(
         r"C:\Sampon\Maantiede\Master of the Universe\yhdyskuntarakenteenvyoh17\YKRVyohykkeet2017.shp", 
-        encoding='utf-8')
+        encoding="utf-8")
 ykr_vyoh = gpd.overlay(ykr_vyoh, 
                        gpd.GeoDataFrame(geometry=resarea.buffer(500)), 
                        how="intersection")
@@ -112,9 +110,8 @@ visitors = visitors.drop([3753])
 ### PROCESS SHAPEFILES ###
 ##########################
 
-# Process Helsinki Capital Region geodataframe from PAAVO data
+# Process Helsinki Capital Region GeoDataFrame from PAAVO data
 muns = ["091", "049", "092", "235"]
-postal = gpd.read_file(r"paavo\2019\pno_tilasto_2019.shp", encoding="utf-8")
 postal = postal[postal.kunta.isin(muns)]
 postal = postal.reset_index().drop(columns=["index", "euref_x", "euref_y"])
 
@@ -205,20 +202,31 @@ for idx, geom in enumerate(postal.geometry):
             
 
 
-
 ################################
 ### GIVE GRID CELLS ZIPCODES ###
 ################################
 
-# establish zipcode data
-grid_areas3 = gpd.GeoDataFrame(columns=["YKR_ID", "zipcode", "largest_area", 
+# My survey data and Travel Time Matrix 2018 operate in different spatial
+# units. TTM is available in YKR grid cells, while my data was gathered
+# with PAAVO zipcode delineations as the base unit. In order to compare TTM and 
+# my findings I need to add postal area code data to grid. This enables me to
+# assign each postal code area with mean data about parktime and walktime.
+            
+# The for loop below assigns zipcode to a cell when more than 50 percent of the
+# current cell area is in that zipcode. Helsinki Capital Region is of different
+# shape in grid and postal and the for loop below will not iterate through 
+# cells outside of postal. Add these cells to grid_areas after this for loop.
+
+# Establish dataframe to collect zipcode area data
+grid_areas = gpd.GeoDataFrame(columns=["YKR_ID", "zipcode", "largest_area", 
                                        "total_area"])
 crs = grid.crs
-spatial_index = grid.sindex
+spatial_index = grid.sindex # geopandas spatial index
 
+# Use i to create new rows to grid_areas
 i = 0
 for idx, postalarea in postal.iterrows():   
-    print("now processing {0}".format(postalarea.nimi))
+    #print("now processing {0}".format(postalarea.nimi))
     
     possible_matches_index = list(
             spatial_index.intersection(postalarea.geometry.bounds))
@@ -226,56 +234,59 @@ for idx, postalarea in postal.iterrows():
     precise_matches = possible_matches[
             possible_matches.intersects(postalarea.geometry)]
     
+    # current zipcode as df
     thisZip = gpd.overlay(precise_matches,
                         gpd.GeoDataFrame(crs=crs, geometry=[postalarea.geometry]),
                         how="intersection")
     thisZip["area1"] = thisZip.area
 
-
+    # Iterate through all rows in current zipcode and see if each YKR_ID is
+    # in grid_areas or not
     for inner_idx, row in thisZip.iterrows():
 
-        # this YKR_ID does not yet exist
-        if grid_areas3[grid_areas3["YKR_ID"].isin([row.YKR_ID])].empty == True:
+        # this YKR_ID does not yet exist in grid_areas
+        if grid_areas[grid_areas["YKR_ID"].isin([row.YKR_ID])].empty == True:
 
-            grid_areas3.loc[i, "YKR_ID"] = row.YKR_ID
-            grid_areas3.loc[i, "zipcode"] = postalarea.posti_alue
-            grid_areas3.loc[i, "largest_area"] = row.area1
-            grid_areas3.loc[i, "total_area"] = row.area1
+            grid_areas.loc[i, "YKR_ID"] = row.YKR_ID
+            grid_areas.loc[i, "zipcode"] = postalarea.posti_alue
+            grid_areas.loc[i, "largest_area"] = row.area1
+            grid_areas.loc[i, "total_area"] = row.area1
             i += 1
             
         # The current YKR_ID was found in grid_areas 
         else:   
 
             # This is the location of the located pre-existing ykr_id
-            found_idx = grid_areas3.index[grid_areas3.YKR_ID == row.YKR_ID][0]
+            found_idx = grid_areas.index[grid_areas.YKR_ID == row.YKR_ID][0]
             
-            # in this case the ykr id has been iterated over in some previous
-            # iteration of a postal area. Only add to largest_area if larger
-            # than before and add to total_area
-            if row.area1 > grid_areas3.loc[found_idx, "largest_area"]:
-                grid_areas3.loc[found_idx, "largest_area"] = row.area1
-                grid_areas3.loc[found_idx, "zipcode"] = postalarea.posti_alue
+            # In this case the ykr id has been iterated over in some previous
+            # iteration of a postal area. Only add to largest_area if area value
+            # is larger than before and add to total_area
+            if row.area1 > grid_areas.loc[found_idx, "largest_area"]:
+                grid_areas.loc[found_idx, "largest_area"] = row.area1
+                grid_areas.loc[found_idx, "zipcode"] = postalarea.posti_alue
                 
-            grid_areas3.loc[found_idx, "total_area"] += row.area1
+            grid_areas.loc[found_idx, "total_area"] += row.area1
 
 
-# add ykr-ids which don't occur in grid_areas. These are the cells outside 
-# PAAVO postal code areas
-notPresent = list(np.setdiff1d(list(grid.YKR_ID), list(grid_areas3.YKR_ID)))
+# Find out which grid ykr-ids do not occur in grid_areas. These are the cells 
+# outside PAAVO postal code areas
+notPresent = list(np.setdiff1d(list(grid.YKR_ID), list(grid_areas.YKR_ID)))
 
+# Add cells to grid_areas
 for cell_id in notPresent:
-    grid_areas3 = grid_areas3.append(
+    grid_areas = grid_areas.append(
         {"YKR_ID": np.int64(cell_id), 
          "zipcode": "99999"}, 
         ignore_index=True)
 
-# Incorporate zipcode data to grid
-grid2 = pd.concat(
-        [grid.set_index("YKR_ID"), grid_areas3.set_index("YKR_ID")], 
+# Incorporate grid_areas area data to grid
+grid = pd.concat(
+        [grid.set_index("YKR_ID"), grid_areas.set_index("YKR_ID")], 
         axis=1, join="inner").reset_index()
 
 # With this shp we can verify visually that the method works great
-#grid2.to_file("ykrgrid2.shp")
+#grid.to_file("ykrgrid2.shp")
 
 # verify zipcodes in plot
 # get postal codes to grid and separate each zipcode area. TODO: incorporate
@@ -285,8 +296,9 @@ grid2 = pd.concat(
 #                 color="white",
 #                 figsize=(16, 12))
 
+# tad obsolete now that grid has zipcode data
 #for code in list(set(grid_areas3.zipcode)):
-#    theseCells = grid_areas3["YKR_ID"][grid_areas3["zipcode"] == code]
+#    theseCells = grid_areas["YKR_ID"][grid_areas["zipcode"] == code]
 #    thisArea = grid[grid["YKR_ID"].isin(list(theseCells))]
 #    thisArea.plot(ax=base,
 #            linewidth=0.8,
@@ -299,7 +311,8 @@ grid2 = pd.concat(
 ### RESPONDENT BEHAVIOUR ###
 ############################
 
-# Create groupby aggregations of the records.
+# Create groupby aggregations of the records. One can use this dataframe to
+# see how each respondent answered to the survey
 visitor_grp = records.groupby(["ip"]).agg({
         "id": "count", 
         "timestamp": lambda x: x.tolist(),
@@ -317,7 +330,8 @@ visitor_grp = records.groupby(["ip"]).agg({
 #################################
 
 # Detect if a user has answered a same area multiple times. Please note that 
-# this only locates duplicates but does nothing about it.
+# this only locates duplicates but does nothing about it. I will leave the
+# discussion about this to the thesis.
 for visitor in records.ip.unique():
     theseRecords = records.loc[records['ip'] == visitor]
     
@@ -364,8 +378,8 @@ for idx, (park_value, walk_value, ip_value) in enumerate(
 illegal = list(set(illegal))
 illegal_df = records[records["ip"].isin(illegal)]
 
-# Drop the records which have values equal or above 60 as answer. Drop the IP 
-# addresses from visitors as well.
+# Drop the records which have values equal or above 60 as answer. Drop the same
+# IP address codes from visitors as well.
 records = records.drop(records.index[delList])
 records = records.reset_index()
 visitors = visitors[~visitors["ip"].isin(illegal)]
@@ -377,7 +391,8 @@ visitors = visitors.reset_index()
 ### ADD DATA TO GEODATAFRAMES ###
 #################################
 
-# Reclassify ykr_vyoh. Reclassification is created as in the SYKE website
+# Reclassify ykr_vyoh. Reclassification is created as in Finnish Environment
+# Institute website (Only available in Finnish)
 #https://www.ymparisto.fi/fi-FI/Elinymparisto_ja_kaavoitus/Yhdyskuntarakenne/Tietoa_yhdyskuntarakenteesta/Yhdyskuntarakenteen_vyohykkeet
 ykr_vyoh["vyohselite"] = ykr_vyoh["vyohselite"].replace(
         {"keskustan reunavyöhyke/intensiivinen joukkoliikenne": 
@@ -389,7 +404,7 @@ ykr_vyoh["vyohselite"] = ykr_vyoh["vyohselite"].replace(
          "alakeskuksen jalankulkuvyöhyke/joukkoliikenne": 
              "alakeskuksen jalankulkuvyöhyke"})
 
-# add ykr_vyoh columns
+# Add ykr_vyoh columns
 postal["ykr_kesk_jalan"] = 0
 postal["ykr_kesk_reuna"] = 0
 postal["ykr_int_joukko"] = 0
@@ -398,7 +413,7 @@ postal["ykr_alakesk_jalan"] = 0
 postal["ykr_autovyoh"] = 0
 postal["ykr_novalue"] = 0
 
-# add Urban Atlas 2012 forest amount
+# Add Urban Atlas 2012 forest amount
 postal["ua_forest"] = 0
 
 # Add column "answer count", "parktime mean", and "walktime mean"
@@ -447,10 +462,11 @@ statistics.calculateStats()
 ### Set percentage of urban zones and forest in each zipcode area ###
 #####################################################################
 
-# Idea is to overlay yhdyskuntarakenteen vyöhykkeet on dataframe postal and see 
-# the percentage how much of each zone is included in the zipcode in question. 
-# Together with checking out how much forest is there in research area we could 
-# find some interesting results.
+# The idea is to overlay yhdyskuntarakenteen vyöhykkeet on dataframe postal and 
+# see the percentage how much of each zone is included in the zipcode in 
+# question. Together with checking out how much forest is there in research 
+# area we could find some interesting results in the statistical analysis.
+
 
 # YKR zones
 
@@ -512,6 +528,7 @@ postal["ykr_novalue"] = postal.apply(
 # Make sure rounding does not cause trouble in the calculation above
 postal["ykr_novalue"].loc[postal["ykr_novalue"] < 0] = 0
 
+
 # Urban Atlas 2012 forest
 
 # Reproject the geometries by replacing the values with projected ones
@@ -540,7 +557,7 @@ for row in postal.iterrows():
 
 
 #########################################
-# BRING YKR ZONES AND FOREST TO RECORDS #
+# MERGE YKR ZONES AND FOREST TO RECORDS #
 #########################################
 
 # See generalised value of ykr_vyoh and forest in records for further
@@ -618,8 +635,7 @@ for idx, row in enumerate(records.iterrows()):
 # (for example Lippajärvi-Järvenperä and Sepänkylä-Kuurinniitty) and just 
 # south of Helsinki-Vantaa airport.
 
-# Helsinki
-# Piirijako
+# Helsinki subdivisions, see:
 # https://www.avoindata.fi/data/fi/dataset/helsinki-alueittain/resource/9e197c6a-1882-4ad9-a50b-9dc7c49cb75a
 
 # Southern subdivision
@@ -730,16 +746,15 @@ hkiEast = ["00940", # Kontula
 hkiOster = ["00890"] # Östersundom
 #postal[postal.posti_alue.isin(hkiOster)].plot()
 
-
 # All of the centers in Helsinki
 #postal[postal.posti_alue.isin(hkiSouth + hkiWest + hkiCentral + hkiNorth +
 #                              hkiNortheast + hkiSoutheast + hkiEast +
 #                              hkiOster)].plot()
 
 
-# Espoo
+# Espoo subdivisions:
 #https://www.espoo.fi/fi-fi/Espoon_kaupunki/Tietoa_Espoosta/Tilastot_ja_tutkimukset/Aluejakokartat
-# See Excel sheet for exact place names
+# See Excel sheet for exact place names:
 # Suur-, tilasto- ja pienalueiden nimet 1.1.2014
     
 #Suur-Leppävaara subdivision
@@ -825,7 +840,8 @@ espPohjoisespoo = ["02970", # Kalajärvi
 # Kauniainen
 kauniainen = ["02700"]
 
-# Vantaa
+
+# Vantaa subdivisions:
 # https://www.vantaa.fi/instancedata/prime_product_julkaisu/vantaa/embeds/vantaawwwstructure/124282_Vantaa_alueittain_2015.pdf
 # Myyrmäki subdivision
 # Linnainen, Hämevaara, Hämeenkylä, Vapaala, Varisto, Myyrmäki, Kaivoksela,
@@ -896,8 +912,6 @@ vanHakunila = ["01200", # Hakunila
                "01280"] # Länsimäki
 #postal[postal.posti_alue.isin(vanHakunila)].plot()
 
-
-
 # All of Vantaa
 #postal[postal.posti_alue.isin(vanMyyrmaki + vanKivisto + vanAviapolis +
 #                              vanTikkurila + vanKoivukyla + vanKorso +
@@ -907,11 +921,10 @@ vanHakunila = ["01200", # Hakunila
 
 # Insert subvision names to records
 
-# Insert column for "suurpiiri" (we'll call them subdivisions) information 
-# to records
+# Create column for subdivisions information to records
 records["subdiv"] = 0
 
-# This dictionary helps assigning postal codes to dataframe records
+# This dictionary helps assigning postal codes to DataFrame records
 subdiv_dict = {"hkiSouth": "Helsinki Southern",
                "hkiWest": "Helsinki Western",
                "hkiCentral": "Helsinki Central",
@@ -955,88 +968,70 @@ for varname, fullname in subdiv_dict.items():
 # https://gis.stackexchange.com/questions/80367/how-to-convert-6-7-digit-coordinates-to-degrees-latitude-longitude
 # utm easthing and northing
 
-# this code is meant to compare 2018 travel time matrix results to my results
+# This code is meant to compare 2018 Travel-Time Matrix results to my results.
 # Get origin and destination points from TTM data, then compare to zipcodes
 # mean in my data
 
-# 0,73 min parkkipaikan etsimisaika. 43,8 s
+# Above I sorted out zipcodes for each cell in grid to enable comparison here.
+# Use originId and destinationId to find which zipcode origin and destination
+# are, then use this zipcode to find the corresponding data on mean parktime
+# and walktime in records.
 
-from pyproj import Proj, transform
-import reverse_geocoder as rg
+# In TTM, searching for parking is 0.73 minutes (43.8 s). Searching for parking
+# includes the parking itself.
 
 # Origin and destination in YKR_id
-origin = "5838783"
-destination = "5838787"
+originId = "5838783"
+destinationId = "5838787"
 traveltimepath = r"C:\Sampon\Maantiede\Master of the Universe\HelsinkiTravelTimeMatrix2018\{0}xxx\travel_times_to_ {1}.txt".format(
-        destination[:4], destination)
+        destinationId[:4], destinationId)
 
-# get destination txt file and columns not about private cars
+# Get destination txt file. Remove all columns not about private cars
 destfile = pd.read_csv(traveltimepath, sep=";")
 destfile["from_id"] = pd.to_numeric(destfile["from_id"])
 delCol = list(destfile.columns[2:13])
 destfile = destfile.drop(delCol, axis=1)
 
-# read ykr-grid into GeoDataFrame, then find geometry of the destination
-# TÄÄ TEHDÄÄN SKRIPTIN ALUSSA, DELAA TÄÄ JOSSAIN VÄLIS
-#grid = gpd.read_file(
-#        wd + r"\MetropAccess_YKR_grid_EurefFIN.shp")
+# destination and origin in grid
+dest = grid.loc[grid["YKR_ID"] == int(destinationId)].reset_index()
+orig = grid.loc[grid["YKR_ID"] == int(originId)].reset_index()
+destGeom = dest.centroid.geometry[0]
+origGeom = orig.centroid.geometry[0]
 
-grid["YKR_ID"] = pd.to_numeric(grid["YKR_ID"])
+# Get the row of origin and destination in postal. maybe unnecessary, can
+# just use orig there below in thisZipcode
+#origZipData = postal[postal["posti_alue"] == orig["zipcode"][0]]
 
-destGeom = grid.loc[grid["YKR_ID"] == int(destination)].reset_index()
-origGeom = grid.loc[grid["YKR_ID"] == int(origin)].reset_index()
+# Try to calculate mean parktime and walktime for rush hour and non-rush hour.
+# Problems arise when small n causes values be unexpected: like Keimola here.
 
-destGeom = destGeom.centroid.geometry[0]
-origGeom = origGeom.centroid.geometry[0]
-
-# this offline reverse geocoder is kind of useless!
-#def pointToLatLon(point):
-#    '''
-#    Get Shapely Point coordinates as tuple, in YX order for geolocator
-#    '''
-#    x, y = tuple(point.coords)[0]
-#    
-#    # Nominatim. These lines could be inside function
-#    myProj = Proj(init="epsg:3067", proj="utm", zone=35)
-#    lon, lat = myProj(x, y, inverse=True)
-#    
-#    return (lat, lon)
-    
-#destCoords = pointToLatLon(destGeom)
-#origCoords = pointToLatLon(origGeom)
-
-# use reverse_geocoder
-#match = rg.search(destCoords)
-#destMatch = match[0]["name"]
-
-#match = rg.search(origCoords)
-#origMatch = match[0]["name"]
-
-# get correct row
-thisRow = postal.loc[postal.intersects(origGeom)]
-
-# try to add mean parktime and walktime for rush hour and non-rush hour.
-# problems arise when small n causes values be unexpected: like keimola here.
 # IF 0.73min IS THE USED PARKING TIME, WHAT IS THE USED WALKING TIME IN THE
 # TRAVELTIME MATRIX?
+# --- ANSWER MAY BE THAT WALKING TO DESTINATION IS INCLUDED IN THIS 0.73min
 
 # in data:
-# 1 is rushhour
-# 2 is weekday other than rushhour
+# 1 is rushhour (equivalent of car_r_t)
+# 2 is weekday other than rushhour (equivalent of car_m_t)
 # 3 weekend, 4 anything
-thisZipcode = records.loc[records.zipcode == thisRow.posti_alue.values[0]]
+
+# car_sl_t could be the entire area as mean
+thisZipcode = records.loc[records.zipcode == orig.zipcode[0]]
 thisDict = {
+        "values_in_zip": len(thisZipcode),
         "car_r_t": thisZipcode.loc[thisZipcode.timeofday == 1]["parktime"].mean(),
         "car_m_t": thisZipcode.loc[thisZipcode.timeofday == 2]["parktime"].mean(),
         "car_sl_t": thisZipcode["parktime"].mean()}
 
-# match origin and destination
-res = destfile.loc[destfile["from_id"] == int(origin)].reset_index()
+# Get TTM2018 data for the origin
+# Match origin and destination
+res = destfile.loc[destfile["from_id"] == int(originId)].reset_index()
 res = res.drop(columns=["index"])
-res = pd.concat([res]*2, ignore_index=True) # copy row
+res = pd.concat([res]*2, ignore_index=True) # copy row for the use of my data
 
-# we will assume rush hour = rush hour, midday = other than rush hour
-
+# We will assume:
+# rush hour (car_r_t) = rush hour, 
+# midday (car_m_t) = other than rush hour
+# full throttle (car_sl_t) = everything as mean
 
 
 
@@ -1045,7 +1040,7 @@ res = pd.concat([res]*2, ignore_index=True) # copy row
 
 res = res.loc[res.index[0]]
 
-# report
+# Report
 #print("From YKR id {0} ({1}) to YKR id {2} ({3})".format(
 #        res[0], origMatch, res[1], destMatch))
 print("Origin is located in {0}. Destination in {1}".format(
@@ -1061,7 +1056,7 @@ print("Entire travel time following speed limits without any additional impedanc
 print("\n --- Sampo Vesanen thesis ---")
 
 
-# plot these two Points
+# Plot origin and destination
 base = grid.plot(linewidth=0.8, 
                  edgecolor="0.8", 
                  color="white",
@@ -1073,6 +1068,11 @@ postal.plot(ax=base,
 gpd.GeoDataFrame(geometry=[origGeom]).plot(ax=base)
 gpd.GeoDataFrame(geometry=[destGeom]).plot(ax=base)
 plt.tight_layout()
+
+
+
+
+
 
 
 
