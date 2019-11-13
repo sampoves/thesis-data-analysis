@@ -117,7 +117,8 @@ postal = postal.reset_index().drop(columns=["index", "euref_x", "euref_y"])
 
 # In the traditional travel time matrix all parking took 0.42 minutes. The
 # team used the bounding box below to define an area in center of Helsinki
-# to note an area where people walk a longer time to their cars
+# to note an area where people walk a longer time to their cars. HENCE, NOT
+# IN MY SCOPE!
 walkingBbox = LinearRing([(387678.024778, 6675360.99039), 
                           (387891.53396, 6670403.35286),
                           (383453.380944, 6670212.21613), 
@@ -1027,23 +1028,17 @@ thisDict = {
 res = destfile.loc[destfile["from_id"] == int(originId)].reset_index()
 res = res.drop(columns=["index"])
 res = pd.concat([res]*2, ignore_index=True) # copy row for the use of my data
+res = res.loc[res.index[0]]
+
+# Report
 
 # We will assume:
 # rush hour (car_r_t) = rush hour, 
 # midday (car_m_t) = other than rush hour
-# full throttle (car_sl_t) = everything as mean
+# entire travel, speed limits, no other impedances (car_sl_t) = everything as mean
 
-
-
-
-
-
-res = res.loc[res.index[0]]
-
-# Report
-#print("From YKR id {0} ({1}) to YKR id {2} ({3})".format(
-#        res[0], origMatch, res[1], destMatch))
-print("Origin is located in {0}. Destination in {1}".format(
+# NB! Walktime not taken into account! need to add it later!
+print("Origin is located in postal code area {0}. Destination in {1}".format(
         postal.loc[postal.intersects(origGeom), "nimi"].values[0],
         postal.loc[postal.intersects(destGeom), "nimi"].values[0]))
 print("\n--- Travel time matrix 2018 ----")
@@ -1054,6 +1049,15 @@ print("Distance in meters in midday traffic: {0} km".format(res[5] / 1000))
 print("Entire travel time following speed limits without any additional impedances: {0} min".format(
         res[6]))
 print("\n --- Sampo Vesanen thesis ---")
+print("Warning, low amount of responses in this zipcode: {0}".format(
+        thisDict["values_in_zip"] if thisDict["values_in_zip"] < 10 else ""))
+print("\nparktime in rush hour traffic: {0} min".format(
+        thisDict["car_r_t"]))
+print("parktime in midday traffic: {0} min".format(
+        thisDict["car_m_t"]))
+print("\nParktime generally: {0} min".format(
+        round(thisDict["car_sl_t"], 2)))
+
 
 
 # Plot origin and destination
@@ -1079,7 +1083,7 @@ plt.tight_layout()
 #################
 ### VISUALISE ###
 #################
-# needs more advanced plotting. Compare to other data I have available,
+# Needs more advanced plotting. Compare to other data I have available,
 # population, area etc
 #https://towardsdatascience.com/lets-make-a-map-using-geopandas-pandas-and-matplotlib-to-make-a-chloropleth-map-dddc31c1983d
 
@@ -1088,10 +1092,6 @@ plt.tight_layout()
 parkingPlot(postal, "answer_count", 0) #AMOUNT OF RECORDS
 parkingPlot(postal, "walktime_mean", 1) #PLOT WALKTIME MEAN
 parkingPlot(postal, "parktime_mean", 1) #PLOT PARKTIME MEAN
-# ratio answer to total pop not useful!
-parkingPlot(postal, "answ_hevakiy", 1) #PLOT ratio answers to total pop
-parkingPlot(postal, "pop_dens", 1) #PLOT pop density
-parkingPlot(postal, "dens_answ", 1) #PLOT ratio answercount to popdensity
 
 
 
@@ -1138,169 +1138,9 @@ plt.show()
 
 
 
-###################################
-### Respondent specific reports ###
-###################################
-    
-# TESTING, might not go anywhere
-
-# This builds ellipses on HCR map for each unique respondent. The ellipse
-# seems to be places so that it is of minimal distance to all the Points.
-# The Points themselves are centroids of postal code areas inputted by the
-# respondent.
-
-# build base for map
-base = postal.plot(linewidth=0.8, 
-                   edgecolor="0.8", 
-                   color="white", 
-                   figsize=(24, 12))
-
-# View walking area where it takes more time to reach one's car, on map
-x, y = walkingBbox.xy
-base.plot(x, y)
-
-# get unique visitors
-unique_visitors = list(records.ip.unique())
-
-# get areas in Point format for each visitor, then use these Points to 
-# create elliptical area of influence
-for idx, visitor in enumerate(unique_visitors):
-    currentZipcodes = records.zipcode[records.ip.isin([visitor])]
-    currentAreas = postal.geometry[postal.posti_alue.isin(currentZipcodes)].centroid
-    
-    # for testing! for ellipses. idx 820, 700, 900 have many Points!
-    if idx == 700:
-        break
-    
-    # show every 500th map
-    #if idx % 500 == 0:
-    #    currentAreas.plot(ax=base)
-
-# Fit ellipse.
-# This works beautifully in plot if if-statement is brought in to the for loop.
-# Remember to comment out base and currentAreas.plot() down there
-# credit to: https://stackoverflow.com/a/47876498/9455395
-if(len(currentAreas) > 1):
-    theseX = currentAreas.x
-    theseY = currentAreas.y
-    xmean, ymean = theseX.mean(), theseY.mean()
-    theseX -= xmean
-    theseY -= ymean
-    
-    U, S, V = np.linalg.svd(np.stack((theseX, theseY)))
-    
-    # alkuperäinen: np.sqrt(2 / N). 140 oli jossain vaiheessa hyvä kun N = 300
-    tt = np.linspace(0, 2 * np.pi, 1000)
-    circle = np.stack((np.cos(tt), np.sin(tt)))    # unit circle
-    transform = np.sqrt(2 / len(currentAreas)) * U.dot(np.diag(S))   # transformation matrix
-    fit = transform.dot(circle) + np.array([[xmean], [ymean]])
-    
-    # initiate zipcodes as background
-    base = postal.plot(linewidth=0.8, 
-                       edgecolor="0.8", 
-                       color="white", 
-                       figsize=(24, 12))
-    currentAreas.plot(ax=base) # the original Points
-    
-    # fit ellipse
-    plt.plot(fit[0, :], fit[1, :], 'r')
-    plt.show()
-    
-    
-    
-#####################
-### OUTLIER STUFF ###
-#####################
-#https://medium.com/datadriveninvestor/finding-outliers-in-dataset-using-python-efc3fce6ce32
-#https://towardsdatascience.com/ways-to-detect-and-remove-the-outliers-404d16608dba
-
-# outlier graph
-import seaborn as sns
-sns.boxplot(x=records["parktime"])
-
-
-
-###############################
-#### Crosstabs test Pandas ####
-###############################
-
-#KATO TOI EKA
-#https://www.datacamp.com/community/tutorials/categorical-data
-#https://www.youtube.com/watch?v=-kTaxac-l7o
-#https://statistics.laerd.com/statistical-guides/types-of-variable.php
-#https://dfrieds.com/data-analysis/crosstabs-python-pandas
-# Try to emulate SPSS Crosstabs --> nominal by interval --> Eta
-pd.crosstab(index=records["timeofday"], 
-            columns=records["parkspot"]).rename(
-        columns={1: "Side of road", 
-                 2: "lot", 
-                 3: "garage", 
-                 4: "private_reserved", 
-                 5: "other"})
-
-pd.crosstab(index=records["timeofday"], 
-            columns=records["parkspot"]).unstack().reset_index().rename(
-    columns={1: "Side of road", 
-             2: "lot", 
-             3: "garage", 
-             4: "private_reserved", 
-             5: "other"})
-
-
-    
-#####################
-### ONE-WAY ANOVA ###
-#####################
-    
-#https://pythonfordatascience.org/anova-python/
-#https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.f_oneway.html
-#https://ariepratama.github.io/How-to-Use-1-Way-Anova-in-Python/
-#https://reneshbedre.github.io/blog/anova.html
-#https://raiswell.rbind.io/post/one-way-anova-in-python/
-#https://plot.ly/python/v3/anova/
-#http://pytolearn.csd.auth.gr/d1-hyptest/12/anova-one.html
-#https://statistics.laerd.com/statistical-guides/types-of-variable.php
-
-    
-
-# This emulates R and SPSS progression
-# SPSS -> analyze -> compare means --> one-way anova 
-# options: descriptive, homogeinity of variance test (levene), Brown-Forsythe
-    
-### describe: walktime~timeofday
-# ratkaisu: https://www.marsja.se/pandas-python-descriptive-statistics/
-# toimii samalla tavalla ku R
-grouped_data = records.groupby(["timeofday"])
-round(grouped_data['walktime'].describe(), 3)
-    
-### levene
-# ei sama ku R
-levene(records["walktime"], records["timeofday"], center="mean")
-
-### anova
-#stats.f_oneway(records["walktime"], records["timeofday"]) # ei sama ku R
-
-#2
-# ratkaisu: https://pythonfordatascience.org/anova-python/
-# toimii samalla tavalla ku R
-mod = ols('walktime ~ C(timeofday)', data=records).fit()
-#mod = ols('parktime ~ likert', data=records[records.parkspot==1]).fit() #esim
-#mod.summary()
-sm.stats.anova_lm(mod, typ=2)
-
-### brown-forsythe    
-# ei näytä siltä että tätä olis pythonille
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+##########################
+### SOME VISUALISATION ###
+##########################
     
 import statsmodels.api as sm
 from statsmodels.formula.api import ols    
