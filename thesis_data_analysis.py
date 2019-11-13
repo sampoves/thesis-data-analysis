@@ -210,118 +210,6 @@ for idx, geom in enumerate(postal.geometry):
 ### GIVE GRID CELLS ZIPCODES ###
 ################################
 
-# THIS WORKS! is far as I have testeddd
-### TAAS UUS TEEST
-
-# kirjoita muistiin, että mikä ykr-koodi on saanu minkäkin aluesumman
-# col (total area of zipcode) <-- tässä kaikki maa, tärkeä reunapolygoneille
-# col (area of current iteration in current zipcode) <-- käy sit vaikka monta
-# kertaa kaikki läpi, jotta löytyy suurin prosentuaalinen osuus cellille
-
-# try with sjoin
-# exterior border
-#crs = grid.crs
-#exteriorInter = gpd.sjoin(grid,
-#                          gpd.GeoDataFrame(crs=crs, geometry=[mainland.boundary]),
-#                          how="inner", op="intersects")
-
-# all borders of zipcode areas, including exterior borders
-#borderInter = gpd.sjoin(grid, 
-#                        gpd.GeoDataFrame(geometry=postal.boundary.geometry),
-#                        how="inner", op="intersects")
-
-# InteriorborderInter is all zipcode borders without exterior borders
-#interiorBorderInter = gpd.overlay(borderInter, exteriorInter, how="difference")
-
-#plot_polygon([both])
-#plot_polygon([borderInter, exteriorInter])
-#plot_polygon([exteriorInter])
-
-import time
-start_time = time.time()
-
-# Instantiate index class
-grid_index = index.Index()
-for idx, cell in grid.iterrows():
-    grid_index.insert(idx, cell["geometry"].bounds)
-
-# initiate listing for grid cells
-grid_areas = gpd.GeoDataFrame(columns=["YKR_ID", "zipcode", "largest_area", 
-                                       "total_area"])
-
-# kind of works?! 12 000 results in maybe 6 minutes
-i = 0
-for postal_idx, postalarea in postal.iterrows():
-    print("now processing {0}".format(postalarea.nimi))
-    
-    # find candidates for intersection
-    for intersection_maybe in grid_index.intersection(postalarea["geometry"].bounds):  
-            
-        # Confirmation of intersection
-        if postalarea.geometry.intersects(grid.loc[intersection_maybe]["geometry"]):
-            
-            # with interiorBorderInter we know that the grid cell piece is
-            # not a full square
-            thisCellPiece = gpd.overlay(
-                    gpd.GeoDataFrame(geometry=[grid.loc[intersection_maybe]["geometry"]]),
-                    gpd.GeoDataFrame(geometry=[postalarea.geometry]),
-                    how="intersection")
-            
-            # current grid cell area
-            cellarea = thisCellPiece.area[0]
-            
-            # test if cell ykr-id already exists in grid_areas
-            grid_ykr = grid.loc[intersection_maybe].YKR_ID
-            
-            if grid_areas[grid_areas["YKR_ID"].isin([grid_ykr])].empty == True:
-                
-                # this YKR_ID does not yet exist
-                grid_areas.loc[i, "YKR_ID"] = grid.loc[intersection_maybe].YKR_ID
-                grid_areas.loc[i, "zipcode"] = postalarea.posti_alue
-                grid_areas.loc[i, "largest_area"] = cellarea
-                grid_areas.loc[i, "total_area"] = cellarea
-                i += 1
-                
-            else:   
-                # The current YKR_ID was found in grid_areas 
-                # This is the location of the located pre-existing ykr_id
-                found_idx = grid_areas.index[grid_areas.YKR_ID == grid.loc[intersection_maybe].YKR_ID][0]
-                
-                # in this case the ykr id has been iterated over in some previous
-                # iteration of a postal area. Only add to largest_area if larger
-                # than before and add to total_area
-                if cellarea > grid_areas.loc[found_idx, "largest_area"]:
-                    grid_areas.loc[found_idx, "largest_area"] = cellarea
-                    grid_areas.loc[found_idx, "zipcode"] = postalarea.posti_alue
-                    
-                grid_areas.loc[found_idx, "total_area"] += cellarea
-
-print("--- %s seconds ---" % (time.time() - start_time))
-
-# add ykr-ids which don't occur in grid_areas. These are the cells outside 
-# PAAVO postal code areas
-grid_areas2 = grid_areas.copy()
-notPresent = list(np.setdiff1d(list(grid.YKR_ID), list(grid_areas.YKR_ID)))
-
-for cell_id in notPresent:
-    grid_areas2 = grid_areas2.append(
-        {"YKR_ID": np.int64(cell_id), 
-         "zipcode": "99999"}, 
-        ignore_index=True)
-
-
-
-
-
-
-
-
-
-# NEWTEST FASTTT
-# much faster
-import time
-start_time = time.time()
-
 # establish zipcode data
 grid_areas3 = gpd.GeoDataFrame(columns=["YKR_ID", "zipcode", "largest_area", 
                                        "total_area"])
@@ -370,11 +258,6 @@ for idx, postalarea in postal.iterrows():
                 
             grid_areas3.loc[found_idx, "total_area"] += row.area1
 
-print("--- %s seconds ---" % (time.time() - start_time))
-
-
-# result
-grid[grid["YKR_ID"].isin(list(grid_areas3["YKR_ID"]))].plot()
 
 # add ykr-ids which don't occur in grid_areas. These are the cells outside 
 # PAAVO postal code areas
@@ -386,11 +269,29 @@ for cell_id in notPresent:
          "zipcode": "99999"}, 
         ignore_index=True)
 
-#compare slow and fast. they are identical as far as this works
-set(grid_areas2["largest_area"]).difference(set(grid_areas3["largest_area"]))
+# Incorporate zipcode data to grid
+grid2 = pd.concat(
+        [grid.set_index("YKR_ID"), grid_areas3.set_index("YKR_ID")], 
+        axis=1, join="inner").reset_index()
 
+# With this shp we can verify visually that the method works great
+#grid2.to_file("ykrgrid2.shp")
 
+# verify zipcodes in plot
+# get postal codes to grid and separate each zipcode area. TODO: incorporate
+# zipcodes to grid
+#base = grid.plot(linewidth=0.8, 
+#                 edgecolor="0.8", 
+#                 color="white",
+#                 figsize=(16, 12))
 
+#for code in list(set(grid_areas3.zipcode)):
+#    theseCells = grid_areas3["YKR_ID"][grid_areas3["zipcode"] == code]
+#    thisArea = grid[grid["YKR_ID"].isin(list(theseCells))]
+#    thisArea.plot(ax=base,
+#            linewidth=0.8,
+#            edgecolor="none",
+#            facecolor=np.random.rand(3,))
 
 
 
