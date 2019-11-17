@@ -34,6 +34,7 @@ from rtree import index
 # Working directories
 wd = r"C:\Sampon\Maantiede\Master of the Universe\python"
 datawd = r"C:\Sampon\Maantiede\Master of the Universe\leaflet_survey_results"
+ttm_path = r"C:\Sampon\Maantiede\Master of the Universe\HelsinkiTravelTimeMatrix2018\{0}xxx\travel_times_to_ {1}.txt"
 
 # Survey data file paths
 records_data = os.path.join(datawd, "records.csv")
@@ -441,8 +442,10 @@ for idx, postal_zip in enumerate(postal.posti_alue):
     postal.loc[idx, "walktime_mean"] = round(this_mean, 2)
 
 # Prepare annotation of plot features
-postal['coords'] = postal['geometry'].apply(lambda x: x.representative_point().coords[:])
-postal['coords'] = [coords[0] for coords in postal['coords']]
+#postal['coords'] = postal['geometry'].apply(lambda x: x.representative_point().coords[:])
+#postal['coords'] = [coords[0] for coords in postal['coords']]
+postal["coords"] = polygonCoordsToTuple(postal)
+
 
 # population density
 #postal["pop_dens"] = postal.apply(
@@ -966,6 +969,8 @@ for varname, fullname in subdiv_dict.items():
 ### UTILISE TRAVEL-TIME MATRIX 2018 ###
 #######################################
 
+# ORIGIN AND DESTINATION MAY BE MIXED UP, INSPECT
+
 # https://gis.stackexchange.com/questions/80367/how-to-convert-6-7-digit-coordinates-to-degrees-latitude-longitude
 # utm easthing and northing
 
@@ -982,10 +987,9 @@ for varname, fullname in subdiv_dict.items():
 # includes the parking itself.
 
 # Origin and destination in YKR_id
-originId = "5838783"
-destinationId = "5838787"
-traveltimepath = r"C:\Sampon\Maantiede\Master of the Universe\HelsinkiTravelTimeMatrix2018\{0}xxx\travel_times_to_ {1}.txt".format(
-        destinationId[:4], destinationId)
+originId = "5985086"
+destinationId = "5949415"
+traveltimepath = ttm_path.format(destinationId[:4], destinationId)
 
 # Get destination txt file. Remove all columns not about private cars
 destfile = pd.read_csv(traveltimepath, sep=";")
@@ -1038,29 +1042,95 @@ res = res.loc[res.index[0]]
 # entire travel, speed limits, no other impedances (car_sl_t) = everything as mean
 
 # NB! Walktime not taken into account! need to add it later!
+
+# Traveltimes Travel-Time Matrix, from destfile
+ttm_r_traveltime = res[2]
+ttm_m_traveltime = res[4]
+ttm_sl_traveltime = res[6]
+
+# Searching for parking, TTM data and thesis survey data
+ttm_sfp = 0.42
+thesis_sfp_r = round(thisDict["car_r_t"], 2)
+thesis_sfp_m = round(thisDict["car_m_t"], 2)
+thesis_sfp_sl = round(thisDict["car_sl_t"], 2)
+
+# Travel-Time Matrix travel times minus Travel-Time Matrix searching for 
+# parking, 0.42 mins
+ttm_r_drivetime = ttm_r_traveltime - ttm_sfp
+ttm_m_drivetime = ttm_m_traveltime - ttm_sfp
+ttm_sl_drivetime = ttm_sl_traveltime - ttm_sfp
+
+# How many percent searching for parking constituted of the total travel time?
+# According to Travel-Time Matrix data
+ttm_r_pct = round(ttm_sfp / ttm_r_traveltime * 100, 2)
+ttm_m_pct = round(ttm_sfp / ttm_m_traveltime * 100, 2)
+ttm_sl_pct = round(ttm_sfp / ttm_sl_traveltime * 100, 2)
+
+# How many percent searching for parking constituted of the total travel time?
+# According to thesis data
+thesis_r_pct = round(thesis_sfp_r / ttm_r_traveltime * 100, 2)
+thesis_m_pct = round(thesis_sfp_m / ttm_m_traveltime * 100, 2)
+thesis_sl_pct = round(thesis_sfp_sl / ttm_sl_traveltime * 100, 2)
+
+thesis_r_drivetime = ttm_r_traveltime - thesis_sfp_r
+thesis_m_drivetime = ttm_m_traveltime - thesis_sfp_m
+thesis_sl_drivetime = ttm_sl_traveltime - thesis_sfp_sl
+
 print("Origin is located in postal code area {0}. Destination in {1}".format(
         postal.loc[postal.intersects(origGeom), "nimi"].values[0],
         postal.loc[postal.intersects(destGeom), "nimi"].values[0]))
 print("\n--- Travel time matrix 2018 ----")
-print("\nEntire travel time in rush hour traffic: {0} min".format(res[2]))
-print("Distance in meters in rush hour traffic: {0} km".format(res[3] / 1000))
-print("\nEntire travel time in midday traffic: {0} min".format(res[4]))
-print("Distance in meters in midday traffic: {0} km".format(res[5] / 1000))
+print("\nEntire travel time in rush hour traffic: {0} min".format(ttm_r_traveltime))
+#print("Distance in meters in rush hour traffic: {0} km".format(res[3] / 1000))
+print("Entire travel time in midday traffic: {0} min".format(ttm_m_traveltime))
+#print("Distance in meters in midday traffic: {0} km".format(res[5] / 1000))
 print("Entire travel time following speed limits without any additional impedances: {0} min".format(
-        res[6]))
-print("\n --- Sampo Vesanen thesis ---")
-print("Warning, low amount of responses in this zipcode: {0}".format(
-        thisDict["values_in_zip"] if thisDict["values_in_zip"] < 10 else ""))
-print("\nparktime in rush hour traffic: {0} min".format(
-        thisDict["car_r_t"]))
-print("parktime in midday traffic: {0} min".format(
-        thisDict["car_m_t"]))
-print("\nParktime generally: {0} min".format(
-        round(thisDict["car_sl_t"], 2)))
+        ttm_sl_traveltime))
 
+print("\n--- Inferred facts from TTM 2018 ---")
+print("\nSearching for parking is 0.42 minutes in this context")
+print("\nEntire travel time in rush hour traffic minus searching for parking: {0} min".format(
+        ttm_r_drivetime))
+print("-- SFP represents {0} % of total travel time in rush hour".format(
+        ttm_r_pct))
+print("Entire travel time in midday traffic minus searching for parking: {0} min".format(
+        ttm_m_drivetime))
+print("-- SFP represents {0} % of total travel time in midday traffic".format(
+        ttm_m_pct))
+print("Entire travel time in speed limits minus searching for parking: {0} min".format(
+        ttm_sl_drivetime))
+print("-- SFP represents {0} % of total travel time in speed limits".format(
+        ttm_sl_pct))
+
+print("\n --- Sampo Vesanen thesis ---")
+if thisDict["values_in_zip"] < 20:
+    print("Warning, low amount (< 20) of responses in origin zipcode: {0}".format(
+            thisDict["values_in_zip"]))
+print("\nParktime (Searching for parking) in rush hour traffic: {0} min".format(
+        thesis_sfp_r))
+print("Parktime (SFP) in midday traffic: {0} min".format(
+        thesis_sfp_m))
+print("Parktime (SFP) generally: {0} min".format(
+        thesis_sfp_sl))
+print("\nEntire travel time in rush hour traffic minus thesis data searching for parking: {0} min".format(
+        thesis_r_drivetime))
+print("-- SFP represents {0} % of total travel time in rush hour".format(
+        thesis_r_pct))
+print("Entire travel time in midday traffic minus thesis data searching for parking: {0} min".format(
+        thesis_m_drivetime))
+print("-- SFP represents {0} % of total travel time in midday traffic".format(
+        thesis_m_pct))
+print("Entire travel time following speed limits without any additional impedances minus thesis data searching for parking: {0} min".format(
+        thesis_sl_drivetime))
+print("-- SFP represents {0} % of total travel time when following speed limits".format(
+        thesis_sl_pct))
 
 
 # Plot origin and destination
+from matplotlib.offsetbox import (TextArea, DrawingArea, OffsetImage,
+                                  AnnotationBbox)
+
+# background layers for matplotlib
 base = grid.plot(linewidth=0.8, 
                  edgecolor="0.8", 
                  color="white",
@@ -1069,11 +1139,110 @@ postal.plot(ax=base,
             linewidth=0.8,
             edgecolor="black",
             facecolor="none")
-gpd.GeoDataFrame(geometry=[origGeom]).plot(ax=base)
-gpd.GeoDataFrame(geometry=[destGeom]).plot(ax=base)
+
+# allow start and destination point iteration
+origPoint = gpd.GeoDataFrame(geometry=[origGeom])
+destPoint = gpd.GeoDataFrame(geometry=[destGeom])
+
+# For loop for plotting origin and destination on map
+for item in [origPoint, destPoint]:
+    
+    # annotation coordinates to tuple
+    item["coords"] = polygonCoordsToTuple(item)
+    #item["coords"] = item["geometry"].apply(lambda x: x.representative_point().coords[:])
+    #item["coords"] = [coords[0] for coords in item["coords"]]
+    
+    item.plot(ax=base)
+    
+    # old annotation
+    anno = postal.loc[postal.intersects(item.geometry[0]), "nimi"].values[0]
+    #plt.annotate(s=anno, xy=item["coords"][0], horizontalalignment="left",
+    #             fontsize=13)
+    
+    # Annotate the 1st position with a text box ('Test 1')
+    offsetbox = TextArea(anno, minimumdescent=False)
+    ab = AnnotationBbox(offsetbox, item["coords"][0],
+                        xybox=(-20, 40),
+                        xycoords='data',
+                        boxcoords="offset points",
+                        arrowprops=dict(arrowstyle="->"))
+    base.add_artist(ab)
+
 plt.tight_layout()
 
 
+
+
+# prepare for making this a function
+def travelTimeComparison(originId, destinationId, ttmpath, plotIds=False):
+    '''
+    jeejeefunc
+    '''
+    # Get destination txt file. Remove all columns not about private cars
+    traveltimepath = ttm_path.format(destinationId[:4], destinationId)
+    destfile = pd.read_csv(traveltimepath, sep=";")
+    destfile["from_id"] = pd.to_numeric(destfile["from_id"])
+    delCol = list(destfile.columns[2:13])
+    destfile = destfile.drop(delCol, axis=1)
+    
+    # destination and origin in grid
+    dest = grid.loc[grid["YKR_ID"] == int(destinationId)].reset_index()
+    orig = grid.loc[grid["YKR_ID"] == int(originId)].reset_index()
+    destGeom = dest.centroid.geometry[0]
+    origGeom = orig.centroid.geometry[0]
+
+    # car_sl_t could be the entire area as mean
+    thisZipcode = records.loc[records.zipcode == orig.zipcode[0]]
+    thisDict = {
+            "values_in_zip": len(thisZipcode),
+            "car_r_t": thisZipcode.loc[thisZipcode.timeofday == 1]["parktime"].mean(),
+            "car_m_t": thisZipcode.loc[thisZipcode.timeofday == 2]["parktime"].mean(),
+            "car_sl_t": thisZipcode["parktime"].mean()}
+
+    # Get TTM2018 data for the origin
+    # Match origin and destination
+    res = destfile.loc[destfile["from_id"] == int(originId)].reset_index()
+    res = res.drop(columns=["index"])
+    res = pd.concat([res]*2, ignore_index=True) # copy row for the use of my data
+    res = res.loc[res.index[0]]
+
+    # NB! Walktime not taken into account! need to add it later!
+    print("Origin is located in postal code area {0}. Destination in {1}".format(
+            postal.loc[postal.intersects(origGeom), "nimi"].values[0],
+            postal.loc[postal.intersects(destGeom), "nimi"].values[0]))
+    print("\n--- Travel time matrix 2018 ----")
+    print("\nEntire travel time in rush hour traffic: {0} min".format(res[2]))
+    print("Distance in meters in rush hour traffic: {0} km".format(res[3] / 1000))
+    print("\nEntire travel time in midday traffic: {0} min".format(res[4]))
+    print("Distance in meters in midday traffic: {0} km".format(res[5] / 1000))
+    print("Entire travel time following speed limits without any additional impedances: {0} min".format(
+            res[6]))
+    print("\n --- Sampo Vesanen thesis ---")
+    if thisDict["values_in_zip"] < 20:
+        print("Warning, low amount (< 20) of responses in origin zipcode: {0}".format(
+                thisDict["values_in_zip"]))
+    print("\nparktime in rush hour traffic: {0} min".format(
+            round(thisDict["car_r_t"], 2)))
+    print("parktime in midday traffic: {0} min".format(
+            round(thisDict["car_m_t"], 2)))
+    print("\nParktime generally: {0} min".format(
+            round(thisDict["car_sl_t"], 2)))
+    
+    if plotIds == True:
+        # Plot origin and destination
+        base = grid.plot(linewidth=0.8, 
+                         edgecolor="0.8", 
+                         color="white",
+                         figsize=(16, 12))
+        postal.plot(ax=base,
+                    linewidth=0.8,
+                    edgecolor="black",
+                    facecolor="none")
+        gpd.GeoDataFrame(geometry=[origGeom]).plot(ax=base)
+        gpd.GeoDataFrame(geometry=[destGeom]).plot(ax=base)
+        plt.tight_layout()
+
+travelTimeComparison("5985086", "5949415", ttm_path, plotIds=True)
 
 
 
@@ -1129,54 +1298,12 @@ for dictkey, dictvalue in zip(dates.keys(), dates.values()):
             ax.annotate(
                     dictkey, xy=(date, idx), 
                     xytext=(date - timedelta(days=2), idx + 400),
-                    arrowprops=dict(facecolor='black', shrink=0.05),)
+                    arrowprops=dict(facecolor="black", shrink=0.05),)
             helper = 1
 
 plt.grid(True)
 plt.tight_layout()
 plt.show()
-
-
-
-##########################
-### SOME VISUALISATION ###
-##########################
-    
-import statsmodels.api as sm
-from statsmodels.formula.api import ols    
-import seaborn as sns
-
-# basic
-f, ax = plt.subplots(figsize=(11, 9))
-plt.title("parktime distribution between sample")
-sns.distplot(records.parktime)
-
-# advanced
-f, ax = plt.subplots(figsize=(11, 9))
-
-sns.distplot(records[records.parkspot == 1].parktime, 
-             ax=ax, 
-             label="side of street")
-
-sns.distplot(records[records.parkspot == 2].parktime, 
-             ax=ax, 
-             label="parking lot")
-
-sns.distplot(records[records.parkspot == 3].parktime, 
-             ax=ax, 
-             label="parking gara")
-
-sns.distplot(records[records.parkspot == 4].parktime, 
-             ax=ax, 
-             label="priva/reserve")
-
-plt.title("parktime Distribution for parkspot")
-plt.legend()
-
-# https://www.marsja.se/four-ways-to-conduct-one-way-anovas-using-python/
-#boxplot
-records.boxplot("parktime", by="timeofday", figsize=(12, 8))
-records.boxplot("parktime", by="parkspot", figsize=(12, 8))
 
 
 
