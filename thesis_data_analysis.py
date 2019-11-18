@@ -30,6 +30,7 @@ import statsmodels.api as sm
 from rtree import index
 from matplotlib.offsetbox import (TextArea, DrawingArea, OffsetImage,
                                   AnnotationBbox)
+import random
 
 # Working directories
 wd = r"C:\Sampon\Maantiede\Master of the Universe\python"
@@ -969,19 +970,78 @@ for varname, fullname in subdiv_dict.items():
 ### UTILISE TRAVEL-TIME MATRIX 2018 ###
 #######################################
 
-# ORIGIN AND DESTINATION MAY BE MIXED UP, INSPECT
-
-def travelTimeComparison2(listOfTuples, ttmpath, printStats = False, 
-                          plotIds=False):
+def travelTimeComparison(listOfTuples, ttmpath, printStats = False, 
+                         plotIds=False):
     '''
-    dfds
+    Compare Travel-Time Matrix 2018 (from here on TTM) data with my Thesis 
+    survey data. This function produces a dataframe with one row for each tuple 
+    inputted into it. This function calculates many descriptives about these 
+    two datasets.
+    
+    In this thesis we assume:
+    - rush hour (car_r_t) = "Weekday, rush hour (07:00-09:00 and 15:00-17:00)", 
+    - midday (car_m_t) = "Weekday, other than rush hour"
+    - entire travel time with speed limits, no other impedances (car_sl_t) = 
+        all parktime data as averaged
+    
+    resulting columns are as follows:
+        "from_id"               YKR ID of origin
+        "from_name"             Postal area name of origin
+        "to_id"                 YKR ID of destination
+        "to_name"               Postal area name of destination
+        "car_r_t"               TTM: entire travel time in rush hour traffic
+                                (minutes)
+        "car_m_t"               TTM: entire travel time in midday traffic
+                                (minutes)
+        "car_sl_t"              TTM: entire travel time following speed limits
+                                without any additional impedances (minutes)
+        "car_r_drivetime"       TTM: entire travel time in rush hour traffic 
+                                minus searching for parking (SFP: 0.42min)
+                                (minutes)
+        "car_m_drivetime"       TTM: entire travel time in midday traffic minus
+                                searching for parking (SFP: 0.42min) (minutes)
+        "car_sl_drivetime"      TTM: entire travel time following speed limits
+                                without any additional impedances minus
+                                searching for parking (SFP: 0.42min) (minutes)
+        "car_r_pct"             TTM: how many percent is SFP of car_r_t
+                                (percent)
+        "car_m_pct"             TTM: how many percent is SFP of car_m_t  
+                                (percent)
+        "car_sl_pct"            TTM: how many percent is SFP of car_sl_t
+                                (percent)
+        "values_in_dest"        Thesis: amount of records in destination postal
+                                code area
+        "thesis_r_sfp"          Thesis: searching for parking in destination
+                                postal code area in rush hour traffic
+                                (minutes)
+        "thesis_m_sfp"          Thesis: SFP in destination postal code area
+                                in midday traffic (minutes)
+        "thesis_sl_sfp"         Thesis: SFP in destination postal code area
+                                generally (all parktime values averaged)
+                                (minutes)
+        "thesis_r_pct"          Thesis: how many percent is thesis SFP of
+                                TTM entire travel time in rush hour traffic
+                                (percent)
+        "thesis_m_pct"          Thesis: how many percent is thesis SFP of
+                                TTM entire travel time in midday traffic 
+                                (percent)
+        "thesis_sl_pct"         Thesis: how many percent is thesis SFP of
+                                TTM entire travel time following speed limits
+                                without any additional impedances (percent)
+        "thesis_r_drivetime"    TTM: Entire travel time in rush hour traffic
+                                minus Thesis data rush hour SFP (minutes)
+        "thesis_m_drivetime"    TTM: Entire travel time in midday traffic minus
+                                thesis data midday SFP (minutes)
+        "thesis_sl_drivetime"   TTM: Entire travel time following speed limits
+                                without any additional impedances minus thesis
+                                data general (all values averaged) SFP (minutes)
     '''
     
     result = pd.DataFrame(
             columns=["from_id", "from_name", "to_id", "to_name", "car_r_t", 
                      "car_m_t", "car_sl_t", "car_r_drivetime", "car_m_drivetime", 
                      "car_sl_drivetime", "car_r_pct", "car_m_pct", "car_sl_pct", 
-                     "values_in_zip", "thesis_r_sfp", "thesis_m_sfp", 
+                     "values_in_dest", "thesis_r_sfp", "thesis_m_sfp", 
                      "thesis_sl_sfp", "thesis_r_pct", "thesis_m_pct", 
                      "thesis_sl_pct", "thesis_r_drivetime", "thesis_m_drivetime", 
                      "thesis_sl_drivetime"])
@@ -995,68 +1055,54 @@ def travelTimeComparison2(listOfTuples, ttmpath, printStats = False,
         # results. Get origin and destination points from TTM data, then 
         # compare to zipcodes mean in my data
         
-        # Above I sorted out zipcodes for each cell in grid to enable comparison 
-        # here. Use originId and destinationId to find which zipcode origin 
-        # and destination are, then use this zipcode to find the corresponding 
-        # data on mean parktime and walktime in records.
-        
-        # copy df template to produce this row of data
+        # copy dataframe template to produce this row of data
         thisRow = template.copy()
 
         # Origin and destinations are read from list of tuples. Read relevant 
-        # txt file location from ttmpath
+        # text file location from "ttm_path"
         traveltimepath = ttm_path.format(destinationId[:4], destinationId)
         
-        # Get destination txt file. Remove all columns not about private cars
+        # Get destination text file. Remove all columns not about private cars
         destfile = pd.read_csv(traveltimepath, sep=";")
         destfile["from_id"] = pd.to_numeric(destfile["from_id"])
         delCol = list(destfile.columns[2:13])
         destfile = destfile.drop(delCol, axis=1)
         
-        # Destination and origin in grid
+        # Slice destination and origin from GeoDataFrame grid. Convert geometry 
+        # to Point for later use in plotting
         dest = grid.loc[grid["YKR_ID"] == int(destinationId)].reset_index()
         orig = grid.loc[grid["YKR_ID"] == int(originId)].reset_index()
-        destGeom = dest.centroid.geometry[0]
-        origGeom = orig.centroid.geometry[0]
+        dest["geometry"] = dest.centroid
+        orig["geometry"] = orig.centroid
         
         # ID data to current dataframe row
         thisRow.loc[0, "from_id"] = originId
         thisRow.loc[0, "to_id"] = destinationId
         thisRow.loc[0, "from_name"] = postal.loc[
-                postal.intersects(origGeom), "nimi"].values[0]
+                postal.intersects(orig.geometry[0]), "nimi"].values[0]
         thisRow.loc[0, "to_name"] = postal.loc[
-                postal.intersects(destGeom), "nimi"].values[0]
+                postal.intersects(dest.geometry[0]), "nimi"].values[0]
         
         # Get TTM2018 data for the origin
         # Match origin and destination
         car = destfile.loc[destfile["from_id"] == int(originId)].reset_index()
         car = car.loc[car.index[0]]
-        
-        # in data:
-        # 1 is rushhour (equivalent of car_r_t)
-        # 2 is weekday other than rushhour (equivalent of car_m_t)
-        # 3 weekend, 4 anything
-        # car_sl_t could be the entire area as mean
-        thisZipcode = records.loc[records.zipcode == orig.zipcode[0]]
 
-        # We will assume:
-        # - rush hour (car_r_t) = rush hour, 
-        # - midday (car_m_t) = other than rush hour
-        # - entire travel, speed limits, no other impedances (car_sl_t) = 
-        # everything as mean
+        # Get all thesis survey data about destination postal code area
+        thisZipcode = records.loc[records.zipcode == dest.zipcode[0]]
         
-        # Traveltimes Travel-Time Matrix, from destfile
+        # Travel-time Matrix 2018, entire travel times
         thisRow.loc[0, "car_r_t"] = car[3]
         thisRow.loc[0, "car_m_t"] = car[5]
         thisRow.loc[0, "car_sl_t"] = car[7]
-        thisRow.loc[0, "values_in_zip"] = len(thisZipcode)
+        thisRow.loc[0, "values_in_dest"] = len(thisZipcode)
         car_r_t = thisRow.loc[0, "car_r_t"]
         car_m_t = thisRow.loc[0, "car_m_t"] 
         car_sl_t = thisRow.loc[0, "car_sl_t"]
-        values_in_zip = thisRow.loc[0, "values_in_zip"]
+        values_in_dest = thisRow.loc[0, "values_in_dest"]
         
-        # Searching for parking, TTM data and thesis survey data
-        ttm_sfp = 0.42
+        # Searching for parking for thesis survey data, in destination postal
+        # code area
         thisRow.loc[0, "thesis_r_sfp"] = round(thisZipcode.loc[
                 thisZipcode.timeofday == 1]["parktime"].mean(), 2)
         thisRow.loc[0, "thesis_m_sfp"] = round(thisZipcode.loc[
@@ -1066,8 +1112,9 @@ def travelTimeComparison2(listOfTuples, ttmpath, printStats = False,
         thesis_m_sfp = thisRow.loc[0, "thesis_m_sfp"]
         thesis_sl_sfp = thisRow.loc[0, "thesis_sl_sfp"]
         
-        # Travel-Time Matrix travel times minus Travel-Time Matrix searching for 
-        # parking, 0.42 mins
+        # Travel-Time Matrix 2018 travel times minus Travel-Time Matrix 
+        # searching for parking, using default value 0.42 mins
+        ttm_sfp = 0.42
         thisRow.loc[0, "car_r_drivetime"] = car_r_t - ttm_sfp
         thisRow.loc[0, "car_m_drivetime"] = car_m_t - ttm_sfp
         thisRow.loc[0, "car_sl_drivetime"] = car_sl_t - ttm_sfp
@@ -1075,30 +1122,27 @@ def travelTimeComparison2(listOfTuples, ttmpath, printStats = False,
         car_m_drivetime = thisRow.loc[0, "car_m_drivetime"]
         car_sl_drivetime = thisRow.loc[0, "car_sl_drivetime"]
         
-        # How many percent searching for parking constituted of the total 
-        # travel time?
-        # According to Travel-Time Matrix data
-        thisRow.loc[0, "car_r_pct"] = round(ttm_sfp / car_r_t * 100, 2)
-        thisRow.loc[0, "car_m_pct"] = round(ttm_sfp / car_m_t * 100, 2)
-        thisRow.loc[0, "car_sl_pct"] = round(ttm_sfp / car_sl_t * 100, 2)
+        # Of Travel-Time Matrix data, how many percent searching for parking 
+        # constituted of the total travel time?
+        thisRow.loc[0, "car_r_pct"] = round(ttm_sfp / car_r_t, 3)
+        thisRow.loc[0, "car_m_pct"] = round(ttm_sfp / car_m_t, 3)
+        thisRow.loc[0, "car_sl_pct"] = round(ttm_sfp / car_sl_t, 3)
         car_r_pct = thisRow.loc[0, "car_r_pct"]
         car_m_pct = thisRow.loc[0, "car_m_pct"]
         car_sl_pct = thisRow.loc[0, "car_sl_pct"]
         
-        # How many percent searching for parking constituted of the total 
-        # travel time?
-        # According to thesis data
-        thisRow.loc[0, "thesis_r_pct"] = round(
-                thesis_r_sfp / car_r_t * 100, 2)
-        thisRow.loc[0, "thesis_m_pct"] = round(
-                thesis_m_sfp / car_m_t * 100, 2)
-        thisRow.loc[0, "thesis_sl_pct"] = round(
-                thesis_sl_sfp / car_sl_t * 100, 2)
+        # According to thesis SFP data, How many percent searching for parking 
+        # constituted of the total travel time (TTM data)?
+        thisRow.loc[0, "thesis_r_pct"] = round(thesis_r_sfp / car_r_t, 3)
+        thisRow.loc[0, "thesis_m_pct"] = round(thesis_m_sfp / car_m_t, 3)
+        thisRow.loc[0, "thesis_sl_pct"] = round(thesis_sl_sfp / car_sl_t, 3)
         thesis_r_pct = thisRow.loc[0, "thesis_r_pct"]
         thesis_m_pct = thisRow.loc[0, "thesis_m_pct"]
         thesis_sl_pct = thisRow.loc[0, "thesis_sl_pct"]
         
-        # thesis drivetime
+        # Travel-Time Matrix 2018 travel times minus thesis survey data
+        # searching for parking, using values for rush hour, midday and general,
+        # respectively
         thisRow.loc[0, "thesis_r_drivetime"] = car_r_t - thesis_r_sfp
         thisRow.loc[0, "thesis_m_drivetime"] = car_m_t - thesis_m_sfp
         thisRow.loc[0, "thesis_sl_drivetime"] = car_sl_t - thesis_sl_sfp
@@ -1125,20 +1169,20 @@ def travelTimeComparison2(listOfTuples, ttmpath, printStats = False,
             print("\nEntire travel time in rush hour traffic minus searching for parking: {0} min"
                   .format(car_r_drivetime))
             print("-- SFP represents {0} % of total travel time in rush hour"
-                  .format(car_r_pct))
+                  .format(car_r_pct * 100))
             print("Entire travel time in midday traffic minus searching for parking: {0} min"
                   .format(car_m_drivetime))
             print("-- SFP represents {0} % of total travel time in midday traffic"
-                  .format(car_m_pct))
+                  .format(car_m_pct * 100))
             print("Entire travel time in speed limits minus searching for parking: {0} min"
                   .format(car_sl_drivetime))
             print("-- SFP represents {0} % of total travel time in speed limits"
-                  .format(car_sl_pct))
+                  .format(car_sl_pct * 100))
             
             print("\n --- Sampo Vesanen thesis ---")
-            if values_in_zip < 20:
+            if values_in_dest < 20:
                 print("Warning, low amount (< 20) of responses in origin zipcode: {0}"
-                      .format(values_in_zip))
+                      .format(values_in_dest))
             if len(detect_outlier(list(thisZipcode.parktime))) != 0:
                 print("Additional warning, possible outliers detected in origin parktime data: {0}"
                       .format(detect_outlier(list(thisZipcode.parktime))))
@@ -1150,15 +1194,15 @@ def travelTimeComparison2(listOfTuples, ttmpath, printStats = False,
             print("\nEntire travel time in rush hour traffic minus thesis data searching for parking: {0} min"
                   .format(thesis_r_drivetime))
             print("-- SFP represents {0} % of total travel time in rush hour"
-                  .format(thesis_r_pct))
+                  .format(thesis_r_pct * 100))
             print("Entire travel time in midday traffic minus thesis data searching for parking: {0} min"
                   .format(thesis_m_drivetime))
             print("-- SFP represents {0} % of total travel time in midday traffic"
-                  .format(thesis_m_pct))
+                  .format(thesis_m_pct * 100))
             print("Entire travel time following speed limits without any additional impedances minus thesis data searching for parking: {0} min"
                   .format(thesis_sl_drivetime))
             print("-- SFP represents {0} % of total travel time when following speed limits\n\n"
-                  .format(thesis_sl_pct))
+                  .format(thesis_sl_pct * 100))
         
         # Plot origin and destination
         if plotIds == True:
@@ -1171,24 +1215,22 @@ def travelTimeComparison2(listOfTuples, ttmpath, printStats = False,
                         linewidth=0.8,
                         edgecolor="black",
                         facecolor="none")
+ 
+            # For loop for plotting origin and destination on map. Prepare
+            # annotation with these lists
+            identifierlist = ["Origin: ", "Destination: "]
+            namelist = [thisRow.from_name[0], thisRow.to_name[0]]
+            ykrlist = ["\nYKR-ID: " + str(orig.YKR_ID.item()), 
+                       "\nYKR-ID: " + str(dest.YKR_ID.item())]
             
-            # allow start and destination point iteration
-            origPoint = gpd.GeoDataFrame(geometry=[origGeom])
-            destPoint = gpd.GeoDataFrame(geometry=[destGeom])
-            
-            # For loop for plotting origin and destination on map
-            for item in [origPoint, destPoint]:
-                
+            for item, identifier, name, ykr in zip([orig, dest], identifierlist, 
+                                                   namelist, ykrlist):
                 # annotation coordinates to tuple
                 item["coords"] = polygonCoordsToTuple(item)
-    
                 item.plot(ax=base)
                 
-                # old annotation
-                anno = postal.loc[postal.intersects(
-                        item.geometry[0]), "nimi"].values[0]
-
                 # Annotate the 1st position with a text box ('Test 1')
+                anno = identifier + name + ykr
                 offsetbox = TextArea(anno, minimumdescent=False)
                 ab = AnnotationBbox(offsetbox, item["coords"][0],
                                     xybox=(-20, 40),
@@ -1205,13 +1247,20 @@ def travelTimeComparison2(listOfTuples, ttmpath, printStats = False,
 
 # IF 0.42min IS THE USED PARKING TIME, WHAT IS THE USED WALKING TIME IN 
 # THE TRAVELTIME MATRIX?
+l = []
+i = 0
+while i < 3:
+    # Does not take into account that randomly chosen YKR-ID is outside
+    # research area, travelTimeComparison() may fail
+    vals = random.sample(set(grid.YKR_ID.astype(str)), 2)
+    l.append(tuple(vals))
+    i += 1
+    
+#l = [("5985086", "5866836"), ("5981923", "5980266")]
+pelele = travelTimeComparison(l, ttm_path, False, True)
 
-# VARIABLENAMES SUPER BROKEN INSIDE FUNCTION
-# make sure stats are correct
-l = [("5985086", "5949415")]
-l = [("5981923", "5980266")]
-l = [("5985086", "5949415"), ("5981923", "5980266")]
-pelele = travelTimeComparison2(l, ttm_path, True, True)
+
+
 
 
 
