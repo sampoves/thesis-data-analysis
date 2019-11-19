@@ -1068,12 +1068,9 @@ def travelTimeComparison(listOfTuples, ttmpath, printStats = False,
         delCol = list(destfile.columns[2:13])
         destfile = destfile.drop(delCol, axis=1)
         
-        # Slice destination and origin from GeoDataFrame grid. Convert geometry 
-        # to Point for later use in plotting
+        # Slice destination and origin from GeoDataFrame grid. 
         dest = grid.loc[grid["YKR_ID"] == int(destinationId)].reset_index()
         orig = grid.loc[grid["YKR_ID"] == int(originId)].reset_index()
-        dest["geometry"] = dest.centroid
-        orig["geometry"] = orig.centroid
         
         # ID data to current dataframe row
         thisRow.loc[0, "from_id"] = originId
@@ -1082,6 +1079,12 @@ def travelTimeComparison(listOfTuples, ttmpath, printStats = False,
                 postal.intersects(orig.geometry[0]), "nimi"].values[0]
         thisRow.loc[0, "to_name"] = postal.loc[
                 postal.intersects(dest.geometry[0]), "nimi"].values[0]
+        
+        # Convert dest and orig geometry to Point for later use in plotting.
+        # If this is done earlier, the naming of the zipcode above can fail
+        # in cases
+        dest["geometry"] = dest.centroid
+        orig["geometry"] = orig.centroid
         
         # Get TTM2018 data for the origin
         # Match origin and destination
@@ -1211,11 +1214,16 @@ def travelTimeComparison(listOfTuples, ttmpath, printStats = False,
                              edgecolor="0.8", 
                              color="white",
                              figsize=(16, 12))
+            forest.plot(ax=base,
+                        linewidth=0.8,
+                        edgecolor="none",
+                        facecolor="green")
             postal.plot(ax=base,
                         linewidth=0.8,
                         edgecolor="black",
                         facecolor="none")
- 
+
+    
             # For loop for plotting origin and destination on map. Prepare
             # annotation with these lists
             identifierlist = ["Origin: ", "Destination: "]
@@ -1236,7 +1244,8 @@ def travelTimeComparison(listOfTuples, ttmpath, printStats = False,
                                     xybox=(-20, 40),
                                     xycoords="data",
                                     boxcoords="offset points",
-                                    arrowprops=dict(arrowstyle="->"))
+                                    arrowprops=dict(facecolor="wheat",
+                                                    arrowstyle="->"))
                 base.add_artist(ab)
             
             plt.tight_layout()
@@ -1250,11 +1259,14 @@ def travelTimeComparison(listOfTuples, ttmpath, printStats = False,
 l = []
 i = 0
 while i < 3:
-    # Does not take into account that randomly chosen YKR-ID is outside
-    # research area, travelTimeComparison() may fail
-    vals = random.sample(set(grid.YKR_ID.astype(str)), 2)
+    # In valuerange make sure no grid cells outside research area are accepted
+    valuerange = set(grid.YKR_ID.astype(str)) - set(list(map(str, notPresent)))
+    vals = random.sample(valuerange, 2)
     l.append(tuple(vals))
     i += 1
+
+# bug: in the data -1 is nodata. travelTimeComparison() does not know this
+# and will give crazy results
     
 #l = [("5985086", "5866836"), ("5981923", "5980266")]
 pelele = travelTimeComparison(l, ttm_path, False, True)
