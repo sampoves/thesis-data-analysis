@@ -970,8 +970,8 @@ for varname, fullname in subdiv_dict.items():
 ### UTILISE TRAVEL-TIME MATRIX 2018 ###
 #######################################
 
-def travelTimeComparison(listOfTuples, ttmpath, printStats = False, 
-                         plotIds=False):
+def travelTimeComparison(listOfTuples, ttmpath, detect_outliers=False,
+                         printStats=False, plotIds=False):
     '''
     Compare Travel-Time Matrix 2018 (from here on TTM) data with my Thesis 
     survey data. This function produces a dataframe with one row for each tuple 
@@ -983,8 +983,15 @@ def travelTimeComparison(listOfTuples, ttmpath, printStats = False,
     - midday (car_m_t) = "Weekday, other than rush hour"
     - entire travel time with speed limits, no other impedances (car_sl_t) = 
         all parktime data as averaged
+        
+    Additional note: If thesis_r_ or thesis_m_ is nan, it means that this
+    destination does not have data for that timeofday option. This is more
+    likely to happen in postal code areas with low amounts of responses.
     
-    resulting columns are as follows:
+    If car_r_t, car_m_t and car_sl_t are nan, it means that there is no way
+    to reach the destination from the origin.
+    
+    Resulting columns in the result dataframe are as follows:
         "from_id"               YKR ID of origin
         "from_name"             Postal area name of origin
         "to_id"                 YKR ID of destination
@@ -1094,10 +1101,11 @@ def travelTimeComparison(listOfTuples, ttmpath, printStats = False,
         # Get all thesis survey data about destination postal code area
         thisZipcode = records.loc[records.zipcode == dest.zipcode[0]]
         
-        # Travel-time Matrix 2018, entire travel times
-        thisRow.loc[0, "car_r_t"] = car[3]
-        thisRow.loc[0, "car_m_t"] = car[5]
-        thisRow.loc[0, "car_sl_t"] = car[7]
+        # Travel-time Matrix 2018, entire travel times. Detect nodata values
+        # (-1) and assign np.nan if detected.
+        thisRow.loc[0, "car_r_t"] = np.nan if car[3] == -1 else car[3]
+        thisRow.loc[0, "car_m_t"] = np.nan if car[5] == -1 else car[5]
+        thisRow.loc[0, "car_sl_t"] =  np.nan if car[7] == -1 else car[7]
         thisRow.loc[0, "values_in_dest"] = len(thisZipcode)
         car_r_t = thisRow.loc[0, "car_r_t"]
         car_m_t = thisRow.loc[0, "car_m_t"] 
@@ -1105,16 +1113,56 @@ def travelTimeComparison(listOfTuples, ttmpath, printStats = False,
         values_in_dest = thisRow.loc[0, "values_in_dest"]
         
         # Searching for parking for thesis survey data, in destination postal
-        # code area
-        thisRow.loc[0, "thesis_r_sfp"] = round(thisZipcode.loc[
-                thisZipcode.timeofday == 1]["parktime"].mean(), 2)
-        thisRow.loc[0, "thesis_m_sfp"] = round(thisZipcode.loc[
-                thisZipcode.timeofday == 2]["parktime"].mean(), 2)
-        thisRow.loc[0, "thesis_sl_sfp"] = round(thisZipcode["parktime"].mean(), 2)
+        # code area. In this phase we optionally test if there are any outliers
+        # in parktime values. This can be helpful to prevent seemingly erroneous
+        # data from distorting a series of values in a postal code area with
+        # low amount of responses.
+        
+        # Record all values
+        parktime1 = thisZipcode.loc[thisZipcode.timeofday == 1]["parktime"]
+        parktime2 = thisZipcode.loc[thisZipcode.timeofday == 2]["parktime"]
+        parktime_all = thisZipcode["parktime"]
+        
+        if detect_outliers == True:
+            
+            # only detect outliers if enough values
+            if len(parktime1) > 3:
+                outliers = detect_outlier(parktime1)
+                
+                # report to user if outliers found
+                if len(outliers) > 0:
+                    print("Outliers detected in rush hour for destinationId {0}: {1}"
+                          .format(destinationId, outliers))
+                
+                # Iteratively remove outliers from current Series
+                for idx, value in outliers:
+                    parktime1 = parktime1[parktime1.index != idx]
+                
+            if len(parktime2) > 3:
+                outliers = detect_outlier(parktime2)
+                if len(outliers) > 0:
+                    print("Outliers detected in midday traffic for destinationId {0}: {1}"
+                          .format(destinationId, outliers))
+                for idx, value in outliers:
+                    parktime2 = parktime2[parktime2.index != idx]
+                    
+            if len(parktime_all) > 3:
+                outliers = detect_outlier(parktime_all)
+                if len(outliers) > 0:
+                    print("Outliers detected in parktime_all for destinationId {0}: {1}"
+                          .format(destinationId, outliers))
+                for idx, value in outliers:
+                    parktime_all = parktime_all[parktime_all.index != idx]
+
+        thisRow.loc[0, "thesis_r_sfp"] = round(parktime1.mean(), 2)
+        thisRow.loc[0, "thesis_m_sfp"] = round(parktime2.mean(), 2)
+        thisRow.loc[0, "thesis_sl_sfp"] = round(parktime_all.mean(), 2)
+        
         thesis_r_sfp =  thisRow.loc[0, "thesis_r_sfp"]
         thesis_m_sfp = thisRow.loc[0, "thesis_m_sfp"]
         thesis_sl_sfp = thisRow.loc[0, "thesis_sl_sfp"]
         
+
         # Travel-Time Matrix 2018 travel times minus Travel-Time Matrix 
         # searching for parking, using default value 0.42 mins
         ttm_sfp = 0.42
@@ -1251,6 +1299,7 @@ def travelTimeComparison(listOfTuples, ttmpath, printStats = False,
             plt.tight_layout()
 
     result = result.reset_index()
+    result = result.drop(columns=["index"])
     
     return result
 
@@ -1258,18 +1307,16 @@ def travelTimeComparison(listOfTuples, ttmpath, printStats = False,
 # THE TRAVELTIME MATRIX?
 l = []
 i = 0
-while i < 3:
+while i < 10:
     # In valuerange make sure no grid cells outside research area are accepted
     valuerange = set(grid.YKR_ID.astype(str)) - set(list(map(str, notPresent)))
     vals = random.sample(valuerange, 2)
     l.append(tuple(vals))
     i += 1
-
-# bug: in the data -1 is nodata. travelTimeComparison() does not know this
-# and will give crazy results
     
 #l = [("5985086", "5866836"), ("5981923", "5980266")]
-pelele = travelTimeComparison(l, ttm_path, False, True)
+traveltime = travelTimeComparison(l, ttm_path, True, False, False)
+
 
 
 

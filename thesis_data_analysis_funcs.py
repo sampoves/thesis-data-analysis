@@ -8,9 +8,148 @@ Functions for thesis data crunch
 """
 
 # Import functions
+import geopandas as gpd
+import math
 import numpy as np
 import pandas as pd 
 import matplotlib.pyplot as plt
+from descartes import PolygonPatch
+from shapely.geometry import Point, MultiPoint
+from shapely.ops import cascaded_union
+from matplotlib.offsetbox import (TextArea, DrawingArea, OffsetImage,
+                                  AnnotationBbox)
+
+
+def plot_polygon(polygonList):
+    '''
+    Insert Polygons in lists! If only one Polygon, then use list with one
+    value, for example plot_polygon([Polygon]).
+    
+    Code by Kevin Dwyer, HumanGeo blog. Edited by Sampo Vesanen
+    View alpha shape polygons in pylab
+    
+    An useful general Polygon viewing tool, just stack them and view them
+    
+    Input       List of Polygons
+    Returns     matplotlib view
+    '''
+    
+    def createPolygonPatch(pol, alpha):
+        '''
+        Declutter code, create PolygonPatch inside this function. For now
+        the function only accepts the input Polygon and a value for transparency.
+        '''
+        thisPatch = PolygonPatch(pol, 
+                         fc=np.random.rand(3,), # each object gets a random color
+                         ec=np.random.rand(3,), 
+                         fill=True,
+                         alpha=alpha,
+                         zorder=-1)
+        return thisPatch
+    
+    # keeps track if Point is detected
+    polIsPoint = 0
+    
+    # Allow user to forget the use of unary_union when building list of
+    # GeoDataFrames. If item in loop is instance GeoDataFrame, perform
+    # unary_union on it, else don't make changes.
+    polygonList = [item.unary_union if isinstance(item, gpd.GeoDataFrame) else \
+                   item for item in polygonList]
+    
+    fig = plt.figure(figsize=(14,12))
+    ax = fig.add_subplot(111)
+    margin = 1000 # Give resuls more space. Original was .3
+    x_min, y_min, x_max, y_max = cascaded_union(polygonList).bounds
+    envArea = cascaded_union(polygonList).envelope.area
+    ax.set_xlim([x_min - margin, x_max + margin])
+    ax.set_ylim([y_min - margin, y_max + margin])
+    
+    # Prevents Polygon distortion in matplotlib window
+    ax.axes.set_aspect("equal")
+    
+    for pol in polygonList:
+        # allow Points and MultiPoints in plot_polygon(). Also implemented 
+        # cascaded union envelope size based Point buffer
+        if isinstance(pol, (Point, MultiPoint)):
+            # if envArea is zero, buffer is 10, otherwise formula
+            pol = pol.buffer(10 if envArea == 0.0 else 20 * math.log(envArea))
+            polIsPoint = 1
+
+        thisPatch = createPolygonPatch(pol, 1)
+        ax.add_patch(thisPatch)
+        
+        # insert halo of sorts for Points for better visibility
+        if polIsPoint == 1 and envArea != 0:
+            bgpol = createPolygonPatch(pol.buffer(1000), 0.5)
+            ax.add_patch(bgpol)
+            polIsPoint = 0
+            
+    plt.tight_layout()
+
+    return fig
+
+
+
+def plot_polygons(dictionary):
+    '''
+    Plot as many Polygons as needed. All presented in one figure. For testing
+    purposes. Pretty useful for checking out multiple Polygons fast.
+    
+    # Function expects dictionaries with following logic. facecolor and 
+    # edgecolor are to be presented in hex
+    # {"polygonName": "facecolor_edgecolor_alpha_fillboolean"}
+    
+    Input       a dictionary in the format presented above
+    Returns     Matplotlib map view
+    
+    '''
+    
+    def testEval(str):
+        '''
+        Check if string has # in front. If no, then eval()
+        
+        Input       a string
+        Returns     eval'ed string or the same as input
+        '''
+        if str[:1] != "#":
+            return eval(str)
+        
+        else:
+            return str
+    
+    
+    fig = plt.figure(figsize=(14,12))
+    ax = fig.add_subplot(111)
+    margin = 1000 # Give resuls more space. Original was .3
+    
+    # Get all Polygons as shapely features in list, then cascaded_union and 
+    # bounds
+    x_min, y_min, x_max, y_max = cascaded_union(
+            [eval(pol) for pol in dictionary]).bounds
+    
+    ax.set_xlim([x_min-margin, x_max+margin])
+    ax.set_ylim([y_min-margin, y_max+margin])
+    
+    # prevents Polygon distortion in matplotlib window
+    ax.axes.set_aspect("equal") 
+    
+    for pol, allsettings in dictionary.items():
+        # Split settings of a Polygon to parts
+        theseSettings = allsettings.split("_") 
+        
+        # allow Points in plot_polygons() NOT TESTED
+        #if isinstance(pol, Point):
+        #    pol = pol.centroid.buffer(8)
+        
+        thisPatch = PolygonPatch(eval(pol), 
+                                 fc=testEval(theseSettings[0]), # facecolor
+                                 ec=testEval(theseSettings[1]), # edgecolor
+                                 alpha=eval(theseSettings[2]), # opacity
+                                 fill=eval(theseSettings[3]), # fill boolean
+                                 zorder=-1)
+        ax.add_patch(thisPatch)
+    
+    return fig
 
 
 
@@ -66,6 +205,17 @@ def annotationFunction(df, rowname):
 
 
 
+def polygonCoordsToTuple(gdf):
+    '''
+    Shapely Polygons to tuple. Used in annotation
+    '''
+    geoSeries = gdf["geometry"].apply(lambda x: x.representative_point().coords[:])
+    geoSeries = [coords[0] for coords in geoSeries]
+    
+    return geoSeries
+
+
+
 def convertToDatetime(dataframe, columnName):
     '''
     Declutter code
@@ -82,20 +232,31 @@ def convertToDatetimeVar2(dataframe, columnName):
 
 
 
-def detect_outlier(data_1):
+def detect_outlier(data):
     """
-    Thanks: 
+    Input may be a list or a Series.
+    
+    1) We write a function that takes numeric data as an input argument.
+    2) We find the mean and standard deviation of the all the data points
+    3) We find the z score for each of the data point in the dataset and if the 
+    z score is greater than 3 than we can classify that point as an outlier. 
+    Any point outside of 3 standard deviations would be an outlier.
+    
+    Adapted from code by Renu Khandelwal:
     https://medium.com/datadriveninvestor/finding-outliers-in-dataset-using-python-efc3fce6ce32
     """
     outliers = []
     threshold = 3
-    mean_1 = np.mean(data_1)
-    std_1 = np.std(data_1)
+    mean_1 = np.mean(data)
+    std_1 = np.std(data)
     
-    for y in data_1:
-        z_score = (y - mean_1)/std_1 
+    # adding idx enables us to keep track of outlier value position in a
+    # dataframe. Return answers as a list of tuples
+    for idx, value in enumerate(data):
+        z_score = (value - mean_1) / std_1 
         if np.abs(z_score) > threshold:
-            outliers.append(y)
+            outliers.append((idx, value))
+            
     return outliers
 
 
