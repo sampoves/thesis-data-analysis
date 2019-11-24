@@ -18,7 +18,7 @@ from shapely.geometry import Point, MultiPoint
 from shapely.ops import cascaded_union
 from matplotlib.offsetbox import (TextArea, DrawingArea, OffsetImage,
                                   AnnotationBbox)
-
+import random
 
 def plot_polygon(polygonList):
     '''
@@ -463,3 +463,16 @@ def getJenksBreaks(dataList, numClass):
     countNum -= 1
     
   return kclass
+
+
+
+def random_color():
+    '''
+    Get a light random color for matplotlib
+    
+    Code adapted from Stack Overflow user Yakir Tsuberi:
+    https://stackoverflow.com/a/50906743/9455395
+    '''
+    
+    rand = lambda: random.randint(150, 255)
+    return "#%02X%02X%02X" % (rand(), rand(), rand())

@@ -1055,6 +1055,22 @@ def travelTimeComparison(listOfTuples, ttmpath, detect_outliers=False,
     template = result.copy()
     template.loc[0] = 0
     
+    if plotIds == True:
+        # background layers for matplotlib. Use these to have all origin and
+        # destination pairs on the same map
+        base = grid.plot(linewidth=0.8, 
+                         edgecolor="0.8", 
+                         color="white",
+                         figsize=(16, 12))
+        forest.plot(ax=base,
+                    linewidth=0.8,
+                    edgecolor="none",
+                    facecolor="green")
+        postal.plot(ax=base,
+                    linewidth=0.8,
+                    edgecolor="black",
+                    facecolor="none")
+
     # Iterate through all ids inputted by user
     for originId, destinationId in list(listOfTuples):
         
@@ -1257,19 +1273,20 @@ def travelTimeComparison(listOfTuples, ttmpath, detect_outliers=False,
         
         # Plot origin and destination
         if plotIds == True:
-            # background layers for matplotlib
-            base = grid.plot(linewidth=0.8, 
-                             edgecolor="0.8", 
-                             color="white",
-                             figsize=(16, 12))
-            forest.plot(ax=base,
-                        linewidth=0.8,
-                        edgecolor="none",
-                        facecolor="green")
-            postal.plot(ax=base,
-                        linewidth=0.8,
-                        edgecolor="black",
-                        facecolor="none")
+            # background layers for matplotlib. Activate these to get 
+            # individual maps for each origin and destination pairs.
+            #base = grid.plot(linewidth=0.8, 
+            #                 edgecolor="0.8", 
+            #                 color="white",
+            #                 figsize=(16, 12))
+            #forest.plot(ax=base,
+            #            linewidth=0.8,
+            #            edgecolor="none",
+            #            facecolor="green")
+            #postal.plot(ax=base,
+            #            linewidth=0.8,
+            #            edgecolor="black",
+            #            facecolor="none")
 
     
             # For loop for plotting origin and destination on map. Prepare
@@ -1279,21 +1296,32 @@ def travelTimeComparison(listOfTuples, ttmpath, detect_outliers=False,
             ykrlist = ["\nYKR-ID: " + str(orig.YKR_ID.item()), 
                        "\nYKR-ID: " + str(dest.YKR_ID.item())]
             
+            # Random light color for annotation bbox background to identify 
+            # dataframe rows from each other
+            rnd_col = random_color()
+            
             for item, identifier, name, ykr in zip([orig, dest], identifierlist, 
                                                    namelist, ykrlist):
-                # annotation coordinates to tuple
+                # Annotation coordinates to tuple
                 item["coords"] = polygonCoordsToTuple(item)
                 item.plot(ax=base)
                 
-                # Annotate the 1st position with a text box ('Test 1')
+                # Annotate with a text box
+                # Show acknowledgement in annotationbbox if destination is not 
+                # reachable from origin (TTM18 nodata value -1 changed to np.nan)
+                if np.isnan(car_r_t):
+                    ykr = ykr + "\nNodata, route not navigable"
                 anno = identifier + name + ykr
+                
                 offsetbox = TextArea(anno, minimumdescent=False)
                 ab = AnnotationBbox(offsetbox, item["coords"][0],
                                     xybox=(-20, 40),
                                     xycoords="data",
                                     boxcoords="offset points",
-                                    arrowprops=dict(facecolor="wheat",
-                                                    arrowstyle="->"))
+                                    bboxprops=dict(facecolor=rnd_col,
+                                                   boxstyle="round"),
+                                    arrowprops=dict(arrowstyle="->"))
+
                 base.add_artist(ab)
             
             plt.tight_layout()
@@ -1307,15 +1335,50 @@ def travelTimeComparison(listOfTuples, ttmpath, detect_outliers=False,
 # THE TRAVELTIME MATRIX?
 l = []
 i = 0
-while i < 10:
+while i < 8:
     # In valuerange make sure no grid cells outside research area are accepted
     valuerange = set(grid.YKR_ID.astype(str)) - set(list(map(str, notPresent)))
     vals = random.sample(valuerange, 2)
     l.append(tuple(vals))
     i += 1
-    
+
 #l = [("5985086", "5866836"), ("5981923", "5980266")]
-traveltime = travelTimeComparison(l, ttm_path, True, False, False)
+traveltime = travelTimeComparison(l, ttm_path, True, False, True)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
