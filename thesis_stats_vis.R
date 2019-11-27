@@ -5,14 +5,13 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 13.10.2019
+# 27.11.2019
 
 # Reference material for the tests
 #https://stats.stackexchange.com/a/124618/262051
 #https://rcompanion.org/handbook/E_01.html
 #https://www.st-andrews.ac.uk/media/capod/students/mathssupport/OrdinalexampleR.pdf
 #https://www.r-bloggers.com/box-plot-with-r-tutorial/
-#http://www.biostathandbook.com/kruskalwallis.html
 
 # Descriptive statistics
 #https://www.fsd.uta.fi/menetelmaopetus/varianssi/harjoitus1.html
@@ -108,44 +107,11 @@ thesisdata["timestamp"] <- lapply(thesisdata["timestamp"], timefunc)
 
 
 
-#### Run tests with GetANOVA() ####
+#### ShinyApp ####
 
-# vauvuavu obsoleteeee
+# This ShinyApp is a versatile tool to study the thesis survey data. One can
+# choose parameters with freedom and exclude options as seen fit.
 
-# We use GetANOVA() function, which performs multiple analyses with the 
-# information fed to it. 
-
-# Get walktime by timeofday
-GetANOVA(walktime ~ timeofday, thesisdata$walktime, thesisdata$timeofday,
-         thesisdata, c(1, 2, 3, 4))
-
-# Get walktime by timeofday, remove "Can't specify"
-GetANOVA(walktime ~ timeofday, thesisdata$walktime, thesisdata$timeofday,
-         thesisdata[-which(as.integer(thesisdata$timeofday) == 4), ],
-         c(1, 2, 3, 4))
-
-# parktime by parkspot
-GetANOVA(parktime ~ parkspot, thesisdata$parktime, thesisdata$parkspot,
-         thesisdata, c(1, 2, 3, 4))
-
-# parktime by subdivision
-GetANOVA(parktime ~ subdiv, thesisdata$parktime, thesisdata$subdiv,
-         thesisdata, c(1, 2, 3, 4))
-
-# walktime by ykr zone
-GetANOVA(walktime ~ ykr_zone, thesisdata$walktime, thesisdata$ykr_zone,
-         thesisdata, c(1, 2, 3, 4))
-
-
-
-
-
-
-
-
-
-
-# ShinyApp
 server <- function(input, output, session){
   
   #### Listener function ####
@@ -271,7 +237,7 @@ server <- function(input, output, session){
     }
     p
     
-    # Base graphics
+    # Boxplot with R base graphics
     #boxplot(thisFormula, 
     #        data = inputdata, 
     #        names = legendnames,
@@ -292,10 +258,6 @@ server <- function(input, output, session){
     #leveneVal <- levene[[3]][1]
 
     res <- SigTableToShiny(levene, TRUE)
-    
-    # signif.code row, not in use. Just copied as text to the UI
-    #signig_codes <- read.table(textConnection(capture.output(levenet)[6]), fill = TRUE)
-    #signig_codes <- apply(signig_codes, 1, paste, collapse = " ")
     
     # show
     res
@@ -353,9 +315,7 @@ server <- function(input, output, session){
   })
 }
 
-
-
-#### ShinyApp UI elements ####
+# ShinyApp UI elements
 ui <- shinyUI(fluidPage(theme = shinytheme("slate"),
   
   # Edit various CSS features such as the Brown-Forsythe test box
@@ -443,17 +403,41 @@ shinyApp(ui = ui, server = server)
 
 
 
+#### Obsolete material ####
+
+# All of the functionality below is superseded by the ShinyApp described above.
+# Preserve these for the sake of alternatives and simplicity.
+
+
+# Run tests with GetANOVA()
+
+# We use GetANOVA() function, which performs multiple analyses with the 
+# information fed to it. 
+
+# Get walktime by timeofday
+GetANOVA(walktime ~ timeofday, thesisdata$walktime, thesisdata$timeofday,
+         thesisdata, c(1, 2, 3, 4))
+
+# Get walktime by timeofday, remove "Can't specify"
+GetANOVA(walktime ~ timeofday, thesisdata$walktime, thesisdata$timeofday,
+         thesisdata[-which(as.integer(thesisdata$timeofday) == 4), ],
+         c(1, 2, 3, 4))
+
+# parktime by parkspot
+GetANOVA(parktime ~ parkspot, thesisdata$parktime, thesisdata$parkspot,
+         thesisdata, c(1, 2, 3, 4))
+
+# parktime by subdivision
+GetANOVA(parktime ~ subdiv, thesisdata$parktime, thesisdata$subdiv,
+         thesisdata, c(1, 2, 3, 4))
+
+# walktime by ykr zone
+GetANOVA(walktime ~ ykr_zone, thesisdata$walktime, thesisdata$ykr_zone,
+         thesisdata, c(1, 2, 3, 4))
 
 
 
-
-
-
-
-
-
-#### Visualise ####
-boxplot(likert ~ parktime, data = thesisdata)
+# Visualise
 
 # How familiar have each parking spots been to respondents?
 barplot(table(thesisdata$likert, thesisdata$parkspot), beside = T,

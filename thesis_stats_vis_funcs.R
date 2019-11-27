@@ -5,38 +5,29 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 13.10.2019
+# 27.11.2019
 
 # Initialise
 library(onewaytests)
 library(car)
 library(plotrix)
 library(moments)
-library(htmltools)
-
-
-
-vprint <- function(x, ...) {
-  
-  # Use this function to print to RStudio Viewer
-  
-
-  html_print(pre(paste0(capture.output(print(x, ...)), collapse = "\n")), 
-             background = "#7a7a7a")
-}
 
 
 
 GetANOVA <- function(thisFormula, response, explanatory, inputdata, 
                      columnsToRemove) {
   
+  # NB! Make note that this function is superseded by the ShinyApp described in
+  # thesis_stats_vis.R.
+  #
   # Get all parts of ANOVA we need in this thesis:
-
+  #
   # Descriptives
   # Levene test
   # One-way ANOVA
   # Brown-Forsythe test
-
+  #
   # Input:  thisFormula:  formula as formula object
   #         response:     column name as string (continuous variable)
   #         explanatory:  column name as string (ordinal variable)
@@ -106,17 +97,13 @@ GetANOVA <- function(thisFormula, response, explanatory, inputdata,
   row.names(desc)[nrow(desc)] <- "Total" #last row
   desc <- round(desc, 3)
   
-  
-  
   #### Levene test ####
   levene <- leveneTest(thisFormula, inputdata, center = mean) #car
   leveneVal <- levene[[3]][1]
   
-  
   #### One-way ANOVA ####
   res.aov <- aov(thisFormula, data = inputdata)
   anovasummary <- summary(res.aov)
-  
   
   #### Brown-Forsythe test #### 
   # Need to remove first four columns for this to work
@@ -167,8 +154,11 @@ GetANOVA <- function(thisFormula, response, explanatory, inputdata,
 SigTableToShiny <- function(sigTable, hasHeading) {
   
   # Use this function to show significance tables in Shiny. It will be useful
-  # with Levene and ANOVA results. The main functionality here is to include
-  # the elusive signifinance star.
+  # with Levene and ANOVA results. 
+  
+  # Due to the format of the significance table it is difficult to present it
+  # in Shiny. The main functionality of this method is to make the significance
+  # star available for the app.
   
   # Levene test dataframe requires transposing. Levene table
   # has an attribute heading while ANOVA doesn't. Use this.
@@ -198,9 +188,9 @@ SigTableToShiny <- function(sigTable, hasHeading) {
     capture.output(sigTable)[sigTablePosition]), 
     fill = TRUE)[[signif_ncol]]
   
-  # Detect if signif_star is something else than factor. If so, the current
-  # analysis is not significant. Change value to " ". Need levels(), otherwise
-  # is.character() reads the signif_star factor value, which is always a number
+  # Detect if signif_star is something else than factor. If so, the function
+  # has picked up a value from probability column and the current analysis is 
+  # not significant. Change value to " ".
   if(!is.factor(signif_star)){
     signif_star <- " "
   }
