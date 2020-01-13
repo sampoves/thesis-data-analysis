@@ -53,6 +53,7 @@ library(moments)
 library(shiny)
 library(shinythemes)
 library(ggplot2)
+library(tidyr)
 
 
 
@@ -107,6 +108,7 @@ thesisdata["timestamp"] <- lapply(thesisdata["timestamp"], timefunc)
 
 
 
+
 #### ShinyApp ####
 
 # This ShinyApp is a versatile tool to study the thesis survey data. One can
@@ -122,9 +124,15 @@ server <- function(input, output, session){
     updateCheckboxGroupInput(session, "checkGroup", 
       label = NULL, 
       choiceNames = levels(thesisdata[, x]),
-      choiceValues = levels(thesisdata[, x]),
-    )
+      choiceValues = levels(thesisdata[, x]),)
+    
+    available <- c("likert", "parkspot", "timeofday")
+    updateSelectInput(session, "barplot",
+                      label = NULL,
+                      choices = available[!available == x])
   })
+  
+  
 
   #### Descriptive statistics ####
   output$descri <- renderTable({
@@ -245,6 +253,29 @@ server <- function(input, output, session){
   })
 
   
+  #### Barplot ####
+  output$barplot <- renderPlot({
+    
+    # See distribution of ordinal variables through a grouped bar plot
+    explanatorycol <- input$expl
+    barplotval <- input$barplot
+    yax <- paste("sum of", barplotval)
+    maximum <- max(tapply(thesisdata[, barplotval], thesisdata[, barplotval], length))
+    
+    # Draw ggplot2 plot
+    plo <- ggplot(thesisdata, aes(x = get(explanatorycol), y = factor(get(barplotval)), fill = get(barplotval))) +
+      geom_bar(aes(y = stat(count)), position = "dodge") + 
+      scale_y_continuous(breaks = seq(0, maximum, by = 200),
+                         expand = expand_scale(mult = c(0, .1))) +
+      xlab(explanatorycol) +
+      ylab(yax) +
+      scale_fill_discrete(name = barplotval)
+      theme(legend.position = "right")
+    
+    plo
+  })
+  
+  
   #### Levene test ####
   output$levene <- renderTable({
     
@@ -344,15 +375,26 @@ ui <- shinyUI(fluidPage(theme = shinytheme("slate"),
   sidebarLayout(
     sidebarPanel(
       
-      #walktime or parktime
+      # walktime or parktime
       selectInput("resp", 
-                 "response (continuous)",
+                 "Response (continuous)",
                  names(thesisdata[-c(1, 2, 3, 4, 5, 6, 9, 10, 11, 12)])),
       
       # all others
       selectInput("expl",
-                 "explanatory (ordinal)", 
+                 "Explanatory (ordinal)", 
                  names(thesisdata[-c(1, 2, 3, 4, 7, 8)])),
+      
+      # Provide user possibility to see distribution of answers within the
+      # ordinal variables.
+      # The values of this conditionalPanel are changed with the observer
+      # function
+      conditionalPanel(
+        condition = "input.expl == 'likert' || input.expl == 'parkspot' || input.expl == 'timeofday'",
+        selectInput("barplot",
+                    "Barplotti",
+                    names(thesisdata[c(5, 6, 9)]),
+      )),
       
       # these are changed with the observer function
       checkboxGroupInput("checkGroup", 
@@ -375,6 +417,14 @@ ui <- shinyUI(fluidPage(theme = shinytheme("slate"),
       h3("Histogram"),
       plotOutput("hist"),
       hr(),
+      
+      conditionalPanel(
+        condition = "input.expl == 'likert' || input.expl == 'parkspot' || input.expl == 'timeofday'",
+        h3("Distribution of ordinal variables"),
+        p("This plot appears when likert, parkspot or timeofday is selected as explanatory variable"),
+        plotOutput("barplot"),
+        hr()
+      ),
       
       h3("Boxplot"),
       plotOutput("boxplot", height = "500px"),
@@ -449,6 +499,15 @@ barplot(table(thesisdata$likert, thesisdata$parkspot), beside = T,
                         "Not at all familiar"),
         args.legend = list(x = 30, y = 1000, cex = 0.8),
         col = c("pink", "light blue", "red", "blue", "green"))
+
+
+# ggplot2 method
+ggplot(thesisdata, aes(x = parkspot, y = factor(likert), fill = likert)) +
+  geom_bar(aes(y = stat(count)), position = "dodge") + 
+  scale_y_continuous(breaks = seq(0, max(tapply(thesisdata$likert, thesisdata$likert, length)), by = 200),
+                     expand = expand_scale(mult = c(0, .1))) +
+  theme(legend.position = "right")
+
 
 # time of day compared to parkspot
 barplot(table(thesisdata$timeofday, thesisdata$parkspot), beside = T,
