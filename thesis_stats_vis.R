@@ -245,11 +245,6 @@ server <- function(input, output, session){
     }
     p
     
-    # Boxplot with R base graphics
-    #boxplot(thisFormula, 
-    #        data = inputdata, 
-    #        names = legendnames,
-    #        col = rainbow(length(legendnames)))
   })
 
   
@@ -259,11 +254,12 @@ server <- function(input, output, session){
     # See distribution of ordinal variables through a grouped bar plot
     explanatorycol <- input$expl
     barplotval <- input$barplot
+    inputdata <- thesisdata[!thesisdata[[explanatorycol]] %in% c(input$checkGroup), ]
     yax <- paste("sum of", barplotval)
     maximum <- max(tapply(thesisdata[, barplotval], thesisdata[, barplotval], length))
     
     # Draw ggplot2 plot
-    plo <- ggplot(thesisdata, aes(x = get(explanatorycol), y = factor(get(barplotval)), fill = get(barplotval))) +
+    plo <- ggplot(inputdata, aes(x = get(explanatorycol), y = factor(get(barplotval)), fill = get(barplotval))) +
       geom_bar(aes(y = stat(count)), position = "dodge") + 
       scale_y_continuous(breaks = seq(0, maximum, by = 200),
                          expand = expand_scale(mult = c(0, .1))) +
