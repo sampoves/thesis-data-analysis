@@ -5,7 +5,7 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 27.11.2019
+# 14.1.2020
 
 # Reference material for the tests
 #https://stats.stackexchange.com/a/124618/262051
@@ -44,6 +44,9 @@ rm(list = ls())
 #install.packages("moments") # quantile
 #install.packages("shiny")
 #install.packages("shinythemes")
+#install.packages("ggplot2")
+#install.packages("tidyr")
+#install.packages("dplyr")
 
 # Libraries
 library(onewaytests)
@@ -54,6 +57,7 @@ library(shiny)
 library(shinythemes)
 library(ggplot2)
 library(tidyr)
+library(dplyr)
 
 
 
@@ -79,8 +83,7 @@ postal <- read.csv(file = postal_path,
                    header = TRUE, sep = ",")
 
 
-# Name factor levels. These factor levels break some functionality I wrote
-# earlier
+# Name factor levels. Determine order of factor levels for plotting
 levels(thesisdata$parkspot) <- list("On the side of street" = 1,
                                     "Parking lot" = 2,
                                     "Parking garage" = 3,
@@ -97,6 +100,21 @@ levels(thesisdata$timeofday) <- list("Weekday, rush hour" = 1,
                                      "Weekday, other than rush hour" = 2,
                                      "Weekend" = 3,
                                      "Can't specify, no usual time" = 4)
+
+levels(thesisdata$ykr_zone) <- list("keskustan jalankulkuvyöhyke" = 1,
+                                    "keskustan reunavyöhyke" = 2,
+                                    "alakeskuksen jalankulkuvyöhyke" = 3,
+                                    "intensiivinen joukkoliikennevyöhyke" = 4,
+                                    "joukkoliikennevyöhyke" = 5,
+                                    "autovyöhyke" = 6,
+                                    "novalue" = 7)
+
+levels(thesisdata$ua_forest) <- list("Predominantly forest" = 1,
+                                     "Mostly forest" = 2,
+                                     "Moderate forest" = 3,
+                                     "Some forest" = 4,
+                                     "Scarce forest" = 5)
+
 
 # Remove two columns "X" and "index". X from postal
 thesisdata <- subset(thesisdata, select = -c(X, index))
@@ -126,7 +144,7 @@ server <- function(input, output, session){
       choiceNames = levels(thesisdata[, x]),
       choiceValues = levels(thesisdata[, x]),)
     
-    available <- c("likert", "parkspot", "timeofday")
+    available <- c("likert", "parkspot", "timeofday", "ua_forest", "ykr_zone", "subdiv")
     updateSelectInput(session, "barplot",
                       label = NULL,
                       choices = available[!available == x])
@@ -228,19 +246,21 @@ server <- function(input, output, session){
     thisFormula <- as.formula(paste(input$resp, '~', input$expl))
     explanatorycol <- input$expl
     
+    # listen to user choices
     inputdata <- thesisdata[!thesisdata[[explanatorycol]] %in% c(input$checkGroup), ]
     inputdata <- inputdata[!inputdata$subdiv %in% c(input$subdivGroup), ]
     
     legendnames <- levels(unique(inputdata[[explanatorycol]]))
     
-    # ggplot2. Rotate labels if enough classes
+    # ggplot2 plotting. Rotate labels if enough classes
     if(length(legendnames) > 5){
       
-      p <- ggplot(inputdata, aes_string(x=input$expl, y=input$resp)) + 
-        geom_boxplot() + theme(axis.text.x = element_text(size = 12, angle = 45, hjust = 1))
+      p <- ggplot(inputdata, aes_string(x = input$expl, y = input$resp)) + 
+        geom_boxplot() + 
+        theme(axis.text.x = element_text(size = 12, angle = 45, hjust = 1))
     } else {
       
-      p <- ggplot(inputdata, aes_string(x=input$expl, y=input$resp)) + 
+      p <- ggplot(inputdata, aes_string(x = input$expl, y = input$resp)) + 
         geom_boxplot()
     }
     p
@@ -254,14 +274,32 @@ server <- function(input, output, session){
     # See distribution of ordinal variables through a grouped bar plot
     explanatorycol <- input$expl
     barplotval <- input$barplot
-    inputdata <- thesisdata[!thesisdata[[explanatorycol]] %in% c(input$checkGroup), ]
     yax <- paste("sum of", barplotval)
-    maximum <- max(tapply(thesisdata[, barplotval], thesisdata[, barplotval], length))
+
+    # listen to user choices
+    inputdata <- thesisdata[!thesisdata[[explanatorycol]] %in% c(input$checkGroup), ]
+    inputdata <- inputdata[!inputdata$subdiv %in% c(input$subdivGroup), ]
+    
+    # Plot maximum y tick value. Use dplyr to group the desired max amount.
+    # in dplyr, use !!as.symbol(var) to notify that we are using variables
+    # to denote column names
+    maximum <- inputdata %>% 
+      group_by(!!as.symbol(explanatorycol), !!as.symbol(barplotval)) %>% 
+      summarise(amount = length(!!as.symbol(barplotval))) %>% 
+      top_n(n=1)
+    maximum <- max(as.data.frame(maximum$amount))
+    
+    if (maximum <= 200){
+      tick_interval <- 50
+    } else {
+      tick_interval <- 200
+    }
     
     # Draw ggplot2 plot
-    plo <- ggplot(inputdata, aes(x = get(explanatorycol), y = factor(get(barplotval)), fill = get(barplotval))) +
+    plo <- 
+      ggplot(inputdata, aes(x = get(explanatorycol), y = factor(get(barplotval)), fill = get(barplotval))) +
       geom_bar(aes(y = stat(count)), position = "dodge") + 
-      scale_y_continuous(breaks = seq(0, maximum, by = 200),
+      scale_y_continuous(breaks = seq(0, maximum, by = tick_interval),
                          expand = expand_scale(mult = c(0, .1))) +
       xlab(explanatorycol) +
       ylab(yax) +
@@ -342,7 +380,7 @@ server <- function(input, output, session){
   })
 }
 
-# ShinyApp UI elements
+### ShinyApp UI elements ####
 ui <- shinyUI(fluidPage(theme = shinytheme("slate"),
   
   # Edit various CSS features such as the Brown-Forsythe test box
@@ -388,7 +426,7 @@ ui <- shinyUI(fluidPage(theme = shinytheme("slate"),
       conditionalPanel(
         condition = "input.expl == 'likert' || input.expl == 'parkspot' || input.expl == 'timeofday'",
         selectInput("barplot",
-                    "Barplotti",
+                    "Y axis for barplot",
                     names(thesisdata[c(5, 6, 9)]),
       )),
       
@@ -417,7 +455,7 @@ ui <- shinyUI(fluidPage(theme = shinytheme("slate"),
       conditionalPanel(
         condition = "input.expl == 'likert' || input.expl == 'parkspot' || input.expl == 'timeofday'",
         h3("Distribution of ordinal variables"),
-        p("This plot appears when likert, parkspot or timeofday is selected as explanatory variable"),
+        p("This plot appears when likert, parkspot or timeofday is selected as explanatory (ordinal) variable"),
         plotOutput("barplot"),
         hr()
       ),
@@ -480,47 +518,3 @@ GetANOVA(parktime ~ subdiv, thesisdata$parktime, thesisdata$subdiv,
 # walktime by ykr zone
 GetANOVA(walktime ~ ykr_zone, thesisdata$walktime, thesisdata$ykr_zone,
          thesisdata, c(1, 2, 3, 4))
-
-
-
-# Visualise
-
-# How familiar have each parking spots been to respondents?
-barplot(table(thesisdata$likert, thesisdata$parkspot), beside = T,
-        cex.names = 0.7, 
-        names = c("Side of the road", "lot", "garage", "reserved/private", 
-                  "other"),
-        legend.text = c("Extremely familiar", "Moderately familiar", 
-                        "Somewhat familiar", "Slightly familiar", 
-                        "Not at all familiar"),
-        args.legend = list(x = 30, y = 1000, cex = 0.8),
-        col = c("pink", "light blue", "red", "blue", "green"))
-
-
-# ggplot2 method
-ggplot(thesisdata, aes(x = parkspot, y = factor(likert), fill = likert)) +
-  geom_bar(aes(y = stat(count)), position = "dodge") + 
-  scale_y_continuous(breaks = seq(0, max(tapply(thesisdata$likert, thesisdata$likert, length)), by = 200),
-                     expand = expand_scale(mult = c(0, .1))) +
-  theme(legend.position = "right")
-
-
-# time of day compared to parkspot
-barplot(table(thesisdata$timeofday, thesisdata$parkspot), beside = T,
-        cex.names = 0.7, 
-        names = c("Side of the road", "lot", "garage", "reserved/private", 
-                  "other"),
-        legend.text = c("Weekday, rush hour", "Weekday, other than rush hour", 
-                        "Weekend", "None of the above, no usual time"),
-        args.legend = list(x = 25, y = 900, cex = 0.8),
-        col = c("pink", "light blue", "red", "blue"))
-
-# parktime compared to timeofday
-barplot(table(thesisdata$parkspot, thesisdata$timeofday), beside = T,
-        cex.names = 0.7, 
-        names = c("Weekday, rush hour", "Weekday, other than rush hour", 
-                  "Weekend", "None of the above, no usual time"),
-        legend.text = c("Side of the road", "lot", "garage", "reserved/private", 
-                        "other"),
-        args.legend = list(x = 24, y = 800, cex = 0.8),
-        col = c("pink", "light blue", "red", "blue", "green"))
