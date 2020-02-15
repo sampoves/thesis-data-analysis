@@ -13,6 +13,7 @@ TODO, maybe
     - fix crs mismatches
     - See how long user took to first visit survey and answer to the survey
     - Have same IPs sent records for same areas more than once?
+    - New records,visitors
 """
 
 import os
@@ -28,8 +29,6 @@ from scipy.stats import levene
 from statsmodels.formula.api import ols 
 import statsmodels.api as sm
 from rtree import index
-from matplotlib.offsetbox import (TextArea, DrawingArea, OffsetImage,
-                                  AnnotationBbox)
 import random
 
 # Working directories
@@ -75,6 +74,14 @@ forest = gpd.read_file(r"FI001L3_HELSINKI\ua2012_research_area.shp",
                        encoding="utf-8")
 forest = forest[forest["ITEM2012"] == "Forests"]
 
+## Import Corine Land Cover 2018, select only relevant area
+## Do not utilise this for the time being
+#clc2018 = gpd.read_file(
+#        r"C:\Sampon\Maantiede\Master of the Universe\clc2018_fi20m\clc2018eu25ha.shp", 
+#        encoding="utf-8")
+#clc2018 = gpd.overlay(clc2018, gpd.GeoDataFrame(geometry=resarea.buffer(500)),
+#                      how="intersection")
+
 
 
 ###########################
@@ -105,6 +112,13 @@ visitors = visitors.iloc[1:]
 
  # 82.102.24.252, a confirmed VPN visit by author
 visitors = visitors.drop([3753])
+
+# Alert user if records has IP codes which do not exist in visitors.
+diff = list(set(records.ip) - set(visitors.ip))
+if diff != 0:
+    print("NB! The following IP codes exist only in records: {0}".format(
+            diff))
+    print("This discrepancy may distort analysis of visitors.")
 
 
 
@@ -443,10 +457,7 @@ for idx, postal_zip in enumerate(postal.posti_alue):
     postal.loc[idx, "walktime_mean"] = round(this_mean, 2)
 
 # Prepare annotation of plot features
-#postal['coords'] = postal['geometry'].apply(lambda x: x.representative_point().coords[:])
-#postal['coords'] = [coords[0] for coords in postal['coords']]
 postal["coords"] = polygonCoordsToTuple(postal)
-
 
 # population density
 #postal["pop_dens"] = postal.apply(
@@ -559,6 +570,7 @@ for row in postal.iterrows():
     #    # print forestless report
     #    print("zipcode {0} {1} is forestless".format(row.posti_alue,
     #          row.nimi))
+
 
 
 #########################################
@@ -966,6 +978,31 @@ for varname, fullname in subdiv_dict.items():
     
 
 
+##############################
+### CORINE LAND COVER 2018 ###
+##############################
+
+# Use Corine Land Cover 2018 shapefile to find the most common land cover type
+# in level 3 for each zipcode.
+            
+# Do not utilise this for the time being
+
+#clc_df = pd.DataFrame({"zipcode": postal.posti_alue, "clc": "none"})
+
+##for row in postal.iterrows():
+#    thisRow = row[1]
+#    thisPol = gpd.GeoDataFrame(geometry=[thisRow.geometry])
+#    thisInters = gpd.overlay(clc2018, thisPol, how="intersection")    
+#    level3 = thisInters.dissolve(by="Level3")
+#    level3["area"] = level3.area
+#    pos = level3["area"].idxmax()
+#    clc_df.loc[row[0], "clc"] = level3.loc[pos, "Level3Eng"]
+
+## merge clc data with records
+#records = records.merge(clc_df, left_on="zipcode", right_on="zipcode")
+
+
+
 #######################################
 ### UTILISE TRAVEL-TIME MATRIX 2018 ###
 #######################################
@@ -974,7 +1011,7 @@ for varname, fullname in subdiv_dict.items():
 # THE TRAVELTIME MATRIX?
 l = []
 i = 0
-while i < 8:
+while i < 50:
     # In valuerange make sure no grid cells outside research area are accepted
     valuerange = set(grid.YKR_ID.astype(str)) - set(list(map(str, notPresent)))
     vals = random.sample(valuerange, 2)
@@ -982,14 +1019,70 @@ while i < 8:
     i += 1
 
 #l = [("5985086", "5866836"), ("5981923", "5980266")]
-traveltime = travelTimeComparison(l, ttm_path, True, False, True)
+traveltime = travelTimeComparison(grid, forest, postal, records, l, ttm_path, 
+                                  detectOutliers=False, printStats=False, 
+                                  plotIds=False)
+
+# get means for all columns, see differences
+traveltime[["car_r_drivetime", "car_m_drivetime", "car_sl_drivetime", 
+            "thesis_r_drivetime","thesis_m_drivetime", 
+            "thesis_sl_drivetime"]].mean(axis=0)
 
 
 
+# THIS IS PROBABLY EXTRANEOUS
 
+# create my own TTM18? Idea: only car data, with my data added. Check how much
+# parking time is increased on average compared to 0.42min
 
+# procedure:
+# -- check files with notPresent
+# -- check rows for notPresent
+# -- calculate my data for all other files
+import glob
+all_files = glob.glob(
+        r"C:\Sampon\Maantiede\Master of the Universe\HelsinkiTravelTimeMatrix2018\**\*.txt", 
+        recursive=True)
+all_files = all_files[1:] #drop readme
 
+# my data
+ttm_sampo = r"C:\Sampon\Maantiede\Master of the Universe\HelsinkiTravelTimeSampo"
 
+# check files for notPresent. Change value type to string
+notPresent2 = [str(i) for i in notPresent] 
+accepted = [value for value in all_files if value[97:104] not in notPresent2]
+
+# check rows for notPresent. Drop all not car related columns
+firstfile = pd.read_csv(accepted[0], sep=";")
+firstfile = firstfile.drop(columns=firstfile.columns[2:13]) 
+firstfilename = "\\" + accepted[0].split("\\")[-1]
+firstfoldername = "\\" + accepted[0].split("\\")[-2]
+
+# all rows of firstfile where from_id is not in notPresent2
+firstfile = firstfile[~firstfile.from_id.isin(notPresent2)]
+
+# save txt, first check if directory exists
+if not os.path.exists(ttm_sampo + firstfoldername):
+    os.mkdir(ttm_sampo + firstfoldername)
+
+firstfile.to_csv(ttm_sampo + firstfilename, sep=";", index=None)
+
+# NB! should not run this for loop!! Probably pretty efficient, but runs
+# through the entire TTM18, requires 10Gb+ space
+#for file in accepted:
+#    thisFile = pd.read_csv(item, sep=";")
+#    thisFile = thisFile.drop(columns=thisFile.columns[2:13]) 
+#    thisFilename = "\\" + item.split("\\")[-1]
+#    thisFoldername = "\\" + item.split("\\")[-2]
+#    
+#    # all rows of firstfile where from_id is not in notPresent2
+#    thisFile = thisFile[~thisFile.from_id.isin(notPresent2)]
+#    
+#    # save txt, first check if directory exists
+#    if not os.path.exists(ttm_sampo + thisFoldername):
+#        os.mkdir(ttm_sampo + thisFoldername)
+#    
+#    thisFile.to_csv(ttm_sampo + thisFilename, sep=";", index=None)
 
 
 
@@ -1011,53 +1104,10 @@ parkingPlot(postal, "parktime_mean", 1) #PLOT PARKTIME MEAN
 
 
 
-# Visitors datetime chart, v2, annotate important events
-########################################################
-fig, ax = plt.subplots()
-ax.plot_date(visitors["ts_first"], visitors.index)
-ax.annotate("local max", 
-            xy=("2019-05-22", 191), 
-            xytext=("2019-05-30", 1500),
-            arrowprops=dict(facecolor="black", shrink=0.05), )
-plt.grid(True)
-plt.tight_layout()
-plt.show()
-
-
-
-# Records datetime chart, v2, annotate
-######################################
-dates = {"Espoo 1": "2019-05-22", "Espoo 2": "2019-06-06"}
-
-fig, ax = plt.subplots(figsize=(22,8))
-ax.plot_date(records["timestamp"], records.index)
-
-#annotation for loop
-for dictkey, dictvalue in zip(dates.keys(), dates.values()):
-    
-    # With helper make sure annotation occurs on the first detection of the 
-    # date
-    helper = 0
-    
-    for idx, date in enumerate(records["timestamp"]):
-        splitdate = str(date).split(" ")
-        if splitdate[0] == dictvalue and helper == 0:
-            ax.annotate(
-                    dictkey, xy=(date, idx), 
-                    xytext=(date - timedelta(days=2), idx + 400),
-                    arrowprops=dict(facecolor="black", shrink=0.05),)
-            helper = 1
-
-plt.grid(True)
-plt.tight_layout()
-plt.show()
-
-
-
 #####################
 ### EXPORT TO CSV ###
 #####################
 
 # data to csv for R. "pythonrecords.csv"
-records.to_csv(wd + "records.csv", encoding="Windows-1252")
-postal.to_csv(wd + "postal.csv", encoding="Windows-1252")
+#records.to_csv(wd + "records.csv", encoding="Windows-1252")
+#postal.to_csv(wd + "postal.csv", encoding="Windows-1252")

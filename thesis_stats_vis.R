@@ -1,11 +1,10 @@
 
-
 # Master's thesis statistical tests and visualisation
 #####################################################
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 14.1.2020
+# 15.2.2020
 
 # Reference material for the tests
 #https://stats.stackexchange.com/a/124618/262051
@@ -47,6 +46,8 @@ rm(list = ls())
 #install.packages("ggplot2")
 #install.packages("tidyr")
 #install.packages("dplyr")
+#install.packages("dygraphs")
+#install.packages("xts")
 
 # Libraries
 library(onewaytests)
@@ -58,6 +59,9 @@ library(shinythemes)
 library(ggplot2)
 library(tidyr)
 library(dplyr)
+library(dygraphs)
+library(xts) 
+library(htmltools)
 
 
 
@@ -69,12 +73,18 @@ datapath <- file.path(wd, "pythonrecords.csv")
 postal_path <- file.path(wd, "pythonpostal.csv")
 source(file.path(wd, "python/thesis_stats_vis_funcs.R"))
 
+# Variables used to subset thesisdata inside ShinyApp
+continuous <- c("parktime", "walktime") 
+ordinal <- c("likert", "parkspot", "timeofday", "ua_forest", "ykr_zone", "subdiv") 
+supportcols <- c("X", "id", "timestamp", "ip")
+
 # Read in csv data. Define column types
 thesisdata <- read.csv(file = datapath,
-                colClasses = c(zipcode = "character", ip = "character",
-                               timeofday = "factor", parkspot = "factor",
-                               likert = "factor", ua_forest = "factor",
-                               ykr_zone = "factor", subdiv = "factor"),
+                colClasses = c(timestamp = "POSIXct", zipcode = "character", 
+                               ip = "character", timeofday = "factor", 
+                               parkspot = "factor", likert = "factor", 
+                               ua_forest = "factor", ykr_zone = "factor", 
+                               subdiv = "factor"),
                 header = TRUE, sep = ",")
 
 # Postal code data
@@ -116,14 +126,9 @@ levels(thesisdata$ua_forest) <- list("Predominantly forest" = 1,
                                      "Scarce forest" = 5)
 
 
-# Remove two columns "X" and "index". X from postal
-thesisdata <- subset(thesisdata, select = -c(X, index))
+# Remove column "index". Remove X from postal
+thesisdata <- subset(thesisdata, select = -c(index))
 postal <- postal[-c(1, 5, 6)]
-
-# Timestampify
-timefunc <- function(x) strptime(x, "%Y-%m-%d %H:%M:%S", tz = "Europe/Helsinki")
-thesisdata["timestamp"] <- lapply(thesisdata["timestamp"], timefunc)
-
 
 
 
@@ -144,7 +149,8 @@ server <- function(input, output, session){
       choiceNames = levels(thesisdata[, x]),
       choiceValues = levels(thesisdata[, x]),)
     
-    available <- c("likert", "parkspot", "timeofday", "ua_forest", "ykr_zone", "subdiv")
+    available <- c("likert", "parkspot", "timeofday", "ua_forest", "ykr_zone", 
+                   "subdiv")
     updateSelectInput(session, "barplot",
                       label = NULL,
                       choices = available[!available == x])
@@ -162,7 +168,8 @@ server <- function(input, output, session){
     colname <- input$expl
     
     # take subdiv checkbox group into account
-    inputdata <- thesisdata[!thesisdata[[colname]] %in% c(input$checkGroup), -c(1, 2, 3, 4)]
+    inputdata <- thesisdata[!thesisdata[[colname]] %in% c(input$checkGroup), 
+                            !names(thesisdata) %in% supportcols]
     inputdata <- inputdata[!inputdata$subdiv %in% c(input$subdivGroup), ]
 
     # Basic descriptive statistics
@@ -297,7 +304,8 @@ server <- function(input, output, session){
     
     # Draw ggplot2 plot
     plo <- 
-      ggplot(inputdata, aes(x = get(explanatorycol), y = factor(get(barplotval)), fill = get(barplotval))) +
+      ggplot(inputdata, aes(x = get(explanatorycol), y = factor(get(barplotval)), 
+                            fill = get(barplotval))) +
       geom_bar(aes(y = stat(count)), position = "dodge") + 
       scale_y_continuous(breaks = seq(0, maximum, by = tick_interval),
                          expand = expand_scale(mult = c(0, .1))) +
@@ -368,7 +376,8 @@ server <- function(input, output, session){
     colname <- input$expl
     thisFormula <- as.formula(paste(input$resp, '~', input$expl))
     
-    inputdata <- thesisdata[!thesisdata[[colname]] %in% c(input$checkGroup), -c(1, 2, 3, 4)]
+    inputdata <- thesisdata[!thesisdata[[colname]] %in% c(input$checkGroup), 
+                            !names(thesisdata) %in% supportcols]
     inputdata <- inputdata[!inputdata$subdiv %in% c(input$subdivGroup), ]
     
     # bf.test() works so that the information we want is only printed to
@@ -386,6 +395,9 @@ ui <- shinyUI(fluidPage(theme = shinytheme("slate"),
   # Edit various CSS features such as the Brown-Forsythe test box
   tags$head(
     tags$style(HTML("
+      html, body {
+        height: 100%;
+      }
       #brownf {
         color: #c8c8c8;
         background: #2e3338;
@@ -396,10 +408,11 @@ ui <- shinyUI(fluidPage(theme = shinytheme("slate"),
         max-height: 80vh;
       }
       form.well {
+        display: 100%;
         position: fixed;
         overflow: visible;
         overflow-y: auto;
-        max-height: 80vh;
+        max-height: 90vh;
         max-width: 80vh;
       }"
     ))
@@ -412,12 +425,12 @@ ui <- shinyUI(fluidPage(theme = shinytheme("slate"),
       # walktime or parktime
       selectInput("resp", 
                  "Response (continuous)",
-                 names(thesisdata[-c(1, 2, 3, 4, 5, 6, 9, 10, 11, 12)])),
+                 names(thesisdata[continuous])),
       
       # all others
       selectInput("expl",
                  "Explanatory (ordinal)", 
-                 names(thesisdata[-c(1, 2, 3, 4, 7, 8)])),
+                 names(thesisdata[ordinal])),
       
       # Provide user possibility to see distribution of answers within the
       # ordinal variables.
@@ -427,7 +440,7 @@ ui <- shinyUI(fluidPage(theme = shinytheme("slate"),
         condition = "input.expl == 'likert' || input.expl == 'parkspot' || input.expl == 'timeofday'",
         selectInput("barplot",
                     "Y axis for barplot",
-                    names(thesisdata[c(5, 6, 9)]),
+                    names(thesisdata[c("zipcode", "likert", "walktime")]),
       )),
       
       # these are changed with the observer function
@@ -483,6 +496,163 @@ ui <- shinyUI(fluidPage(theme = shinytheme("slate"),
   )
 ))
 shinyApp(ui = ui, server = server)
+
+
+
+#### Visitor ShinyApp ####
+visitorpath <- file.path(wd, "leaflet_survey_results/visitors.csv")
+visitordata <- read.csv(file = visitorpath,
+                       colClasses = c(X = "integer", id = "integer", 
+                                      ip = "factor", ts_first = "POSIXct", 
+                                      ts_latest = "POSIXct", count = "integer"),
+                       header = TRUE, sep = ",")
+
+# NOW() in MySQL is UTC, change POSIXct object timezone to UTC+3, Helsinki
+# summer time
+visitordata$ts_first <- visitordata$ts_first + 3 * 60 * 60
+visitordata$ts_latest <- visitordata$ts_latest + 3 * 60 * 60
+
+# First sort by timestamp, then rename X or id. This fixes responses with 
+# multiple zipcodes. These records have exact same timestamps, that proved 
+# tricky for dygraphs to understand
+thesisdata_for_xts <- thesisdata[order(thesisdata$timestamp, decreasing = FALSE), ]
+thesisdata_for_xts$X <- seq(1:length(thesisdata_for_xts$X))
+
+# Create xts object necessary to use dygraph
+visitor_xts <- xts(x = visitordata$X, order.by = visitordata$ts_first)
+records_xts <- xts(x = thesisdata_for_xts$X, order.by = thesisdata_for_xts$timestamp)
+
+
+
+# Event timestamps. Manually picked. If many areas are in the same variable,
+# the earliest timestamp is selected
+twitter <- as.POSIXct("2019-05-07 10:43:00 EEST") 
+
+# Maantieteen opiskelijat email group
+mao <- as.POSIXct("2019-05-09 13:24:00 EEST") 
+
+# email groups: Vasara, Resonanssi, Matrix, Geysir, Synop, Meridiaani, Tyyppi-arvo,
+# HYK, TKO-ÄLY, Symbioosi, Helix, MYY, Sampsa, MYO, Lipidi, Vuorovaikeutus,
+# YFK, Oikos
+emails <- as.POSIXct("2019-05-14 10:58:00 EEST") 
+
+# FB
+lisaakaupunkia <- as.POSIXct("2019-05-15 10:33:00 EEST") 
+
+# Haukilahti/Westend asukkaat, Pohjois-Espoon asukasfoorumi, Lippajärvi, 
+# Matinkylä/Olari, Leppävaara, Soukka-Sökö, Suur-Espoonlahti, Puskaradio Tapiola,
+# Puskaradio Kauniainen/Grankulla, Enemmän Tapiolaa!, Kivenlahden ystävät
+espoo1 <- as.POSIXct("2019-05-22 18:00:00 EEST") 
+
+# Kalasatama-Fiskehamnen, Sörnäinen, Punavuori, Laajasalo, Herttoniemi, 
+# Mankkaan lapsiperheet, 
+misc1 <- as.POSIXct("2019-05-23 21:11:00 EEST") 
+
+# Oulunkylä kierrättää ja keskustelee, Käpylä Helsinki, Kumpula, Arabian alue,
+# Vallilan ja Hermannin alue, Hermanni-liike, Jätkäsaari-liike, Ruoholahti asuu,
+# Pasila Böle, Pasila-liike, Ruskeasuo, Meilahden kylä, Töölö-liike, Töölö-
+# Seura ry
+helsinki1 <- as.POSIXct("2019-05-24 16:28:00 EEST") 
+
+# Pihlajamäki, Malmi, Pukinmäen foorumi, Viikki ja Latokartano ympäristöineen,
+# Kuninkaantammi, Maununneva-Hakuninmaa, Kannelmäki-liike, Lauttasaari, 
+# Munkkivuori, Niemenmäki, Etelä-Haaga, Haagan ilmoitustaulu
+helsinki2 <- as.POSIXct("2019-05-25 14:56:00 EEST") 
+
+# Östersundom, Aurinkolahti, Vuosaari, Kruunuvuorenranta, Kontula, Mellunmäki/
+# Mellunkylä, Pitäjänmäki, Munkkiniemi, ITÄ-HELSINKI, Itäkeskus-itästadilaista
+# laiffii, Marjaniemi Helsinki, Puotila & Vartsika, Vartiokylä/Vartioharju,
+# Tammisalo, Herttoniemenranta, Roihuvuori, Kulosaari-HYGGE-Brandö, Suutarilassa
+# tapahtuu, Tapaninvainion foorumi, Tapanila-Mosabacka, Paloheinä-Pakila-
+# Torpparinmäki ilmoittaa (se aito ja alkuperäinen)
+helsinki3 <- as.POSIXct("2019-05-26 12:55:00 EEST") 
+
+# Pitäjänmäkeläiset, Landbo, Kamppi-Punavuori-Hietalahti
+helsinki4 <- as.POSIXct("2019-05-29 16:49:00 EEST") 
+
+# Perusmäki Espoo, As Oy Helsingin Arabianrinne, Rajakylä Vantaa, Leppäkorpi
+# Vantaa, Korso, Rekola, Tikkurila, Aviapolis-asukkaiden alue, Kivistö,
+# Kivistön suuralue, ASKISTO, Vantaanlaakson lapsiperheet, Vapaala, Pähkinärinne,
+# Alppikylä, Laajalahti-ryhmä (suljettu), Kilo Espoo, Karakallio, Saunalahti
+# tapahtumat ja palvelut, Nöykkiö Espoo Foorumi, Henttaalaiset, Myyrmäki
+misc2 <- as.POSIXct("2019-06-06 20:57:00 EEST") 
+
+# Pohjois-Kirkkonummelaiset, Puskaradio Sipoo, Sibbo-Sipoo, Järvenpää, We <3
+# Kerava, Lisää kaupunkia Hyrylään, Tuusula, Nurmijärvi, Nurmijärven
+# viidakkorumpu, Vihtiläiset, Vihdin Nummela, Kirkkonummelaiset (sana vapaa)
+peri <- as.POSIXct("2019-06-09 11:01:00 EEST") 
+
+# Vantaa Puskaradio, Sipoo-Sibbo, Järvenpää, WE <3 KERAVA, Tuusula, Nurmijärven 
+# viidakkorumpu, Vihtiläiset, Korso, Käpylä Helsinki, Laajasalo, Vuosaari,
+# ITÄ-HELSINKI, Lauttasaari, Haagan ilmoitustaulu, REMINDERS
+muistutus <- as.POSIXct("2019-06-26 15:33:00 EEST") 
+
+# they only accepted my message at this date for Nikinmäki and Puskaradio Espoo
+nikinmaki <- as.POSIXct("2019-06-27 14:26:00 EEST")
+puskaradioespoo <- as.POSIXct("2019-06-27 21:30:00 EEST")
+
+# reminder
+lisaakaupunkia2 <- as.POSIXct("2019-07-02 12:06:00 EEST")
+
+# remind email groups except mao, GIS-velhot
+misc3 <- as.POSIXct("2019-07-05 10:29:00 EEST")
+
+visitor_server <- function(input, output) {
+  output$dygraph <- renderUI({
+    das <- list(
+      dygraph(records_xts, main = "records", group = "thesis") %>%
+        dyOptions(drawPoints = TRUE, pointSize = 2) %>%
+        dyRangeSelector(height = 70)  %>%
+        
+        dyEvent(twitter, "@Digigeolab, @AccessibilityRG", labelLoc = "bottom") %>%
+        dyEvent(mao, "MaO") %>%
+        dyEvent(emails, "Email groups") %>%
+        dyEvent(lisaakaupunkia, "FB: Lisää kaupunkia Helsinkiin") %>%
+        dyEvent(espoo1, "Espoo 1") %>%
+        dyEvent(misc1, "Mankkaan lapsiperheet, Helsinki 1") %>%
+        dyEvent(helsinki1, "Helsinki 1", labelLoc = "bottom") %>%
+        dyEvent(helsinki2, "Helsinki 2", labelLoc = "bottom") %>%
+        dyEvent(helsinki3, "Helsinki 3", labelLoc = "bottom") %>%
+        dyEvent(helsinki4, "Helsinki 4", labelLoc = "bottom") %>%
+        dyEvent(misc2, "Espoo 2, Vantaa, Alppikylä", labelLoc = "bottom") %>%
+        dyEvent(peri, "Kehyskunnat", labelLoc = "bottom") %>%
+        dyEvent(muistutus, "Muistutuksia", labelLoc = "bottom") %>%
+        dyEvent(nikinmaki, "Vantaa Nikinmäki", labelLoc = "bottom") %>%
+        dyEvent(puskaradioespoo, "Puskaradio Espoo", labelLoc = "bottom") %>%
+        dyEvent(lisaakaupunkia2, "Muistutus, Lisää kaupunkia Helsinkiin", labelLoc = "bottom") %>%
+        dyEvent(misc3, "emails reminder, GIS-velhot FB", labelLoc = "bottom"),
+      
+      dygraph(visitor_xts, main = "visitors", group = "thesis") %>%
+        dyOptions(drawPoints = TRUE, pointSize = 2) %>%
+        dyRangeSelector(height = 70)  %>%
+        
+        dyEvent(twitter, "@Digigeolab, @AccessibilityRG", labelLoc = "bottom") %>%
+        dyEvent(mao, "MaO") %>%
+        dyEvent(emails, "Email groups") %>%
+        dyEvent(lisaakaupunkia, "FB: Lisää kaupunkia Helsinkiin") %>%
+        dyEvent(espoo1, "Espoo 1") %>%
+        dyEvent(misc1, "Mankkaan lapsiperheet, Helsinki 1") %>%
+        dyEvent(helsinki1, "Helsinki 1", labelLoc = "bottom") %>%
+        dyEvent(helsinki2, "Helsinki 2", labelLoc = "bottom") %>%
+        dyEvent(helsinki3, "Helsinki 3", labelLoc = "bottom") %>%
+        dyEvent(helsinki4, "Helsinki 4", labelLoc = "bottom") %>%
+        dyEvent(misc2, "Espoo 2, Vantaa, Alppikylä", labelLoc = "bottom") %>%
+        dyEvent(peri, "Kehyskunnat", labelLoc = "bottom") %>%
+        dyEvent(muistutus, "Muistutuksia", labelLoc = "bottom") %>%
+        dyEvent(nikinmaki, "Vantaa Nikinmäki", labelLoc = "bottom") %>%
+        dyEvent(puskaradioespoo, "Puskaradio Espoo", labelLoc = "bottom") %>%
+        dyEvent(lisaakaupunkia2, "Muistutus, Lisää kaupunkia Helsinkiin", labelLoc = "bottom") %>%
+        dyEvent(misc3, "emails reminder, GIS-velhot FB", labelLoc = "bottom"))
+    
+    browsable(tagList(das))
+  })
+}
+
+visitor_ui <- basicPage(
+  titlePanel("Received responses and survey page first visits"),
+  uiOutput("dygraph")
+)
+shinyApp(visitor_ui, visitor_server)
 
 
 
