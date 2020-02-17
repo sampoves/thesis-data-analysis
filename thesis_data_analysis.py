@@ -42,9 +42,10 @@ visitors_data = os.path.join(datawd, "visitors.csv")
 
 os.chdir(wd)
 
-# Import functions. Has to be done after inserting os.chdir()
+# Import functions and lists of zipcodes. Has to be done after inserting 
+# os.chdir()
 from thesis_data_analysis_funcs import *
-
+from thesis_data_zipcodes import *
 
 
 ###################
@@ -653,288 +654,44 @@ for idx, row in enumerate(records.iterrows()):
 # (for example Lippajärvi-Järvenperä and Sepänkylä-Kuurinniitty) and just 
 # south of Helsinki-Vantaa airport.
 
-# Helsinki subdivisions, see:
-# https://www.avoindata.fi/data/fi/dataset/helsinki-alueittain/resource/9e197c6a-1882-4ad9-a50b-9dc7c49cb75a
-
-# Southern subdivision
-hkiSouth = ["00250", # Taka-Töölö
-            "00260", # Keski-Töölö
-            "00100", # Helsinki keskusta - Etu-Töölö
-            "00180", # Kamppi-Ruoholahti
-            "00200", # Lauttasaari
-            "00210", # Vattuniemi
-            "00220", # Jätkäsaari
-            "00120", # Punavuori
-            "00130", # Kaartinkaupunki
-            "00140", # Kaivopuisto-Ullanlinna
-            "00160", # Katajanokka
-            "00150", # Eira-Hernesaari
-            "00190", # Suomenlinna
-            "00170"] # Kruununhaka
+# View further information about subdivisions in script thesis_data_zipcodes.py
+            
+# View Helsinki subdivisions on map
 #postal[postal.posti_alue.isin(hkiSouth)].plot()
-
-# Western subdivision
-hkiWest = ["00290", # Meilahden sairaala-alue
-           "00270", # Pohjois-Meilahti
-           "00280", # Ruskeasuo
-           "00330", # Munkkiniemi
-           "00350", # Munkkivuori-Niemenmäki
-           "00310", # Kivihaka
-           "00320", # Etelä-Haaga
-           "00340", # Kuusisaari-Lehtisaari
-           "00400", # Pohjois-Haaga
-           "00380", # Pitäjänmäen teollisuusalue
-           "00360", # Pajamäki
-           "00370", # Reimarla
-           "00440", # Lassila
-           "00390", # Konala
-           "00410", # Malminkartano 
-           "00420", # Kannelmäki
-           "00430", # Maununneva
-           "00300"] # Pikku Huopalahti
 #postal[postal.posti_alue.isin(hkiWest)].plot()
-
-# Central (Keskinen) subdivision
-hkiCentral = ["00230", # Ilmala 
-             "00240", # Länsi-Pasila 
-             "00610", # Käpylä 
-             "00600", # Koskela 
-             "00560", # Toukola-Vanhakaupunki 
-             "00550", # Vallila 
-             "00520", # Itä-Pasila
-             "00510", # Etu-Vallila-Alppila
-             "00500", # Sörnäinen
-             "00530", # Kallio
-             "00540", # Kalasatama
-             "00580"] # Verkkosaari
 #postal[postal.posti_alue.isin(hkiCentral)].plot()
-
-# Norther subdivision
-hkiNorth = ["00690", # Tuomarinkylä-Torpparinmäki 
-            "00670", # Paloheinä
-            "00660", # Länsi-Pakila
-            "00680", # Itä-Pakila
-            "00630", # Maunula-Suursuo
-            "00620", # Metsälä-Etelä-Oulunkylä
-            "00650", # Veräjämäki
-            "00640"] # Oulunkylä-Patola
 #postal[postal.posti_alue.isin(hkiNorth)].plot()
-
-# Northeastern subdivision
-hkiNortheast = ["00740", # Siltamäki
-                "00750", # Puistola
-                "00760", # Suurmetsä
-                "00780", # Tapaninvainio
-                "00730", # Tapanila
-                "00770", # Jakomäki-Alppikylä
-                "00720", # Pukinmäki-Savela
-                "00710", # Pihlajamäki
-                "00790", # Viikki
-                "00700"] # Malmi
 #postal[postal.posti_alue.isin(hkiNortheast)].plot()
-
-# Southeastern subdivision
-hkiSoutheast = ["00800", # Länsi-Herttoniemi 
-                "00880", # Roihupellon teollisuusalue
-                "00820", # Roihuvuori
-                "00810", # Herttoniemi
-                "00830", # Tammisalo                
-                "00570", # Kulosaari
-                "00590", # Kaitalahti
-                "00870", # Etelä-Laajasalo
-                "00850", # Jollas
-                "00860", # Santahamina                
-                "00840"] # Laajasalo
 #postal[postal.posti_alue.isin(hkiSoutheast)].plot()
-
-# Eastern subdivision
-hkiEast = ["00940", # Kontula
-           "00970", # Mellunmäki
-           "00920", # Myllypuro
-           "00950", # Vartioharju 
-           "00960", # Pohjois-Vuosaari 
-           "00980", # Etelä-Vuosaari
-           "00990", # Aurinkolahti 
-           "00900", # Puotinharju 
-           "00910", # Puotila            
-           "00930"] # Itäkeskus-Marjaniemi
 #postal[postal.posti_alue.isin(hkiEast)].plot()
-
-# Östersundom subdivision
-hkiOster = ["00890"] # Östersundom
 #postal[postal.posti_alue.isin(hkiOster)].plot()
-
-# All of the centers in Helsinki
 #postal[postal.posti_alue.isin(hkiSouth + hkiWest + hkiCentral + hkiNorth +
 #                              hkiNortheast + hkiSoutheast + hkiEast +
 #                              hkiOster)].plot()
 
-
-# Espoo subdivisions:
-#https://www.espoo.fi/fi-fi/Espoon_kaupunki/Tietoa_Espoosta/Tilastot_ja_tutkimukset/Aluejakokartat
-# See Excel sheet for exact place names:
-# Suur-, tilasto- ja pienalueiden nimet 1.1.2014
-    
-#Suur-Leppävaara subdivision
-# Kanta-Leppävaara, Kilo-Karakallio, Laaksolahti, Viherlaakso-Lippajärvi,
-# Sepänkylä
-espLeppavaara = ["02620", # Karakallio
-                 "02610", # Kilo
-                 "02600", # Etelä-Leppävaara 
-                 "02650", # Pohjois-Leppävaara 
-                 "02660", # Lintuvaara
-                 "02710", # Viherlaakso
-                 "02720", # Lähderanta
-                 "02730", # Jupperi
-                 "02630", # Nihtisilta
-                 "02680"] # Uusmäki
+# View Espoo subdivisions on map
 #postal[postal.posti_alue.isin(espLeppavaara)].plot()
-
-#Suur-Tapiola subdivision
-# Kanta-Tapiola, Otaniemi, Haukilahti-Westend, Mankkaa, Laajalahti
-espTapiola = ["02170", # Haukilahti
-              "02140", # Laajalahti
-              "02180", # Mankkaa
-              "02200", # Niittykumpu
-              "02150", # Otaniemi
-              "02100", # Tapiola
-              "02130", # Pohjois-Tapiola
-              "02110", # Otsolahti
-              "02120", # Länsikorkee-Suvikumpu
-              "02160"] # Westend
 #postal[postal.posti_alue.isin(espTapiola)].plot()
-
-#Suur-Matinkylä subdivision
-# Matinkylä, Olari, Henttaa-Suurpelto
-espMatinkyla = ["02250", # Henttaa
-                "02240", # Friisilä
-                "02210", # Olari
-                "02290", # Puolarmetsän sairaala, own placement
-                "02230"] # Matinkylä
 #postal[postal.posti_alue.isin(espMatinkyla)].plot()
-
-#Suur-Espoonlahti subdivision
-# Kanta-Espoonlahti, Saunalahti, Nöykkiö-Latokaski, Kaitaa, Suvisaaristo
-espEspoonlahti = ["02320", # Espoonlahti
-                  "02360", # Soukka
-                  "02300", # Nöykkiönpuro
-                  "02330", # Saunalahti-Kattilalaakso
-                  "02340", # Latokaski
-                  "02270", # Finnoo-Eestinmalmi
-                  "02260", # Kaitaa
-                  "02280", # Malminmäki-Eestinlaakso
-                  "02380"] # Suvisaaristo
 #postal[postal.posti_alue.isin(espEspoonlahti)].plot()
-
-#Suur-Kauklahti subdivision
-# Kanta-Kauklahti, Kurttila-Vanttila
-espKauklahti = ["02780"] # Kauklahti and all others
 #postal[postal.posti_alue.isin(espKauklahti)].plot()
-
-#Vanha-Espoo subdivision
-# Kanta-Espoo, Muurala-Gumböle, Bemböle, Nuuksio-Nupuri
-espVanhaespoo = ["02770", # Espoon keskus
-                 "02810", # Gumböle-Karhusuo
-                 "02820", # Nupuri-Nuuksio
-                 "02760", # Tuomarila-Suvela
-                 "02940", # Lippajärvi-Järvenperä, own placement
-                 "02740", # Bemböle-Pakankylä
-                 "02750", # Sepänkylä-Kuurinniitty, own placement
-                 "02860"] # Siikajärvi
 #postal[postal.posti_alue.isin(espVanhaespoo)].plot()
-
-#Pohjois-Espoo subdivision
-# Vanhakartano-Röylä, Kalajärvi-Lakisto
-espPohjoisespoo = ["02970", # Kalajärvi
-                   "02920", # Niipperi
-                   "02980"] # Lakisto
 #postal[postal.posti_alue.isin(espPohjoisespoo)].plot()
-
-# All of Espoo
 #postal[postal.posti_alue.isin(espLeppavaara + espTapiola + espMatinkyla +
 #                              espEspoonlahti + espKauklahti + espVanhaespoo +
 #                              espPohjoisespoo)].plot()
 
-# Kauniainen
-kauniainen = ["02700"]
-
-
-# Vantaa subdivisions:
-# https://www.vantaa.fi/instancedata/prime_product_julkaisu/vantaa/embeds/vantaawwwstructure/124282_Vantaa_alueittain_2015.pdf
-# Myyrmäki subdivision
-# Linnainen, Hämevaara, Hämeenkylä, Vapaala, Varisto, Myyrmäki, Kaivoksela,
-# Martinlaakso, Vantaanlaakso, Askisto, Petikko
-vanMyyrmaki = ["01600", # Myyrmäki
-               "01610", # Kaivoksela
-               "01620", # Martinlaakso
-               "01630", # Hämeenkylä
-               "01640", # Hämevaara
-               "01650", # Vapaala
-               "01660", # Varisto
-               "01670", # Vantaanlaakso
-               "01680", # Askisto
-               "01710", # Pähkinärinne
-               "01720", # Petikko
-               "01770"] # Martinlaakson teollisuusalue, own placement
+# View Vantaa subdivisions on map
 #postal[postal.posti_alue.isin(vanMyyrmaki)].plot()
-
-# Kivistö subdivision
-# Piispankylä, Keimola, Kivistö, Lapinkylä, Myllymäki, Vestra, Luhtaanmäki,
-# Riipilä, Seutula, Kiila
-vanKivisto = ["01700", # Kivistö
-              "01730", # Vantaanpuisto
-              "01750", # Keimola
-              "01760"] # Seutula
 #postal[postal.posti_alue.isin(vanKivisto)].plot()
-
-# Aviapoliksen
-# Ylästö, Viinikkala, Tammisto, Pakkala, Veromies, Lentokenttä
-vanAviapolis = ["01520", # Tammisto
-                "01530", # Veromiehenkylä
-                "01690", # Ylästö
-                "01510", # Kirkonkylä-Veromäki, my own placement
-                "01740"] # Tuupakan teollisuusalue
 #postal[postal.posti_alue.isin(vanAviapolis)].plot()
-
-# Tikkurila subdivision
-# Hiekkaharju, Tikkurila, Jokiniemi, Viertola, Kuninkaala, Simonkylä,
-# Hakkila, Ruskeasanta, Koivuhaka, Helsingin pitäjän kirkonkylä
-vanTikkurila = ["01300", # Tikkurila
-                "01350", # Hiekkaharju
-                "01370", # Jokiniemi
-                "01380"] # Kuusikko-Hakkila
 #postal[postal.posti_alue.isin(vanTikkurila)].plot()
-
-# Koivukylä subdivision
-# Koivukylä, Ilola, Asola, Rekola, Havukoski, Päiväkumpu
-vanKoivukyla = ["01360", # Koivukylä-Havukoski
-                "01400", # Rekola
-                "01340", # Leinelä, my own placement
-                "01390", # Ruskeasanta-Ilola, my own placement
-                "01420"] # Päiväkumpu
 #postal[postal.posti_alue.isin(vanKoivukyla)].plot()
-
-# Korso subdivision
-# Matari, Korso, Mikkola, Metsola, Leppäkorpi, Jokivarsi, Nikinmäki, Vierumäki,
-# Vallinoja
-vanKorso = ["01450", # Korso
-            "01480"] # Mikkola
 #postal[postal.posti_alue.isin(vanKorso)].plot()
-
-# Hakunila subdivision
-# Länsisalmi, Länsimäki, Ojanko, Vaarala, Hakunila, Rajakylä, Itä-Hakkila,
-# Kuninkaanmäki, Sotunki
-vanHakunila = ["01200", # Hakunila
-               "01230", # Vaarala
-               "01260", # Itä-Hakkila
-               "01280"] # Länsimäki
 #postal[postal.posti_alue.isin(vanHakunila)].plot()
-
-# All of Vantaa
 #postal[postal.posti_alue.isin(vanMyyrmaki + vanKivisto + vanAviapolis +
 #                              vanTikkurila + vanKoivukyla + vanKorso +
 #                              vanHakunila)].plot()
-
 
 
 # Insert subvision names to records
