@@ -24,10 +24,10 @@ import matplotlib.pyplot as plt
 from matplotlib.pyplot import figure
 from datetime import timedelta
 from shapely.geometry import Polygon, MultiPolygon, Point, LinearRing
-import scipy.stats as stats
-from scipy.stats import levene
-from statsmodels.formula.api import ols 
-import statsmodels.api as sm
+#import scipy.stats as stats
+#from scipy.stats import levene
+#from statsmodels.formula.api import ols 
+#import statsmodels.api as sm
 from rtree import index
 import random
 
@@ -135,11 +135,11 @@ postal = postal.reset_index().drop(columns=["index", "euref_x", "euref_y"])
 # team used the bounding box below to define an area in center of Helsinki
 # to note an area where people walk a longer time to their cars. HENCE, NOT
 # IN MY SCOPE!
-walkingBbox = LinearRing([(387678.024778, 6675360.99039), 
-                          (387891.53396, 6670403.35286),
-                          (383453.380944, 6670212.21613), 
-                          (383239.871737, 6675169.85373),
-                          (387678.024778, 6675360.99039)])
+#walkingBbox = LinearRing([(387678.024778, 6675360.99039), 
+#                          (387891.53396, 6670403.35286),
+#                          (383453.380944, 6670212.21613), 
+#                          (383239.871737, 6675169.85373),
+#                          (387678.024778, 6675360.99039)])
 
 
 ### Remove islands unreachable by car
@@ -209,7 +209,8 @@ for idx, geom in enumerate(postal.geometry):
 # Replace postal geometries with geometries without islands
 # NB! postal.at[idx, "geometry"] = thisGeom seems to raise ValueError in
 # GeoPandas 0.6.0. Complains that "Must have equal len keys and value when 
-# setting with an iterable"
+# setting with an iterable". Will remain in GeoPandas version 0.5.0 for this
+# thesis.
 for idx, geom in enumerate(postal.geometry):
     if geom.geom_type == "MultiPolygon":
         thisGeom = MultiPolygon(
@@ -656,7 +657,7 @@ for idx, row in enumerate(records.iterrows()):
 # https://www.avoindata.fi/data/fi/dataset/helsinki-alueittain/resource/9e197c6a-1882-4ad9-a50b-9dc7c49cb75a
 
 # Southern subdivision
-hkiSouth = ["00250", # Taka-Töölö 
+hkiSouth = ["00250", # Taka-Töölö
             "00260", # Keski-Töölö
             "00100", # Helsinki keskusta - Etu-Töölö
             "00180", # Kamppi-Ruoholahti

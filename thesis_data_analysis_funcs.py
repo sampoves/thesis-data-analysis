@@ -291,6 +291,10 @@ class Stats:
         self.areasWithAnswers = self.postal[
                 "answer_count"][self.postal["answer_count"]!=0].count()
         
+        # Quartiles of answers per area
+        self.quartiles = self.records.zipcode.value_counts().quantile(
+                [0.25,0.5,0.75])
+        
         # Names of unanswered areas
         self.areasWithout = list(
                 self.postal["nimi"][self.postal["answer_count"]==0])
@@ -347,6 +351,8 @@ class Stats:
                 167 - self.areasWithAnswers)) # 167 is the amount of zip codes
         print("Answers per area, mean: {0}".format(
                 self.answer_mean))
+        print("Quantiles of answers per area:\n{0}".format(
+                self.quartiles.to_string()))
         print("Unanswered areas: {0}".format(
                 self.areasWithout))
         print("Areas with more than 100 answers: {0}".format(
@@ -367,8 +373,6 @@ class Stats:
                 self.uniqueRecords))
         print("Number of invalid records not taken into account: {0}".format(
                 self.invalid))
-        #sama tulema kuin yllä
-        #len(set(records['ip']).intersection(set(visitors['ip'])))
         print("{0} % of visitors sent me records".format(
                 round(self.uniqueRecords / self.uniqueVisitors * 100, 2)))
         
@@ -479,8 +483,8 @@ def random_color():
 
 
 
-def travelTimeComparison(listOfTuples, ttmpath, detect_outliers=False,
-                         printStats=False, plotIds=False):
+def travelTimeComparison(grid, forest, postal, records, listOfTuples, ttm_path, 
+                         detectOutliers=False, printStats=False, plotIds=False):
     '''
     Compare Travel-Time Matrix 2018 (from here on TTM) data with my Thesis 
     survey data. This function produces a dataframe with one row for each tuple 
@@ -648,7 +652,13 @@ def travelTimeComparison(listOfTuples, ttmpath, detect_outliers=False,
         parktime2 = thisZipcode.loc[thisZipcode.timeofday == 2]["parktime"]
         parktime_all = thisZipcode["parktime"]
         
-        if detect_outliers == True:
+        if detectOutliers == True:
+            
+            print("\n==================================")
+            print("=== OUTLIER REPORT for {0} ===".format(
+                    thisRow.loc[0, "from_id"]))
+            print("==================================")
+            print("If empty, no outliers detected.")
             
             # only detect outliers if enough values
             if len(parktime1) > 3:
@@ -656,7 +666,7 @@ def travelTimeComparison(listOfTuples, ttmpath, detect_outliers=False,
                 
                 # report to user if outliers found
                 if len(outliers) > 0:
-                    print("Outliers detected in rush hour for destinationId {0}: {1}"
+                    print("Outliers detected in rush hour for destinationId {0} (Read: [(index, outlier value)]: {1}"
                           .format(destinationId, outliers))
                 
                 # Iteratively remove outliers from current Series
@@ -666,7 +676,7 @@ def travelTimeComparison(listOfTuples, ttmpath, detect_outliers=False,
             if len(parktime2) > 3:
                 outliers = detect_outlier(parktime2)
                 if len(outliers) > 0:
-                    print("Outliers detected in midday traffic for destinationId {0}: {1}"
+                    print("Outliers detected in midday traffic for destinationId {0} (Read: [(index, outlier value)]: {1}"
                           .format(destinationId, outliers))
                 for idx, value in outliers:
                     parktime2 = parktime2[parktime2.index != idx]
@@ -730,6 +740,9 @@ def travelTimeComparison(listOfTuples, ttmpath, detect_outliers=False,
         result = result.append(thisRow, sort=False)
         
         if printStats == True:
+            print("\n==============================")
+            print("=== STATISTICS for {0} ===".format(thisRow.loc[0, "from_id"]))
+            print("==============================")
             print("Origin is located in postal code area {0}. Destination in {1}"
                   .format(thisRow.loc[0, "from_name"], thisRow.loc[0, "to_name"]))
             print("\n--- Travel time matrix 2018 ----")
