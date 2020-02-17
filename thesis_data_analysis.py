@@ -24,10 +24,6 @@ import matplotlib.pyplot as plt
 from matplotlib.pyplot import figure
 from datetime import timedelta
 from shapely.geometry import Polygon, MultiPolygon, Point, LinearRing
-#import scipy.stats as stats
-#from scipy.stats import levene
-#from statsmodels.formula.api import ols 
-#import statsmodels.api as sm
 from rtree import index
 import random
 
@@ -699,33 +695,8 @@ for idx, row in enumerate(records.iterrows()):
 # Create column for subdivisions information to records
 records["subdiv"] = 0
 
-# This dictionary helps assigning postal codes to DataFrame records
-subdiv_dict = {"hkiSouth": "Helsinki Southern",
-               "hkiWest": "Helsinki Western",
-               "hkiCentral": "Helsinki Central",
-               "hkiNorth": "Helsinki Northern",
-               "hkiNortheast": "Helsinki Northeastern",
-               "hkiSoutheast": "Helsinki Southeastern",
-               "hkiEast": "Helsinki Eastern",
-               "hkiOster": "Helsinki Östersundom",
-               "espLeppavaara": "Espoo Suur-Leppävaara",
-               "espTapiola": "Espoo Suur-Tapiola",
-               "espMatinkyla": "Espoo Suur-Matinkylä",
-               "espEspoonlahti": "Espoo Suur-Espoonlahti",
-               "espKauklahti": "Espoo Suur-Kauklahti",
-               "espVanhaespoo": "Espoo Vanha-Espoo",
-               "espPohjoisespoo": "Espoo Pohjois-Espoo",
-               "vanMyyrmaki": "Vantaa Myyrmäki",
-               "vanKivisto": "Vantaa Kivistö",
-               "vanAviapolis": "Vantaa Aviapolis",
-               "vanTikkurila": "Vantaa Tikkurila",
-               "vanKoivukyla": "Vantaa Koivukylä",
-               "vanKorso": "Vantaa Korso",
-               "vanHakunila": "Vantaa Hakunila",
-               "kauniainen": "Kauniainen"}
-
-# Using dictionary subdiv_dict and lists of zipcodes, assign subdivision names
-# to dataframe records.
+# Using dictionary subdiv_dict and lists of zipcodes from 
+# thesis_data_zipcodes.py, assign subdivision names to dataframe records
 for varname, fullname in subdiv_dict.items():
 
     for idx, row in enumerate(records.iterrows()):

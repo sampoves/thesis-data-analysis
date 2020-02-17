@@ -14,14 +14,6 @@ Hide tedious lists of zipcodes in this Python script.
 ### Divisions by postal code ###
 ################################
 
-# Some postal code areas contain localities which are in conflict with the
-# subdivisions. For example, zipcode Lippajärvi-Järvenperä 02940 contains
-# localities Högnäs (belongs to Vanha-Espoo), Lippajärvi (belongs to Suur-
-# Leppävaara). In these cases I will use my own deliberation for
-# classification. The main problem areas are just south and north of Kauniainen
-# (for example Lippajärvi-Järvenperä and Sepänkylä-Kuurinniitty) and just 
-# south of Helsinki-Vantaa airport.
-
 # Helsinki subdivisions -------------------------------------------------------
 # https://www.avoindata.fi/data/fi/dataset/helsinki-alueittain/resource/9e197c6a-1882-4ad9-a50b-9dc7c49cb75a
 
@@ -267,3 +259,29 @@ vanHakunila = ["01200", # Hakunila
                "01230", # Vaarala
                "01260", # Itä-Hakkila
                "01280"] # Länsimäki
+
+
+# This dictionary helps assigning postal codes to DataFrame records
+subdiv_dict = {"hkiSouth": "Helsinki Southern",
+               "hkiWest": "Helsinki Western",
+               "hkiCentral": "Helsinki Central",
+               "hkiNorth": "Helsinki Northern",
+               "hkiNortheast": "Helsinki Northeastern",
+               "hkiSoutheast": "Helsinki Southeastern",
+               "hkiEast": "Helsinki Eastern",
+               "hkiOster": "Helsinki Östersundom",
+               "espLeppavaara": "Espoo Suur-Leppävaara",
+               "espTapiola": "Espoo Suur-Tapiola",
+               "espMatinkyla": "Espoo Suur-Matinkylä",
+               "espEspoonlahti": "Espoo Suur-Espoonlahti",
+               "espKauklahti": "Espoo Suur-Kauklahti",
+               "espVanhaespoo": "Espoo Vanha-Espoo",
+               "espPohjoisespoo": "Espoo Pohjois-Espoo",
+               "vanMyyrmaki": "Vantaa Myyrmäki",
+               "vanKivisto": "Vantaa Kivistö",
+               "vanAviapolis": "Vantaa Aviapolis",
+               "vanTikkurila": "Vantaa Tikkurila",
+               "vanKoivukyla": "Vantaa Koivukylä",
+               "vanKorso": "Vantaa Korso",
+               "vanHakunila": "Vantaa Hakunila",
+               "kauniainen": "Kauniainen"}
