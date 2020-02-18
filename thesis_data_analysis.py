@@ -44,6 +44,7 @@ from thesis_data_analysis_funcs import *
 from thesis_data_zipcodes import *
 
 
+
 ###################
 ### IMPORT DATA ###
 ###################
@@ -71,14 +72,6 @@ forest = gpd.read_file(r"FI001L3_HELSINKI\ua2012_research_area.shp",
                        encoding="utf-8")
 forest = forest[forest["ITEM2012"] == "Forests"]
 
-## Import Corine Land Cover 2018, select only relevant area
-## Do not utilise this for the time being
-#clc2018 = gpd.read_file(
-#        r"C:\Sampon\Maantiede\Master of the Universe\clc2018_fi20m\clc2018eu25ha.shp", 
-#        encoding="utf-8")
-#clc2018 = gpd.overlay(clc2018, gpd.GeoDataFrame(geometry=resarea.buffer(500)),
-#                      how="intersection")
-
 
 
 ###########################
@@ -104,10 +97,8 @@ records = records.drop([0, 5, 6])
 # The following removes those records.
 records = records.drop([1277, 1278, 1279])
 
-# author's home computer visits
+# Author's visits
 visitors = visitors.iloc[1:] 
-
- # 82.102.24.252, a confirmed VPN visit by author
 visitors = visitors.drop([3753])
 
 # Alert user if records has IP codes which do not exist in visitors.
@@ -128,17 +119,6 @@ muns = ["091", "049", "092", "235"]
 postal = postal[postal.kunta.isin(muns)]
 postal = postal.reset_index().drop(columns=["index", "euref_x", "euref_y"])
 
-# In the traditional travel time matrix all parking took 0.42 minutes. The
-# team used the bounding box below to define an area in center of Helsinki
-# to note an area where people walk a longer time to their cars. HENCE, NOT
-# IN MY SCOPE!
-#walkingBbox = LinearRing([(387678.024778, 6675360.99039), 
-#                          (387891.53396, 6670403.35286),
-#                          (383453.380944, 6670212.21613), 
-#                          (383239.871737, 6675169.85373),
-#                          (387678.024778, 6675360.99039)])
-
-
 ### Remove islands unreachable by car
 
 # Preserve two largest Polygons from these postal code areas
@@ -147,7 +127,8 @@ preserveTwoLargest = ["00830", "00570", "00340", "00200", "00890"]
 # Preserve largest includes island postal code areas
 preserveLargest = ["00210", "00860", "00840", "00850", "00870", "00590"]
 
-# Suvisaaristo needs special attention. Define Polygon
+# Suvisaaristo needs special attention. Define a Polygon to help detect 
+# areas in Suvisaaristo reachable by car
 suvisaar = Polygon([(371829.79632436, 6668010.26942102), 
                     (372652.78908073, 6667612.58164613), 
                     (371343.73348838, 6666204.10411005), 
@@ -236,7 +217,7 @@ for idx, geom in enumerate(postal.geometry):
 grid_areas = gpd.GeoDataFrame(columns=["YKR_ID", "zipcode", "largest_area", 
                                        "total_area"])
 crs = grid.crs
-spatial_index = grid.sindex # geopandas spatial index
+spatial_index = grid.sindex # GeoPandas spatial index
 
 # Use i to create new rows to grid_areas
 i = 0
@@ -284,8 +265,8 @@ for idx, postalarea in postal.iterrows():
             grid_areas.loc[found_idx, "total_area"] += row.area1
 
 
-# Find out which grid ykr-ids do not occur in grid_areas. These are the cells 
-# outside PAAVO postal code areas
+# Find out which grid ykr-ids do not occur in grid_areas. These cells are 
+# outside of PAAVO postal code areas
 notPresent = list(np.setdiff1d(list(grid.YKR_ID), list(grid_areas.YKR_ID)))
 
 # Add cells to grid_areas
@@ -300,26 +281,6 @@ grid = pd.concat(
         [grid.set_index("YKR_ID"), grid_areas.set_index("YKR_ID")], 
         axis=1, join="inner").reset_index()
 
-# With this shp we can verify visually that the method works great
-#grid.to_file("ykrgrid2.shp")
-
-# verify zipcodes in plot
-# get postal codes to grid and separate each zipcode area. TODO: incorporate
-# zipcodes to grid
-#base = grid.plot(linewidth=0.8, 
-#                 edgecolor="0.8", 
-#                 color="white",
-#                 figsize=(16, 12))
-
-# tad obsolete now that grid has zipcode data
-#for code in list(set(grid_areas3.zipcode)):
-#    theseCells = grid_areas["YKR_ID"][grid_areas["zipcode"] == code]
-#    thisArea = grid[grid["YKR_ID"].isin(list(theseCells))]
-#    thisArea.plot(ax=base,
-#            linewidth=0.8,
-#            edgecolor="none",
-#            facecolor=np.random.rand(3,))
-
 
 
 ############################
@@ -327,7 +288,8 @@ grid = pd.concat(
 ############################
 
 # Create groupby aggregations of the records. One can use this dataframe to
-# see how each respondent answered to the survey
+# see how each respondent answered to the survey. This feature is not developed
+# any further from here.
 visitor_grp = records.groupby(["ip"]).agg({
         "id": "count", 
         "timestamp": lambda x: x.tolist(),
@@ -337,43 +299,53 @@ visitor_grp = records.groupby(["ip"]).agg({
         "parktime": lambda x: x.tolist(),
         "walktime": lambda x: x.tolist(),
         "timeofday": lambda x: x.tolist()})
-
+visitor_grp = visitor_grp.rename(columns={"id": "amount"})
     
         
+
 #################################
 ### DETECTION OF ILLEGAL DATA ###
 #################################
 
+# Erase contents of duplicates.txt before writing anything (wipe old data). 
+# Wrap the following for loop in with loop. This enables us to write the 
+# duplicates report as text file in the working directory for easy viewing.
+open(os.path.join(wd, "duplicates.txt"), "w").close()
+
 # Detect if a user has answered a same area multiple times. Please note that 
 # this only locates duplicates but does nothing about it. I will leave the
 # discussion about this to the thesis.
-for visitor in records.ip.unique():
-    theseRecords = records.loc[records['ip'] == visitor]
-    
-    if(theseRecords["zipcode"].is_unique) == False:
-        print("\nDuplicates detected for ip code {0}".format(
-                theseRecords.ip.unique()[0]))
-        dupl = theseRecords[theseRecords.zipcode.duplicated(keep=False)]
-        dupl = dupl.groupby(["zipcode"]).agg(
-                {"id": lambda x: x.tolist(),
-                 "timestamp": lambda x: x.tolist(), 
-                 "ip": "first",
-                 "zipcode": "first", 
-                 "likert": lambda x: identicaltest(x), # defined in funcs.py
-                 "parkspot": lambda x: identicaltest(x),
-                 "parktime": lambda x: identicaltest(x), 
-                 "walktime": lambda x: identicaltest(x), 
-                 "timeofday": lambda x: identicaltest(x)})
-    
-        # Produce report
-        for idx, row in dupl.drop(["ip"], axis=1).iterrows():
-            print(row.to_string(), "\n") # suppress showing of dtype
-
+with open(os.path.join(wd, "duplicates.txt"), "a+") as f:
+    for visitor in records.ip.unique():
+        theseRecords = records.loc[records['ip'] == visitor]
+        
+        if(theseRecords["zipcode"].is_unique) == False:
+            f.write("\nDuplicates detected for ip code {0}\n".format(
+                    theseRecords.ip.unique()[0]))
+            dupl = theseRecords[theseRecords.zipcode.duplicated(keep=False)]
+            dupl = dupl.groupby(["zipcode"]).agg(
+                    {"id": lambda x: x.tolist(),
+                     "timestamp": lambda x: x.tolist(), 
+                     "ip": "first",
+                     "zipcode": "first", 
+                     "likert": lambda x: identicaltest(x), # defined in funcs.py
+                     "parkspot": lambda x: identicaltest(x),
+                     "parktime": lambda x: identicaltest(x), 
+                     "walktime": lambda x: identicaltest(x), 
+                     "timeofday": lambda x: identicaltest(x)})
+        
+            # Produce current rows in the text file
+            for idx, row in dupl.drop(["ip"], axis=1).iterrows():
+                f.write("{}\n\n".format(row.to_string()))
+                
+print("\nA report on duplicate answers saved to disk in path {0}\n".format(
+        os.path.join(wd, "duplicates.txt")))
 
 
 # Remove illegal answers. At this time any value equal or above 60 minutes is 
 # deemed illegal. Value invalid starts at 6 as at this point I have removed 3 
-# of my own records and 3 others which were reported to me as false. See above.
+# of my own records and 3 others which were reported to me as false. See above,
+# part "Prepare source data"
 delList = []
 illegal = []
 invalid = 6
@@ -382,7 +354,7 @@ for idx, (park_value, walk_value, ip_value) in enumerate(
         zip(records["parktime"], records["walktime"], records["ip"])):
     
     if (park_value >= 60 or walk_value >= 60):
-        print("Illegal walktime or parktime detected:", idx, park_value, 
+        print("Illegal walktime and/or parktime detected:", idx, park_value, 
               walk_value)
         delList.append(idx)
         illegal.append(ip_value)
@@ -454,10 +426,10 @@ for idx, postal_zip in enumerate(postal.posti_alue):
             records['zipcode'] == postal_zip]["walktime"].mean()
     postal.loc[idx, "walktime_mean"] = round(this_mean, 2)
 
-# Prepare annotation of plot features
+# Prepare annotation of Polygon features
 postal["coords"] = polygonCoordsToTuple(postal)
 
-# population density
+# Population density
 #postal["pop_dens"] = postal.apply(
 #        lambda row: round(row["he_vakiy"]/(row["pinta_ala"]/1000000), 2), axis=1)
 
@@ -716,6 +688,13 @@ for varname, fullname in subdiv_dict.items():
             
 # Do not utilise this for the time being
 
+## Import Corine Land Cover 2018, select only relevant area
+#clc2018 = gpd.read_file(
+#        r"C:\Sampon\Maantiede\Master of the Universe\clc2018_fi20m\clc2018eu25ha.shp", 
+#        encoding="utf-8")
+#clc2018 = gpd.overlay(clc2018, gpd.GeoDataFrame(geometry=resarea.buffer(500)),
+#                      how="intersection")
+
 #clc_df = pd.DataFrame({"zipcode": postal.posti_alue, "clc": "none"})
 
 ##for row in postal.iterrows():
@@ -759,7 +738,8 @@ traveltime[["car_r_drivetime", "car_m_drivetime", "car_sl_drivetime",
 
 
 
-# THIS IS PROBABLY EXTRANEOUS
+# THIS NEXT PART IS PROBABLY EXTRANEOUS
+# also unfinished
 
 # create my own TTM18? Idea: only car data, with my data added. Check how much
 # parking time is increased on average compared to 0.42min
