@@ -7,13 +7,17 @@ Created on Fri May 10 00:07:36 2019
 Sampo Vesanen Thesis survey datacrunch
 "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 
+This script was created using Anaconda Python Distribution 2019.7. In addition
+to all packages delivered with Anaconda, GeoPandas 0.5.0 with its dependencies 
+was installed for this work. Unfortunately I can't guarantee the smooth execution 
+of this code on newer package versions.
+
 TODO, maybe
     - Geographic analyses (Can't get geoplot to work)
     - Respondent specific reports (probably not useful)
     - fix crs mismatches
-    - See how long user took to first visit survey and answer to the survey
-    - Have same IPs sent records for same areas more than once?
-    - New records,visitors
+    - user "oe4guro3dh", remove from visitors. Also, see what's going on with
+    the discrepancy. the three records really do not exist in visitors
 """
 
 import os
@@ -310,6 +314,8 @@ visitor_grp = visitor_grp.rename(columns={"id": "amount"})
 # Erase contents of duplicates.txt before writing anything (wipe old data). 
 # Wrap the following for loop in with loop. This enables us to write the 
 # duplicates report as text file in the working directory for easy viewing.
+# Edit Pandas max_colwidth to show even the lengthiest rows, default 50.
+pd.options.display.max_colwidth = 100
 open(os.path.join(wd, "duplicates.txt"), "w").close()
 
 # Detect if a user has answered a same area multiple times. Please note that 
