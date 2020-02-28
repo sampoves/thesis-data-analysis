@@ -214,3 +214,80 @@ SigTableToShiny <- function(sigTable, hasHeading) {
   
   return(res)
 }
+
+
+# Event timestamps. Manually picked. If many areas are in the same variable,
+# the earliest timestamp is selected
+
+# Twitter: @Digigeolab, @AccessibilityRG
+twitter <- as.POSIXct("2019-05-07 10:43:00 EEST") 
+
+# Maantieteen opiskelijat email group
+mao <- as.POSIXct("2019-05-09 13:24:00 EEST") 
+
+# Student email groups: Vasara, Resonanssi, Matrix, Geysir, Synop, Meridiaani, 
+# Tyyppi-arvo, HYK, TKO-ÄLY, Symbioosi, Helix, MYY, Sampsa, MYO, Lipidi,
+# Vuorovaikeutus, YFK, Oikos
+emails <- as.POSIXct("2019-05-14 10:58:00 EEST") 
+
+# Lisää kaupunkia Helsinkiin group and own Facebook wall. Also 6 private
+# WhatsApp groups
+fb <- as.POSIXct("2019-05-15 10:33:00 EEST") 
+
+# Haukilahti/Westend asukkaat, Pohjois-Espoon asukasfoorumi, Lippajärvi, 
+# Matinkylä/Olari, Leppävaara, Soukka-Sökö, Suur-Espoonlahti, Puskaradio Tapiola,
+# Puskaradio Kauniainen/Grankulla, Enemmän Tapiolaa!, Kivenlahden ystävät
+espoo1 <- as.POSIXct("2019-05-22 18:00:00 EEST") 
+
+# Kalasatama-Fiskehamnen, Sörnäinen, Punavuori, Laajasalo, Herttoniemi, 
+# Mankkaan lapsiperheet, 
+misc1 <- as.POSIXct("2019-05-23 21:11:00 EEST") 
+
+# Oulunkylä kierrättää ja keskustelee, Käpylä Helsinki, Kumpula, Arabian alue,
+# Vallilan ja Hermannin alue, Hermanni-liike, Jätkäsaari-liike, Ruoholahti asuu,
+# Pasila Böle, Pasila-liike, Ruskeasuo, Meilahden kylä, Töölö-liike, Töölö-
+# Seura ry
+helsinki1 <- as.POSIXct("2019-05-24 16:28:00 EEST") 
+
+# Pihlajamäki, Malmi, Pukinmäen foorumi, Viikki ja Latokartano ympäristöineen,
+# Kuninkaantammi, Maununneva-Hakuninmaa, Kannelmäki-liike, Lauttasaari, 
+# Munkkivuori, Niemenmäki, Etelä-Haaga, Haagan ilmoitustaulu
+helsinki2 <- as.POSIXct("2019-05-25 14:56:00 EEST") 
+
+# Östersundom, Aurinkolahti, Vuosaari, Kruunuvuorenranta, Kontula, Mellunmäki/
+# Mellunkylä, Pitäjänmäki, Munkkiniemi, ITÄ-HELSINKI, Itäkeskus-itästadilaista
+# laiffii, Marjaniemi Helsinki, Puotila & Vartsika, Vartiokylä/Vartioharju,
+# Tammisalo, Herttoniemenranta, Roihuvuori, Kulosaari-HYGGE-Brandö, Suutarilassa
+# tapahtuu, Tapaninvainion foorumi, Tapanila-Mosabacka, Paloheinä-Pakila-
+# Torpparinmäki ilmoittaa (se aito ja alkuperäinen)
+helsinki3 <- as.POSIXct("2019-05-26 12:55:00 EEST") 
+
+# Pitäjänmäkeläiset, Landbo, Kamppi-Punavuori-Hietalahti
+helsinki4 <- as.POSIXct("2019-05-29 16:49:00 EEST") 
+
+# Perusmäki Espoo, As Oy Helsingin Arabianrinne, Rajakylä Vantaa, Leppäkorpi
+# Vantaa, Korso, Rekola, Tikkurila, Aviapolis-asukkaiden alue, Kivistö,
+# Kivistön suuralue, ASKISTO, Vantaanlaakson lapsiperheet, Vapaala, Pähkinärinne,
+# Alppikylä, Laajalahti-ryhmä (suljettu), Kilo Espoo, Karakallio, Saunalahti
+# tapahtumat ja palvelut, Nöykkiö Espoo Foorumi, Henttaalaiset, Myyrmäki
+misc2 <- as.POSIXct("2019-06-06 20:57:00 EEST") 
+
+# Pohjois-Kirkkonummelaiset, Puskaradio Sipoo, Sibbo-Sipoo, Järvenpää, We <3
+# Kerava, Lisää kaupunkia Hyrylään, Tuusula, Nurmijärvi, Nurmijärven
+# viidakkorumpu, Vihtiläiset, Vihdin Nummela, Kirkkonummelaiset (sana vapaa)
+peri <- as.POSIXct("2019-06-09 11:01:00 EEST") 
+
+# Vantaa Puskaradio, Sipoo-Sibbo, Järvenpää, WE <3 KERAVA, Tuusula, Nurmijärven 
+# viidakkorumpu, Vihtiläiset, Korso, Käpylä Helsinki, Laajasalo, Vuosaari,
+# ITÄ-HELSINKI, Lauttasaari, Haagan ilmoitustaulu, REMINDERS
+reminder <- as.POSIXct("2019-06-26 15:33:00 EEST") 
+
+# They only accepted my message at this date for Nikinmäki and Puskaradio Espoo
+nikinmaki <- as.POSIXct("2019-06-27 14:26:00 EEST")
+puskaradioespoo <- as.POSIXct("2019-06-27 21:30:00 EEST")
+
+# reminder to Lisää kaupunkia Helsinkiin
+lisaakaupunkia2 <- as.POSIXct("2019-07-02 12:06:00 EEST")
+
+# Reminder email groups, all except MaO. Also GIS-velhot FB group
+misc3 <- as.POSIXct("2019-07-05 10:29:00 EEST")
