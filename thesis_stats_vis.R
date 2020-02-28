@@ -4,7 +4,7 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 27.2.2020
+# 28.2.2020
 #
 # An interactive tool for analysing thesis results is presented in this script.
 # The script uses exclusively source file "pythonrecords". The other source
@@ -144,7 +144,7 @@ postal <- subset(postal, select = -c(X, pinta_ala, kunta))
 
 
 
-#### Map testing ####
+#### Prepare map for ShinyApp ####
 
 # Prepare a context map for to visualise currently active areas in analysis
 # ShinyApp. Updating this map makes the app a bit more sluggish. Delete this
@@ -185,29 +185,35 @@ centroids <- setNames(
 centroids[2, 2] <- centroids[2, 2] + 0.02
 centroids$label <- c("Espoo", "Helsinki", "Kauniainen", "Vantaa")
 
+# Set color gradients for muns. Kauniainen will be a single color set below.
+c_esp <- brewer.pal(7, "YlOrRd")
+c_hel <- brewer.pal(8, "PuBu")
+c_van <- brewer.pal(7, "BuGn")
 
-
-c_esp <- brewer.pal(7, "BrBG")
-c_hel <- brewer.pal(8, "PiYG")
-c_van <- brewer.pal(7, "PRGn")
-
-# the amounts were fetched through
-#table(suuralue_f$subdiv)
+# Get the amounts how many times each color has to be repeated in the next phase
+amounts <- unname(table(suuralue_f$Name))
 
 # assign hex codes to color column using the order of subdivisions and amount
-# of rows per subdivision
-suuralue_f$color <- c(rep(c_esp[1], 458), rep(c_esp[2], 325), rep(c_hel[1], 118), 
-                      rep(c_hel[2], 121), rep(c_hel[3], 230), rep(c_hel[4], 250),
-                      rep(c_hel[5], 241), rep(c_hel[6], 496), rep(c_van[1], 173), 
-                      rep(c_van[2], 192), rep(c_van[3], 96), rep(c_hel[7], 300),
-                      rep(c_esp[3], 979), rep(c_hel[8], 245), rep(c_van[4], 113), 
-                      rep(c_van[5], 100), rep(c_esp[4], 273), rep(c_esp[5], 646),
-                      rep("#000000", 115), rep(c_esp[6], 769), rep(c_esp[7], 354), 
-                      rep(c_van[6], 147), rep(c_van[7], 132))
+# of rows per subdivision. First reorder dataframe by subdivision
+suuralue_f <- suuralue_f[order(suuralue_f$Name), ]
+suuralue_f$color <- c(rep(c_esp[1], amounts[1]), rep(c_esp[2], amounts[2]), 
+                      rep(c_esp[3], amounts[3]), rep(c_esp[4], amounts[4]), 
+                      rep(c_esp[5], amounts[5]), rep(c_esp[6], amounts[6]), 
+                      rep(c_esp[7], amounts[7]), rep(c_hel[1], amounts[8]), 
+                      rep(c_hel[2], amounts[9]), rep(c_hel[3], amounts[10]),
+                      rep(c_hel[4], amounts[11]), rep(c_hel[5], amounts[12]),
+                      rep(c_hel[6], amounts[13]), rep(c_hel[7], amounts[14]),
+                      rep(c_hel[8], amounts[15]), rep("#98817B", amounts[16]),
+                      rep(c_van[1], amounts[17]), rep(c_van[2], amounts[18]),
+                      rep(c_van[3], amounts[19]), rep(c_van[4], amounts[20]),
+                      rep(c_van[5], amounts[21]), rep(c_van[6], amounts[22]),
+                      rep(c_van[7], amounts[23]))
+
+
+
 
 # colors to factors and reorder subdivision names to facilitate ggplot
 suuralue_f <- suuralue_f %>% mutate(color = as.factor(color)) # to factor
-suuralue_f <- suuralue_f[order(suuralue_f$Name), ]
 
 # ggplot maptest
 # ggplot() +
