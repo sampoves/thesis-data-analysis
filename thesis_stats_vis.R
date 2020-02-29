@@ -186,7 +186,8 @@ centroids[2, 2] <- centroids[2, 2] + 0.02
 centroids$label <- c("Espoo", "Helsinki", "Kauniainen", "Vantaa")
 
 # Set color gradients for municipalities. Kauniainen will be a single color set 
-# below.
+# below. These color gradients may be confusing. Investigate better colouring
+# in the future
 c_esp <- brewer.pal(7, "YlOrRd")
 c_hel <- brewer.pal(8, "PuBu")
 c_van <- brewer.pal(7, "BuGn")
@@ -484,6 +485,9 @@ server <- function(input, output, session){
   output$map <- renderPlot({
     
     mapp <- ggplot() + 
+        geom_polygon(data = suuralue_f,
+                     aes(long, lat, group = group, fill = "#3d3d3d"),
+                     colour = NA) +
         geom_polygon(
           data = suuralue_f[!suuralue_f$Name %in% c(input$subdivGroup), ], 
           aes(long, lat, group = group, fill = color),
@@ -623,7 +627,23 @@ ui <- shinyUI(fluidPage(theme = shinytheme("slate"),
       hr(),
       
       h3("Active subdivisions"),
-      plotOutput("map")
+      plotOutput("map"),
+      hr(),
+      
+      # This is an unfortunate hack to prevent the data providers from appearing
+      # on top of the context map
+      br(), br(), br(), br(), br(), br(), br(), br(), br(), br(), br(), br(),
+      br(), hr(),
+      h3("Data providers"),
+      HTML("<a https://hri.fi/data/dataset/paakaupunkiseudun-aluejakokartat>",
+            "Municipality subdivisions</a>",
+            "© Helsingin, Espoon, Vantaan ja Kauniaisten mittausorganisaatiot",
+            "2011. Aineisto on muokkaamaton. License",
+            "<a https://creativecommons.org/licenses/by/4.0/deed.en> CC BY 4.0</a>",
+            "<br><a https://www.stat.fi/tup/paavo/index_en.html>",
+            "Postal code area boundaries </a>, © Statistics Finland 2019.", 
+            "Retrieved 27.6.2019. License <a https://creativecommons.org/licenses/by/4.0/deed.en>",
+            "CC BY 4.0</a>")
     )
   )
 ))
