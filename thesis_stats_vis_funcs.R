@@ -1,11 +1,12 @@
 
 
-# Master's thesis statistical tests and visualisation
-#### Stats and visualisation functions
+# Sampo Vesanen's Master's thesis statistical tests and visualisation
+#####################################################################
+#### Stats and visualisation functions and essential variables
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 27.11.2019
+# 29.2.2020
 
 # Initialise
 library(onewaytests)
@@ -158,10 +159,10 @@ SigTableToShiny <- function(sigTable, hasHeading) {
   
   # Due to the format of the significance table it is difficult to present it
   # in Shiny. The main functionality of this method is to make the significance
-  # star available for the app.
+  # star available in the app.
   
-  # Levene test dataframe requires transposing. Levene table
-  # has an attribute heading while ANOVA doesn't. Use this.
+  # Levene test dataframe requires transposing. Levene table has an attribute 
+  # heading while ANOVA doesn't. Use this.
   if (is.null(attributes(sigTable)$heading)) {
     # ANOVA
     res <- as.data.frame(do.call(rbind, sigTable))
@@ -170,8 +171,8 @@ SigTableToShiny <- function(sigTable, hasHeading) {
     res <- t(as.data.frame(do.call(rbind, sigTable)))
   }
   
-  # Take into account that the table may have an attribute heading. Ask user
-  # if this is the case
+  # Take into account that the table may have an attribute heading. Ask if this 
+  # is the case
   if (hasHeading == FALSE){
     sigTablePosition = 2
   } else {
@@ -200,7 +201,7 @@ SigTableToShiny <- function(sigTable, hasHeading) {
   repeated_na <- rep("NA", nrow(res) - 1)
   signif_star <- c(as.character(signif_star), repeated_na)
   
-  # bind column signif_star to result.
+  # Bind column signif_star to result.
   res <- cbind.data.frame(res, signif_star)
   
   # Name rows. Try to detect differences in Levene and ANOVA summary tables.
@@ -216,24 +217,27 @@ SigTableToShiny <- function(sigTable, hasHeading) {
 }
 
 
-# Event timestamps. Manually picked. If many areas are in the same variable,
-# the earliest timestamp is selected
+
+#### Dygraph event timestamps #### 
+# These are manually collected from my email correspondence and Facebook history. 
+# If many areas are in the same variable, the earliest timestamp is selected
 
 # Twitter: @Digigeolab, @AccessibilityRG
 twitter <- as.POSIXct("2019-05-07 10:43:00 EEST") 
 
-# Maantieteen opiskelijat email group
+# Maantieteen opiskelijat student organisation email list
 mao <- as.POSIXct("2019-05-09 13:24:00 EEST") 
 
-# Student email groups: Vasara, Resonanssi, Matrix, Geysir, Synop, Meridiaani, 
+# Student email list: Vasara, Resonanssi, Matrix, Geysir, Synop, Meridiaani, 
 # Tyyppi-arvo, HYK, TKO-ÄLY, Symbioosi, Helix, MYY, Sampsa, MYO, Lipidi,
 # Vuorovaikeutus, YFK, Oikos
 emails <- as.POSIXct("2019-05-14 10:58:00 EEST") 
 
-# Lisää kaupunkia Helsinkiin group and own Facebook wall. Also 6 private
+# Lisää kaupunkia Helsinkiin group and own Facebook wall. Also six private
 # WhatsApp groups
 fb <- as.POSIXct("2019-05-15 10:33:00 EEST") 
 
+# Facebook neighborhood group advertisement begins:
 # Haukilahti/Westend asukkaat, Pohjois-Espoon asukasfoorumi, Lippajärvi, 
 # Matinkylä/Olari, Leppävaara, Soukka-Sökö, Suur-Espoonlahti, Puskaradio Tapiola,
 # Puskaradio Kauniainen/Grankulla, Enemmän Tapiolaa!, Kivenlahden ystävät
@@ -277,17 +281,19 @@ misc2 <- as.POSIXct("2019-06-06 20:57:00 EEST")
 # viidakkorumpu, Vihtiläiset, Vihdin Nummela, Kirkkonummelaiset (sana vapaa)
 peri <- as.POSIXct("2019-06-09 11:01:00 EEST") 
 
-# Vantaa Puskaradio, Sipoo-Sibbo, Järvenpää, WE <3 KERAVA, Tuusula, Nurmijärven 
-# viidakkorumpu, Vihtiläiset, Korso, Käpylä Helsinki, Laajasalo, Vuosaari,
-# ITÄ-HELSINKI, Lauttasaari, Haagan ilmoitustaulu, REMINDERS
+# Reminders to the largest Facebook groups: Vantaa Puskaradio, Sipoo-Sibbo, 
+# Järvenpää, WE <3 KERAVA, Tuusula, Nurmijärven  viidakkorumpu, Vihtiläiset, 
+# Korso, Käpylä Helsinki, Laajasalo, Vuosaari, ITÄ-HELSINKI, Lauttasaari, 
+# Haagan ilmoitustaulu
 reminder <- as.POSIXct("2019-06-26 15:33:00 EEST") 
 
-# They only accepted my message at this date for Nikinmäki and Puskaradio Espoo
+# They only accepted to display my message in Nikinmäki and Puskaradio Espoo at
+# this late date
 nikinmaki <- as.POSIXct("2019-06-27 14:26:00 EEST")
 puskaradioespoo <- as.POSIXct("2019-06-27 21:30:00 EEST")
 
-# reminder to Lisää kaupunkia Helsinkiin
+# A reminder to Lisää kaupunkia Helsinkiin
 lisaakaupunkia2 <- as.POSIXct("2019-07-02 12:06:00 EEST")
 
-# Reminder email groups, all except MaO. Also GIS-velhot FB group
+# A reminder for email lists, all except MaO. A new ad to GIS-velhot FB group
 misc3 <- as.POSIXct("2019-07-05 10:29:00 EEST")

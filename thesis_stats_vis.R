@@ -1,15 +1,12 @@
 
-# Master's thesis statistical tests and visualisation
-#####################################################
+# Sampo Vesanen's Master's thesis statistical tests and visualisation
+#####################################################################
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 28.2.2020
+# 29.2.2020
 #
-# An interactive tool for analysing thesis results is presented in this script.
-# The script uses exclusively source file "pythonrecords". The other source
-# file "pythonpostal" includes other data, but it is not currently utilised.
-
+# This is an interactive tool for analysing the results of my research survey.
 
 # Reference material for the tests
 #https://stats.stackexchange.com/a/124618/262051
@@ -73,9 +70,10 @@ library(rgdal)
 library(RColorBrewer)
 
 
+
 #### Preparation ####
 
-# Working path
+# Important directories
 wd <- "C:/Sampon/Maantiede/Master of the Universe"
 datapath <- file.path(wd, "pythonrecords.csv")
 postal_path <- file.path(wd, "pythonpostal.csv")
@@ -83,12 +81,13 @@ visitorpath <- file.path(wd, "leaflet_survey_results/visitors.csv")
 suuraluepath <- file.path(wd, "python/suuralueet/PKS_suuralue.kml")
 munsclippedpath <- file.path(wd, "python/paavo/hcr_muns_clipped.shp")
 
-# Source functions
+# Source functions and postal code variables
 source(file.path(wd, "python/thesis_stats_vis_funcs.R"))
 
-# Variables used to subset thesisdata inside ShinyApp
+# These variables are used to subset dataframe thesisdata inside ShinyApp
 continuous <- c("parktime", "walktime") 
-ordinal <- c("likert", "parkspot", "timeofday", "ua_forest", "ykr_zone", "subdiv") 
+ordinal <- c("likert", "parkspot", "timeofday", "ua_forest", "ykr_zone", 
+             "subdiv") 
 supportcols <- c("X", "id", "timestamp", "ip")
 
 
@@ -124,6 +123,7 @@ levels(thesisdata$timeofday) <- list("Weekday, rush hour" = 1,
                                      "Weekend" = 3,
                                      "Can't specify, no usual time" = 4)
 
+# SYKE does not provide official translations for these zones
 levels(thesisdata$ykr_zone) <- list("keskustan jalankulkuvyöhyke" = 1,
                                     "keskustan reunavyöhyke" = 2,
                                     "alakeskuksen jalankulkuvyöhyke" = 3,
@@ -144,7 +144,7 @@ postal <- subset(postal, select = -c(X, pinta_ala, kunta))
 
 
 
-#### Prepare map for ShinyApp ####
+#### Prepare the context map for ShinyApp ####
 
 # Prepare a context map for to visualise currently active areas in analysis
 # ShinyApp. Updating this map makes the app a bit more sluggish. Delete this
@@ -153,7 +153,7 @@ suuralue <- readOGR(suuraluepath, use_iconv = TRUE, encoding = "UTF-8")
 suuralue_f <- merge(fortify(suuralue), as.data.frame(suuralue), by.x = "id", 
                     by.y = 0)
 
-# align area names with subdiv
+# Align area names with thesisdata$subdiv
 levels(suuralue_f$Name) <- c("Vantaa Aviapolis", "Helsinki Southern", 
                              "Vantaa Hakunila", "Helsinki Eastern", 
                              "Helsinki Southeastern", "Kauniainen",
@@ -168,9 +168,9 @@ levels(suuralue_f$Name) <- c("Vantaa Aviapolis", "Helsinki Southern",
                              "Helsinki Östersundom")
 suuralue_f$Name <- factor(suuralue_f$Name, levels = sort(levels(suuralue_f$Name)))
 
+# Get municipality borders
 muns_clipped <- readOGR(munsclippedpath)
-muns_clipped <- spTransform(
-  muns_clipped, 
+muns_clipped <- spTransform(muns_clipped, 
   CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"))
 muns_clipped_f <- merge(fortify(muns_clipped), as.data.frame(muns_clipped), 
                         by.x = "id", by.y = 0)
@@ -181,20 +181,22 @@ centroids <- setNames(
   do.call("rbind.data.frame", by(muns_clipped_f, muns_clipped_f$nimi, function(x) 
   {Polygon(x[c("long", "lat")])@labpt})), c("long", "lat")) 
 
-# Manually set better location for annotation of Helsinki
+# Manually set better location for the annotation of Helsinki
 centroids[2, 2] <- centroids[2, 2] + 0.02
 centroids$label <- c("Espoo", "Helsinki", "Kauniainen", "Vantaa")
 
-# Set color gradients for muns. Kauniainen will be a single color set below.
+# Set color gradients for municipalities. Kauniainen will be a single color set 
+# below.
 c_esp <- brewer.pal(7, "YlOrRd")
 c_hel <- brewer.pal(8, "PuBu")
 c_van <- brewer.pal(7, "BuGn")
 
-# Get the amounts how many times each color has to be repeated in the next phase
+# In the next phase, each color has to be repeated as many times as they show
+# up in suuralue_f. Find out how many.
 amounts <- unname(table(suuralue_f$Name))
 
-# assign hex codes to color column using the order of subdivisions and amount
-# of rows per subdivision. First reorder dataframe by subdivision
+# Assign hex codes to the color column using the order of subdivisions and 
+# amount of rows per subdivision. First reorder dataframe by subdivision
 suuralue_f <- suuralue_f[order(suuralue_f$Name), ]
 suuralue_f$color <- c(rep(c_esp[1], amounts[1]), rep(c_esp[2], amounts[2]), 
                       rep(c_esp[3], amounts[3]), rep(c_esp[4], amounts[4]), 
@@ -209,13 +211,10 @@ suuralue_f$color <- c(rep(c_esp[1], amounts[1]), rep(c_esp[2], amounts[2]),
                       rep(c_van[5], amounts[21]), rep(c_van[6], amounts[22]),
                       rep(c_van[7], amounts[23]))
 
-
-
-
-# colors to factors and reorder subdivision names to facilitate ggplot
+# Colors to factors and reorder subdivision names to facilitate ggplot
 suuralue_f <- suuralue_f %>% mutate(color = as.factor(color)) # to factor
 
-# ggplot maptest
+# Independent ggplot maptest
 # ggplot() +
 #   geom_polygon(
 #     data = suuralue_f,
@@ -238,12 +237,12 @@ suuralue_f <- suuralue_f %>% mutate(color = as.factor(color)) # to factor
 #### Analysis ShinyApp ---------------------------------------------------------
 
 # This ShinyApp is a versatile tool to study the thesis survey data. One can
-# choose parameters with freedom and exclude options as seen fit.
+# choose parameters with lots of freedom and exclude options as seen fit.
 
 server <- function(input, output, session){
   
   #### Listener function ####
-  # Detect changes in selectInput to modify available check boxes.
+  # Detect changes in selectInput to modify available check boxes
   observe({
     x <- input$expl
 
@@ -270,7 +269,7 @@ server <- function(input, output, session){
     response <- thesisdata[[responsecol]]
     colname <- input$expl
     
-    # take subdiv checkbox group into account
+    # Take subdiv checkbox group into account
     inputdata <- thesisdata[!thesisdata[[colname]] %in% c(input$checkGroup), 
                             !names(thesisdata) %in% supportcols]
     inputdata <- inputdata[!inputdata$subdiv %in% c(input$subdivGroup), ]
@@ -279,7 +278,7 @@ server <- function(input, output, session){
     desc <- describe(thisFormula, inputdata)
     
     ### Std. Error
-    # clumsily calculate mean, so that we can preserve column names in the next
+    # Clumsily calculate mean, so that we can preserve column names in the next
     # phase
     stder <- aggregate(thisFormula, data = inputdata,
                        FUN = function(x) c(mean = mean(x),
@@ -297,13 +296,13 @@ server <- function(input, output, session){
     confs <- confs[[2]]
     desc <- cbind(desc, confs)
     
-    # Reorder to SPSS order
+    # Reorder to SPSS descriptive statistics order
     desc <- desc[c("n", "Median", "Mean", "Std.Dev", "Std.Error", 
                    "CI for mean, Lower Bound", "CI for mean, Upper Bound", "Min", 
                    "Max", "25th", "75th", "Skewness", "Kurtosis", "NA")]
     
-    # Add total row. We will add total values for all columns in this inconvenient
-    # manner.
+    # Add a total row. We will add total values for all columns in this 
+    # inconvenient manner.
     vect <- c()
     vect[1] <- sapply(1, function(x) sum(desc[, x]))
     vect[2] <- sapply(2, function(x) median(desc[, x]))
@@ -325,8 +324,6 @@ server <- function(input, output, session){
     desc <- rbind(desc, vect)
     row.names(desc)[nrow(desc)] <- "Total" #last row
     desc <- round(desc, 3)
-    
-    # Show
     desc
   }, 
   striped = TRUE,
@@ -356,7 +353,7 @@ server <- function(input, output, session){
     thisFormula <- as.formula(paste(input$resp, '~', input$expl))
     explanatorycol <- input$expl
     
-    # listen to user choices
+    # Listen to user choices
     inputdata <- thesisdata[!thesisdata[[explanatorycol]] %in% c(input$checkGroup), ]
     inputdata <- inputdata[!inputdata$subdiv %in% c(input$subdivGroup), ]
     
@@ -386,12 +383,12 @@ server <- function(input, output, session){
     barplotval <- input$barplot
     yax <- paste("sum of", barplotval)
 
-    # listen to user choices
+    # Listen to user choices
     inputdata <- thesisdata[!thesisdata[[explanatorycol]] %in% c(input$checkGroup), ]
     inputdata <- inputdata[!inputdata$subdiv %in% c(input$subdivGroup), ]
     
     # Plot maximum y tick value. Use dplyr to group the desired max amount.
-    # in dplyr, use !!as.symbol(var) to notify that we are using variables
+    # In dplyr, use !!as.symbol(var) to notify that we are using variables
     # to denote column names
     maximum <- inputdata %>% 
       group_by(!!as.symbol(explanatorycol), !!as.symbol(barplotval)) %>% 
@@ -407,7 +404,8 @@ server <- function(input, output, session){
     
     # Draw ggplot2 plot
     plo <- 
-      ggplot(inputdata, aes(x = get(explanatorycol), y = factor(get(barplotval)), 
+      ggplot(inputdata, aes(x = get(explanatorycol), 
+                            y = factor(get(barplotval)), 
                             fill = get(barplotval))) +
       geom_bar(aes(y = stat(count)), position = "dodge") + 
       scale_y_continuous(breaks = seq(0, maximum, by = tick_interval),
@@ -417,7 +415,6 @@ server <- function(input, output, session){
       scale_fill_discrete(name = barplotval)
       theme(legend.position = "right")
     
-    # show
     plo
   })
   
@@ -434,10 +431,7 @@ server <- function(input, output, session){
     levene <- leveneTest(thisFormula, inputdata, center = mean) #car
 
     res <- SigTableToShiny(levene, TRUE)
-    
-    # show
     res
-    
   }, 
   digits = 6,
   striped = TRUE,
@@ -449,21 +443,18 @@ server <- function(input, output, session){
   #### One-way ANOVA ####
   output$anova <- renderTable({
     
-    # needed variables
     colname <- input$expl
     thisFormula <- as.formula(paste(input$resp, "~", input$expl))
     
     inputdata <- thesisdata[!thesisdata[[colname]] %in% c(input$checkGroup), ]
     inputdata <- inputdata[!inputdata$subdiv %in% c(input$subdivGroup), ]
     
-    #### One-way ANOVA #
+    #### One-way ANOVA
     res.aov <- aov(thisFormula, data = inputdata)
     anovasummary <- summary(res.aov)
     
     # Use this function to communicate table correctly to Shiny
     anovasummary <- SigTableToShiny(anovasummary, FALSE)
-    
-    # Show
     anovasummary
   },
   digits = 6,
@@ -475,7 +466,6 @@ server <- function(input, output, session){
   ### Brown-Forsythe test ####
   output$brownf <- renderPrint({
     
-    # needed variables
     colname <- input$expl
     thisFormula <- as.formula(paste(input$resp, "~", input$expl))
     
@@ -486,12 +476,11 @@ server <- function(input, output, session){
     # bf.test() works so that the information we want is only printed to
     # console. Capture that output and place it in a variable
     captured <- capture.output(bf.test(thisFormula, data = inputdata), 
-                               file = NULL, 
-                               append = TRUE)
+                               file = NULL, append = TRUE)
     cat(captured, sep = "\n")
   })
   
-  ### Map ####
+  ### Context map ####
   output$map <- renderPlot({
     
     mapp <- ggplot() + 
@@ -512,8 +501,6 @@ server <- function(input, output, session){
                                  size = 3)) +
         theme(plot.margin = grid::unit(c(0,0,0,0), "mm"), 
               legend.position = "bottom")
-    
-    # Show
     mapp
   },
   height = 700)
@@ -522,9 +509,10 @@ server <- function(input, output, session){
 ### ShinyApp UI elements ####
 ui <- shinyUI(fluidPage(theme = shinytheme("slate"),
   
-  # Edit various CSS features such as the Brown-Forsythe test box and 
-  # sidebarpanel width. Sidebarpanel width setting is important because long
-  # explanations would break it otherwise.
+  # Edit various CSS features of the ShinyApp such as the Brown-Forsythe test 
+  # box and sidebarPanel (form.well) width. sidebarPanel width setting is 
+  # important because the long explanations would break it otherwise. Also
+  # manually set sidebarPanel z-index to make the element always appear on top.
   tags$head(
     tags$style(HTML("
       html, body {
@@ -560,8 +548,7 @@ ui <- shinyUI(fluidPage(theme = shinytheme("slate"),
       selectInput("resp", 
                  "Response (continuous)",
                  names(thesisdata[continuous])),
-      
-      # all others
+      # All others
       selectInput("expl",
                  "Explanatory (ordinal)", 
                  names(thesisdata[ordinal])),
@@ -578,7 +565,7 @@ ui <- shinyUI(fluidPage(theme = shinytheme("slate"),
           names(thesisdata[c("zipcode", "likert", "walktime")]),
       )),
       
-      # these are changed with the observer function
+      # These are changed with the observer function
       checkboxGroupInput(
         "checkGroup", 
         "Select inactive groups",
@@ -587,7 +574,8 @@ ui <- shinyUI(fluidPage(theme = shinytheme("slate"),
 
       checkboxGroupInput(
         "subdivGroup",
-        HTML("Select inactive subdivisions <p style='font-size: 9px'>(NB! selections here override Explanatory (ordinal) variable subdiv!)</p>"),
+        HTML("Select inactive subdivisions <p style='font-size: 9px'>",
+          "(NB! selections here override Explanatory (ordinal) variable subdiv!)</p>"),
         choiceNames = sort(as.character(unique(thesisdata$subdiv))),
         choiceValues = sort(as.character(unique(thesisdata$subdiv)))),
 
@@ -646,32 +634,35 @@ shinyApp(ui = ui, server = server)
 
 #### Visitor ShinyApp ----------------------------------------------------------
 
+# Use this ShinyApp to explore the development in amounts of survey respondents.
+
 visitordata <- read.csv(file = visitorpath,
                        colClasses = c(X = "integer", id = "integer", 
                                       ip = "factor", ts_first = "POSIXct", 
                                       ts_latest = "POSIXct", count = "integer"),
                        header = TRUE, sep = ",")
 
-# NOW() in MySQL is UTC, change POSIXct object timezone to UTC+3, Helsinki
-# summer time
+# The survey visitors table saved visitor timestamps as NOW() and that is UTC in 
+# MySQL. Change POSIXct object timezone to UTC+3, Helsinki summer time
 visitordata$ts_first <- visitordata$ts_first + 3 * 60 * 60
 visitordata$ts_latest <- visitordata$ts_latest + 3 * 60 * 60
 
 # First sort by timestamp, then rename X or id. This fixes responses with 
-# multiple zipcodes. These records have exact same timestamps, that proved 
-# tricky for dygraphs to understand
+# multiple zipcodes. These records have the exact same timestamps and that proved 
+# tricky for dygraph to understand
 thesisdata_for_xts <- thesisdata[order(thesisdata$timestamp, decreasing = FALSE), ]
 thesisdata_for_xts$X <- seq(1:length(thesisdata_for_xts$X))
 
-# Create xts object necessary to use dygraph
+# Create xts objects necessary to use dygraph
 visitor_xts <- xts(x = visitordata$X, order.by = visitordata$ts_first)
-records_xts <- xts(x = thesisdata_for_xts$X, order.by = thesisdata_for_xts$timestamp)
+records_xts <- xts(x = thesisdata_for_xts$X, 
+                   order.by = thesisdata_for_xts$timestamp)
 
 # Event timestamps are read from thesis_stats_vis_funcs.R
 visitor_server <- function(input, output) {
   
   output$dygraph <- renderUI({
-    das <- list(
+    visitor_graph <- list(
       dygraph(records_xts, main = "records", group = "thesis") %>%
         dyOptions(drawPoints = TRUE, pointSize = 2) %>%
         dyRangeSelector(height = 70)  %>%
@@ -716,7 +707,7 @@ visitor_server <- function(input, output) {
         dyEvent(lisaakaupunkia2, "Reminder, Lisää kaupunkia Helsinkiin", labelLoc = "bottom") %>%
         dyEvent(misc3, "Email list reminders, GIS-velhot FB group", labelLoc = "bottom"))
     
-    browsable(tagList(das))
+    browsable(tagList(visitor_graph))
   })
 }
 
@@ -730,9 +721,8 @@ shinyApp(visitor_ui, visitor_server)
 
 #### Obsolete material ####
 
-# All of the functionality below is superseded by the ShinyApp described above.
-# Preserve these for the sake of alternatives and simplicity.
-
+# All of the functionality below is superseded by the analysis ShinyApp 
+# presented above. Preserve these for the sake of alternatives and simplicity.
 
 # Run tests with GetANOVA()
 
