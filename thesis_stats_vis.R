@@ -76,7 +76,6 @@ library(RColorBrewer)
 # Important directories
 wd <- "C:/Sampon/Maantiede/Master of the Universe"
 datapath <- file.path(wd, "pythonrecords.csv")
-postal_path <- file.path(wd, "pythonpostal.csv")
 visitorpath <- file.path(wd, "leaflet_survey_results/visitors.csv")
 suuraluepath <- file.path(wd, "python/suuralueet/PKS_suuralue.kml")
 munsclippedpath <- file.path(wd, "python/paavo/hcr_muns_clipped.shp")
@@ -99,11 +98,6 @@ thesisdata <- read.csv(file = datapath,
                                ua_forest = "factor", ykr_zone = "factor", 
                                subdiv = "factor"),
                 header = TRUE, sep = ",")
-
-# Postal code data
-postal <- read.csv(file = postal_path, 
-                   colClasses = c(posti_alue = "factor", kunta = "factor"),
-                   header = TRUE, sep = ",")
 
 # Name factor levels. Determine order of factor levels for plotting
 levels(thesisdata$parkspot) <- list("On the side of street" = 1,
@@ -138,9 +132,8 @@ levels(thesisdata$ua_forest) <- list("Predominantly forest" = 1,
                                      "Some forest" = 4,
                                      "Scarce forest" = 5)
 
-# Remove column "index". Remove X, pinta_ala, kunta from postal
+# Remove column "index". Remove X, pinta_ala
 thesisdata <- subset(thesisdata, select = -c(index))
-postal <- subset(postal, select = -c(X, pinta_ala, kunta))
 
 
 
