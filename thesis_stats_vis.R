@@ -477,6 +477,9 @@ server <- function(input, output, session){
   ### Context map ####
   output$map <- renderPlot({
     
+    # Count active subdivs
+    active_subdivs <- 23 - length(input$subdivGroup)
+    
     mapp <- ggplot() + 
         geom_polygon(data = suuralue_f,
                      aes(long, lat, group = group, fill = "#3d3d3d"),
@@ -491,7 +494,8 @@ server <- function(input, output, session){
           fill = NA, 
           colour = "black") +
         coord_map(ylim = c(60.07, 60.42)) +
-        scale_fill_identity("Currently active\nsubdivisions", 
+      scale_fill_identity(paste0("Currently active\nsubdivisions\n(", 
+                                 active_subdivs, " out of 23)"), 
                             labels = suuralue_f$Name, breaks = suuralue_f$color, 
                             guide = "legend") +
         with(centroids, annotate(geom = "text", x = long, y = lat, label = label, 
@@ -519,10 +523,15 @@ ui <- shinyUI(fluidPage(theme = shinytheme("slate"),
         color: #c8c8c8;
         background: #2e3338;
         border: 1px solid #1c1e22;
+        max-width: 1000px;
       }
       #descri {
         overflow-x: auto;
         max-height: 80vh;
+        max-width: 1200px;
+      }
+      #boxplot, #barplot, #hist {
+        max-width: 1000px;
       }
       form.well {
         display: 100%;
@@ -626,17 +635,18 @@ ui <- shinyUI(fluidPage(theme = shinytheme("slate"),
       # This is an unfortunate hack to prevent the data providers from appearing
       # on top of the context map
       br(), br(), br(), br(), br(), br(), br(), br(), br(), br(), br(), br(),
-      br(), hr(),
+      br(), br(), br(), hr(),
       h3("Data providers"),
       HTML("<a https://hri.fi/data/dataset/paakaupunkiseudun-aluejakokartat>",
-            "Municipality subdivisions</a>",
-            "© Helsingin, Espoon, Vantaan ja Kauniaisten mittausorganisaatiot",
-            "2011. Aineisto on muokkaamaton. License",
-            "<a https://creativecommons.org/licenses/by/4.0/deed.en> CC BY 4.0</a>",
-            "<br><a https://www.stat.fi/tup/paavo/index_en.html>",
-            "Postal code area boundaries </a>, © Statistics Finland 2019.", 
-            "Retrieved 27.6.2019. License <a https://creativecommons.org/licenses/by/4.0/deed.en>",
-            "CC BY 4.0</a>")
+           "Municipality subdivisions</a>",
+           "(C) Helsingin, Espoon, Vantaan ja Kauniaisten mittausorganisaatiot",
+           "2011. Aineisto on muokkaamaton. License",
+           "<a https://creativecommons.org/licenses/by/4.0/deed.en> CC BY 4.0</a>",
+           "<br><a https://www.stat.fi/tup/paavo/index_en.html>",
+           "Postal code area boundaries</a> (C) Statistics Finland 2019.", 
+           "Retrieved 27.6.2019. License <a https://creativecommons.org/licenses/by/4.0/deed.en>",
+           "CC BY 4.0</a>"),
+      br()
     )
   )
 ))
@@ -648,6 +658,8 @@ shinyApp(ui = ui, server = server)
 #### Visitor ShinyApp ----------------------------------------------------------
 
 # Use this ShinyApp to explore the development in amounts of survey respondents.
+# Take note! This app uses the unedited visitors table. No IP codes have been
+# deleted.
 
 visitordata <- read.csv(file = visitorpath,
                        colClasses = c(X = "integer", id = "integer", 
