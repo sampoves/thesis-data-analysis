@@ -174,8 +174,13 @@ centroids <- setNames(
   do.call("rbind.data.frame", by(muns_clipped_f, muns_clipped_f$nimi, function(x) 
   {Polygon(x[c("long", "lat")])@labpt})), c("long", "lat")) 
 
-# Manually set better location for the annotation of Helsinki
-centroids[2, 2] <- centroids[2, 2] + 0.02
+centroids2 <- setNames(
+  do.call("rbind.data.frame", by(suuralue_f, suuralue_f$Name, function(x) 
+  {Polygon(x[c("long", "lat")])@labpt})), c("long", "lat"))
+
+# Manually set better location for the annotation of Helsinki and Espoo
+centroids[2, "lat"] <- centroids[2, "lat"] + 0.02
+centroids[1, "lat"] <- centroids[1, "lat"] + 0.01
 centroids$label <- c("Espoo", "Helsinki", "Kauniainen", "Vantaa")
 
 # Set color gradients for municipalities. Kauniainen will be a single color set 
@@ -208,6 +213,19 @@ suuralue_f$color <- c(rep(c_esp[1], amounts[1]), rep(c_esp[2], amounts[2]),
 # Colors to factors and reorder subdivision names to facilitate ggplot
 suuralue_f <- suuralue_f %>% mutate(color = as.factor(color)) # to factor
 
+# name labels here so that all the reordering doesn't mix up stuff. Remove
+# munnames from subdiv annotations
+centroids2$label <- gsub(".* ", "", unique(suuralue_f$Name)) 
+
+# Manually move Espoonlahti and Southeastern to be visible. Remove subdiv label
+# for Kauniainen
+centroids2[2, "lat"] <- centroids2[2, "lat"] + 0.05
+centroids2[2, "long"] <- centroids2[2, "long"] - 0.04
+centroids2[12, "lat"] <- centroids2[12, "lat"] + 0.08
+centroids2[12, "long"] <- centroids2[12, "long"] + 0.05
+centroids2[16, "label"] <- ""
+
+
 # Independent ggplot maptest
 # ggplot() +
 #   geom_polygon(
@@ -223,8 +241,10 @@ suuralue_f <- suuralue_f %>% mutate(color = as.factor(color)) # to factor
 #   scale_fill_identity("Currently active\nsubdivisions", labels = suuralue_f$Name,
 #                       breaks = suuralue_f$color, guide = "legend") +
 #   with(centroids, annotate(geom = "text", x = long, y = lat, label = label,
+#                            size = 4)) +
+#   with(centroids2, annotate(geom = "text", x = long, y = lat, label = label,
 #                            size = 3)) +
-#   theme(plot.margin = grid::unit(c(0,0,0,0), "mm"), legend.position = "bottom")
+#   theme(plot.margin = grid::unit(c(0, 0, 0, 0), "mm"), legend.position = "bottom")
 
 
 
@@ -496,14 +516,17 @@ server <- function(input, output, session){
         coord_map(ylim = c(60.07, 60.42)) +
       scale_fill_identity(paste0("Currently active\nsubdivisions\n(", 
                                  active_subdivs, " out of 23)"), 
-                            labels = suuralue_f$Name, breaks = suuralue_f$color, 
-                            guide = "legend") +
+                          labels = suuralue_f$Name, breaks = suuralue_f$color, 
+                          guide = "legend") +
         with(centroids, annotate(geom = "text", x = long, y = lat, label = label, 
-                                 size = 3)) +
+                                 size = 4)) +
+        with(centroids2[!centroids2$label %in% gsub(".* ", "", c(input$subdivGroup)), ], 
+             annotate(geom = "text", x = long, y = lat, label = label, size = 3)) +
         theme(plot.margin = grid::unit(c(0,0,0,0), "mm"), 
               legend.position = "bottom")
     mapp
   },
+  width = 720,
   height = 700)
 }
 
@@ -737,7 +760,36 @@ visitor_server <- function(input, output) {
 }
 
 visitor_ui <- basicPage(
+  tags$head(
+    tags$style(HTML("
+      html, body {
+        width: 100%;
+        text-align: center;
+        background-color: grey;
+      }
+      #dygraph {
+        display: inline-block;
+      }
+      .verticalLine {
+      border-radius: 25px;
+        border-left: 750px solid white; 
+        height: 1050px; 
+        position: absolute; 
+        left: 40%; 
+      }
+      .verticalLine2 {
+      border-radius: 25px;
+        border-left: 700px solid white; 
+        height: 1050px; 
+        position: absolute; 
+        right: 40%; 
+      }"
+                    
+    ))
+  ),
   titlePanel("Received responses and survey page first visits"),
+  tags$div(class = "verticalLine"),
+  tags$div(class = "verticalLine2"),
   uiOutput("dygraph")
 )
 shinyApp(visitor_ui, visitor_server)
