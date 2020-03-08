@@ -556,6 +556,12 @@ ui <- shinyUI(fluidPage(theme = shinytheme("slate"),
       #boxplot, #barplot, #hist {
         max-width: 1000px;
       }
+      #contents {
+        border: 5px solid #2e3338;
+        border-radius: 5px;
+        padding: 4px;
+        margin-bottom: 12px;
+      }
       form.well {
         display: 100%;
         position: fixed;
@@ -572,6 +578,16 @@ ui <- shinyUI(fluidPage(theme = shinytheme("slate"),
   titlePanel("Sampo Vesanen thesis statistics ShinyApp"),
   sidebarLayout(
     sidebarPanel(
+      HTML("<div id='contents'>"),
+      HTML("<a href='#descri'>Descriptives</a> &mdash;"),
+      HTML("<a href='#hist'>Histogram</a> &mdash;"),
+      HTML("<a href='#barplot'>Barplot</a> &mdash;"),
+      HTML("<a href='#boxplot'>Boxplot</a> &mdash;"),
+      HTML("<a href='#levene'>Levene</a> &mdash;"),
+      HTML("<a href='#anovalink'>ANOVA</a> &mdash;"),
+      HTML("<a href='#brownf'>Brown-Forsythe</a> &mdash;"),
+      HTML("<a href='#map'>Context map</a>"),
+      HTML("</div>"),
       
       # walktime or parktime
       selectInput("resp", 
@@ -641,6 +657,7 @@ ui <- shinyUI(fluidPage(theme = shinytheme("slate"),
         style = "font-size:12px"),
       hr(),
       
+      HTML("<div id='anovalink'</div>"),
       h3("ANOVA"),
       tableOutput("anova"),
       p("Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1", 
@@ -808,21 +825,21 @@ shinyApp(visitor_ui, visitor_server)
 
 # Get walktime by timeofday
 GetANOVA(walktime ~ timeofday, thesisdata$walktime, thesisdata$timeofday,
-         thesisdata, c(1 ,2, 3, 4, 5))
+         thesisdata, c(1, 2, 3, 4, 5))
 
 # Get walktime by timeofday, remove "Can't specify"
 GetANOVA(walktime ~ timeofday, thesisdata$walktime, thesisdata$timeofday,
          thesisdata[-which(as.integer(thesisdata$timeofday) == 4), ],
-         c(1 ,2, 3, 4, 5))
+         c(1, 2, 3, 4, 5))
 
 # parktime by parkspot
 GetANOVA(parktime ~ parkspot, thesisdata$parktime, thesisdata$parkspot,
-         thesisdata, c(1 ,2, 3, 4, 5))
+         thesisdata, c(1, 2, 3, 4, 5))
 
 # parktime by subdivision
 GetANOVA(parktime ~ subdiv, thesisdata$parktime, thesisdata$subdiv,
-         thesisdata, c(1 ,2, 3, 4, 5))
+         thesisdata, c(1, 2, 3, 4, 5))
 
 # walktime by ykr zone
 GetANOVA(walktime ~ ykr_zone, thesisdata$walktime, thesisdata$ykr_zone,
-         thesisdata, c(1 ,2, 3, 4, 5))
+         thesisdata, c(1, 2, 3, 4, 5))
