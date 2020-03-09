@@ -501,29 +501,29 @@ server <- function(input, output, session){
     active_subdivs <- 23 - length(input$subdivGroup)
     
     mapp <- ggplot() + 
-        geom_polygon(data = suuralue_f,
-                     aes(long, lat, group = group, fill = "#3d3d3d"),
-                     colour = NA) +
-        geom_polygon(
-          data = suuralue_f[!suuralue_f$Name %in% c(input$subdivGroup), ], 
-          aes(long, lat, group = group, fill = color),
-          colour = "grey") +
-        geom_polygon(
-          data = muns_clipped_f, 
-          aes(long, lat, group = group), 
-          fill = NA, 
-          colour = "black") +
-        coord_map(ylim = c(60.07, 60.42)) +
+      geom_polygon(data = suuralue_f,
+                   aes(long, lat, group = group, fill = "#3d3d3d"),
+                   colour = NA) +
+      geom_polygon(
+        data = suuralue_f[!suuralue_f$Name %in% c(input$subdivGroup), ], 
+        aes(long, lat, group = group, fill = color),
+        colour = "grey") +
+      geom_polygon(
+        data = muns_clipped_f, 
+        aes(long, lat, group = group), 
+        fill = NA, 
+        colour = "black") +
+      coord_map(ylim = c(60.07, 60.42)) +
       scale_fill_identity(paste0("Currently active\nsubdivisions\n(", 
                                  active_subdivs, " out of 23)"), 
                           labels = suuralue_f$Name, breaks = suuralue_f$color, 
                           guide = "legend") +
-        with(centroids, annotate(geom = "text", x = long, y = lat, label = label, 
-                                 size = 4)) +
-        with(centroids2[!centroids2$label %in% gsub(".* ", "", c(input$subdivGroup)), ], 
-             annotate(geom = "text", x = long, y = lat, label = label, size = 3)) +
-        theme(plot.margin = grid::unit(c(0,0,0,0), "mm"), 
-              legend.position = "bottom")
+      with(centroids, annotate(geom = "text", x = long, y = lat, label = label, 
+                               size = 4)) +
+      with(centroids2[!centroids2$label %in% gsub(".* ", "", c(input$subdivGroup)), ], 
+           annotate(geom = "text", x = long, y = lat, label = label, size = 3)) +
+      theme(plot.margin = grid::unit(c(0,0,0,0), "mm"), 
+            legend.position = "bottom")
     mapp
   },
   width = 720,
@@ -541,6 +541,7 @@ ui <- shinyUI(fluidPage(theme = shinytheme("slate"),
     tags$style(HTML("
       html, body {
         height: 100%;
+        scroll-behavior: smooth;
       }
       #brownf {
         color: #c8c8c8;
@@ -560,7 +561,7 @@ ui <- shinyUI(fluidPage(theme = shinytheme("slate"),
         border: 5px solid #2e3338;
         border-radius: 5px;
         padding: 4px;
-        margin-bottom: 12px;
+        margin-bottom: 15px;
       }
       form.well {
         display: 100%;
@@ -575,18 +576,18 @@ ui <- shinyUI(fluidPage(theme = shinytheme("slate"),
     ))
   ),                    
                      
-  titlePanel("Sampo Vesanen thesis statistics ShinyApp"),
+  titlePanel("Sampo Vesanen MSc thesis research survey results ShinyApp"),
   sidebarLayout(
     sidebarPanel(
       HTML("<div id='contents'>"),
-      HTML("<a href='#descri'>Descriptives</a> &mdash;"),
-      HTML("<a href='#hist'>Histogram</a> &mdash;"),
-      HTML("<a href='#barplot'>Barplot</a> &mdash;"),
-      HTML("<a href='#boxplot'>Boxplot</a> &mdash;"),
-      HTML("<a href='#levene'>Levene</a> &mdash;"),
+      HTML("<a href='#descrilink'>Descriptives</a> &mdash;"),
+      HTML("<a href='#histlink'>Histogram</a> &mdash;"),
+      HTML("<a href='#barplotlink'>Barplot</a> &mdash;"),
+      HTML("<a href='#boxplotlink'>Boxplot</a> &mdash;"),
+      HTML("<a href='#levenelink'>Levene</a> &mdash;"),
       HTML("<a href='#anovalink'>ANOVA</a> &mdash;"),
-      HTML("<a href='#brownf'>Brown-Forsythe</a> &mdash;"),
-      HTML("<a href='#map'>Context map</a>"),
+      HTML("<a href='#brownlink'>Brown-Forsythe</a> &mdash;"),
+      HTML("<a href='#maplink'>Context map</a>"),
       HTML("</div>"),
       
       # walktime or parktime
@@ -628,15 +629,18 @@ ui <- shinyUI(fluidPage(theme = shinytheme("slate"),
     ),
   
     mainPanel(
+      HTML("<div id='descrilink'</div>"),
       h3("Descriptive statistics"),
       p("If N is distributed somewhat equally, Levene test is not required."),
       tableOutput("descri"),
       hr(),
       
+      HTML("<div id='histlink'</div>"),
       h3("Histogram"),
       plotOutput("hist"),
       hr(),
       
+      HTML("<div id='barplotlink'</div>"),
       conditionalPanel(
         condition = 
           "input.expl == 'likert' || input.expl == 'parkspot' || input.expl == 'timeofday'",
@@ -646,10 +650,12 @@ ui <- shinyUI(fluidPage(theme = shinytheme("slate"),
         hr()
       ),
       
+      HTML("<div id='boxplotlink'</div>"),
       h3("Boxplot"),
       plotOutput("boxplot", height = "500px"),
       hr(),
       
+      HTML("<div id='levenelink'</div>"),
       h3("Test of Homogeneity of Variances"),
       p("Levene value needs to be at least 0.05 for ANOVA test to be meaningful. If under 0.05, employ Brown-Forsythe test."),
       tableOutput("levene"),
@@ -658,16 +664,18 @@ ui <- shinyUI(fluidPage(theme = shinytheme("slate"),
       hr(),
       
       HTML("<div id='anovalink'</div>"),
-      h3("ANOVA"),
+      h3("Analysis of variance (ANOVA)"),
       tableOutput("anova"),
       p("Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1", 
         style = "font-size:12px"),
       hr(),
       
+      HTML("<div id='brownlink'</div>"),
       h3("Brown-Forsythe"),
       verbatimTextOutput("brownf"),
       hr(),
       
+      HTML("<div id='maplink'</div>"),
       h3("Active subdivisions"),
       plotOutput("map"),
       hr(),
