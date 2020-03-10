@@ -4,7 +4,7 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 29.2.2020
+# 10.3.2020
 #
 # This is an interactive tool for analysing the results of my research survey.
 
@@ -52,6 +52,7 @@ rm(list = ls())
 #install.packages("xts")
 #install.packages("rgdal")
 #install.packages("RColorBrewer")
+#install.packages("shinyjs")
 
 # Libraries
 library(onewaytests)
@@ -69,7 +70,7 @@ library(htmltools)
 library(rgdal)
 library(RColorBrewer)
 
-
+library(shinyjs)
 
 #### Preparation ####
 
@@ -255,7 +256,13 @@ centroids2[16, "label"] <- ""
 
 server <- function(input, output, session){
   
-  #### Listener function ####
+  #### Listener functions ####
+  
+  # Listen to clear subdivs button. Resetting uses library shinyjs
+  observeEvent(input$resetSubdivs, {
+    reset("subdivGroup")
+  })
+  
   # Detect changes in selectInput to modify available check boxes
   observe({
     x <- input$expl
@@ -423,7 +430,7 @@ server <- function(input, output, session){
                             fill = get(barplotval))) +
       geom_bar(aes(y = stat(count)), position = "dodge") + 
       scale_y_continuous(breaks = seq(0, maximum, by = tick_interval),
-                         expand = expand_scale(mult = c(0, .1))) +
+                         expand = expansion(mult = c(0, .1))) +
       xlab(explanatorycol) +
       ylab(yax) +
       scale_fill_discrete(name = barplotval)
@@ -531,7 +538,9 @@ server <- function(input, output, session){
 }
 
 ### ShinyApp UI elements ####
-ui <- shinyUI(fluidPage(theme = shinytheme("slate"),
+ui <- shinyUI(fluidPage(
+  useShinyjs(),
+  theme = shinytheme("slate"),
   
   # Edit various CSS features of the ShinyApp such as the Brown-Forsythe test 
   # box and sidebarPanel (form.well) width. sidebarPanel width setting is 
@@ -575,7 +584,7 @@ ui <- shinyUI(fluidPage(theme = shinytheme("slate"),
       }"
     ))
   ),                    
-                     
+  
   titlePanel("Sampo Vesanen MSc thesis research survey results ShinyApp"),
   sidebarLayout(
     sidebarPanel(
@@ -625,6 +634,8 @@ ui <- shinyUI(fluidPage(theme = shinytheme("slate"),
         choiceNames = sort(as.character(unique(thesisdata$subdiv))),
         choiceValues = sort(as.character(unique(thesisdata$subdiv)))),
 
+      actionButton("resetSubdivs", "Clear inactive subdivisions"),
+      
       width = 3
     ),
   
@@ -660,14 +671,14 @@ ui <- shinyUI(fluidPage(theme = shinytheme("slate"),
       p("Levene value needs to be at least 0.05 for ANOVA test to be meaningful. If under 0.05, employ Brown-Forsythe test."),
       tableOutput("levene"),
       p("Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1", 
-        style = "font-size:12px"),
+        style = "font-size:12px;margin-top:-12px"),
       hr(),
       
       HTML("<div id='anovalink'</div>"),
       h3("Analysis of variance (ANOVA)"),
       tableOutput("anova"),
       p("Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1", 
-        style = "font-size:12px"),
+        style = "font-size:12px;margin-top:-12px"),
       hr(),
       
       HTML("<div id='brownlink'</div>"),
