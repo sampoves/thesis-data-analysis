@@ -85,57 +85,64 @@ munsclippedpath <- file.path(wd, "python/paavo/hcr_muns_clipped.shp")
 
 
 
-# POSTAL TEST
+### POSTAL TEST ####
 # https://bhaskarvk.github.io/user2017.geodataviz/notebooks/03-Interactive-Maps.nb.html#using_leaflet
-#install.packages("ggiraph")
-#install.packages("widgetframe")
-#install.packages("hrbrthemes")
-#install.packages("colormap")
 library(colormap)
 library(ggiraph)
 library(widgetframe)
 library(hrbrthemes)
 library(rgeos)
-postal_path <- file.path(wd, "pythonpostal.csv")
 
+postal_path <- file.path(wd, "pythonpostal.csv")
 postal <- read.csv(file = postal_path, 
                    colClasses = c(posti_alue = "factor", kunta = "factor"),
                    header = TRUE, sep = ",")
-postal <- postal[, c(2, 108:119)]
-#postal <- rangeMapper::WKT2SpatialPolygonsDataFrame(postal, "geometry", "posti_alue")
-##postal <- sf::st_as_sf(postal, wkt = "geometry")
-#postal <- ggplot2::fortify(postal)
+postal <- postal[, c(2,3, 108:119)]
+
 crs <- sp::CRS("+init=epsg:3067")
 geometries <- lapply(postal[, "geometry"], "readWKT", p4s = crs)
-sp_tmp_ID <- mapply(spChFIDs, geometries, as.character(postal[, 1]))
+
+sp_tmp_ID <- mapply(sp::spChFIDs, geometries, as.character(postal[, 1]))
 row.names(postal) <- postal[, 1]
 data <- SpatialPolygonsDataFrame(
   SpatialPolygons(unlist(lapply(sp_tmp_ID, function(x) x@polygons)), 
-                  proj4string = crs),
-  data = postal[, -ncol(postal)])
+                  proj4string = crs), data = postal)
 
-#data_f <- ggplot2::fortify(data)
-# preserve dataframe data
 data_f <- merge(ggplot2::fortify(data), as.data.frame(data), by.x = "id", 
                 by.y = 0)
 
-#SpatialPolygons(lapply(geometries, function(x) {x@polygons[[1]]}))
-#rgeos::readWKT(postal$geometry[1], p4s = sp::CRS("+init=epsg:3067"))
-#writeWKT(spgeom, byid = FALSE)
+# natural breaks, jenks
+#https://medium.com/@traffordDataLab/lets-make-a-map-in-r-7bd1d9366098
+library(classInt)
+#classes <- classIntervals(data_f$ua_forest, n = 5, style = "jenks")
+classes <- classIntervals(postal$ua_forest, n = 5, style = "jenks")
+data_f <- data_f %>%
+  mutate(jenks_ua_forest = cut(ua_forest, classes$brks, include.lowest = T))
 
+
+# investigate stretching of map without labs
+# programmatic fill
+# Could not figure out how to use aes_string() and tooltip = sprintf() together
+# without substitute()
+# https://ggplot2.tidyverse.org/reference/aes_.html
 g <- ggplot(data_f) +
   geom_polygon_interactive(
     color = "black",
-    aes(long, lat,
-        group = group, 
-        fill = ua_forest,
-        tooltip = sprintf("%s<br/>%s", id, ua_forest))) +
+    size = 0.4,
+    aes_string("long", "lat",
+        #group = "group",
+        fill = "jenks_ua_forest",
+        tooltip = substitute(sprintf(
+          "%s, %s<br/>mean parktime: %s<br/>mean walktime: %s",
+          id, nimi, parktime_mean, walktime_mean)))) +
   hrbrthemes::theme_ipsum() +
-  colormap::scale_fill_colormap(
-    colormap = colormap::colormaps$greens, reverse = T) +
-  labs(title = "Internet Usage in Africa in 2015", 
-       subtitle = "As Percent of Population",
-       caption = "Source: World Bank Open Data")
+  scale_fill_brewer(palette = "PuBu",
+                    name = "Lotsa forest (%)") +
+  #colormap::scale_fill_colormap(
+  #  colormap = colormap::colormaps$greens, reverse = T) +
+  labs(title = "Map", 
+       subtitle = "It's map",
+       caption = "Source: source")
 
 widgetframe::frameWidget(ggiraph(code = print(g)))
 
@@ -598,6 +605,28 @@ server <- function(input, output, session){
   },
   width = 720,
   height = 700)
+  
+  ### Interactive mappp ####
+  output$interactive <- renderggiraph({
+    
+    g <- ggplot(data_f) +
+      geom_polygon_interactive(
+        color = "black",
+        aes_string("long", "lat",
+                   group = "group", 
+                   fill = input$karttacol,
+                   tooltip = substitute(sprintf(
+                     "%s, %s<br/>mean parktime: %s<br/>mean walktime: %s", 
+                     id, nimi, parktime_mean, walktime_mean)))) +
+      hrbrthemes::theme_ipsum() +
+      colormap::scale_fill_colormap(
+        colormap = colormap::colormaps$greens, reverse = T) +
+      labs(title = "Map", 
+           subtitle = "It's map",
+           caption = "Source: source")
+    
+    ggiraph(code = print(g))
+  })
 }
 
 ### ShinyApp UI elements ####
@@ -699,6 +728,10 @@ ui <- shinyUI(fluidPage(
 
       actionButton("resetSubdivs", "Clear inactive subdivisions"),
       
+      selectInput("karttacol",
+                  "Select colorss", 
+                  c("ykr_kesk_jalan", "answer_count", "parktime_mean", "walktime_mean")),
+      
       width = 3
     ),
   
@@ -768,7 +801,9 @@ ui <- shinyUI(fluidPage(
            "Postal code area boundaries</a> (C) Statistics Finland 2019.", 
            "Retrieved 27.6.2019. License <a https://creativecommons.org/licenses/by/4.0/deed.en>",
            "CC BY 4.0</a>"),
-      br()
+      br(),
+      hr(),
+      ggiraphOutput("interactive")
     )
   )
 ))
