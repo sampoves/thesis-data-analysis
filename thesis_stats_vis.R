@@ -38,6 +38,7 @@
 
 #### Initialise ----------------------------------------------------------------
 rm(list = ls())
+gc()
 
 #install.packages("onewaytests") # brown-forsythe
 #install.packages("car")
@@ -69,8 +70,8 @@ library(xts)
 library(htmltools)
 library(rgdal)
 library(RColorBrewer)
-
 library(shinyjs)
+
 
 #### Preparation ####
 
@@ -80,6 +81,66 @@ datapath <- file.path(wd, "pythonrecords.csv")
 visitorpath <- file.path(wd, "leaflet_survey_results/visitors.csv")
 suuraluepath <- file.path(wd, "python/suuralueet/PKS_suuralue.kml")
 munsclippedpath <- file.path(wd, "python/paavo/hcr_muns_clipped.shp")
+
+
+
+
+# POSTAL TEST
+# https://bhaskarvk.github.io/user2017.geodataviz/notebooks/03-Interactive-Maps.nb.html#using_leaflet
+#install.packages("ggiraph")
+#install.packages("widgetframe")
+#install.packages("hrbrthemes")
+#install.packages("colormap")
+library(colormap)
+library(ggiraph)
+library(widgetframe)
+library(hrbrthemes)
+library(rgeos)
+postal_path <- file.path(wd, "pythonpostal.csv")
+
+postal <- read.csv(file = postal_path, 
+                   colClasses = c(posti_alue = "factor", kunta = "factor"),
+                   header = TRUE, sep = ",")
+postal <- postal[, c(2, 108:119)]
+#postal <- rangeMapper::WKT2SpatialPolygonsDataFrame(postal, "geometry", "posti_alue")
+##postal <- sf::st_as_sf(postal, wkt = "geometry")
+#postal <- ggplot2::fortify(postal)
+crs <- sp::CRS("+init=epsg:3067")
+geometries <- lapply(postal[, "geometry"], "readWKT", p4s = crs)
+sp_tmp_ID <- mapply(spChFIDs, geometries, as.character(postal[, 1]))
+row.names(postal) <- postal[, 1]
+data <- SpatialPolygonsDataFrame(
+  SpatialPolygons(unlist(lapply(sp_tmp_ID, function(x) x@polygons)), 
+                  proj4string = crs),
+  data = postal[, -ncol(postal)])
+
+#data_f <- ggplot2::fortify(data)
+# preserve dataframe data
+data_f <- merge(ggplot2::fortify(data), as.data.frame(data), by.x = "id", 
+                by.y = 0)
+
+#SpatialPolygons(lapply(geometries, function(x) {x@polygons[[1]]}))
+#rgeos::readWKT(postal$geometry[1], p4s = sp::CRS("+init=epsg:3067"))
+#writeWKT(spgeom, byid = FALSE)
+
+g <- ggplot(data_f) +
+  geom_polygon_interactive(
+    color = "black",
+    aes(long, lat,
+        group = group, 
+        fill = ua_forest,
+        tooltip = sprintf("%s<br/>%s", id, ua_forest))) +
+  hrbrthemes::theme_ipsum() +
+  colormap::scale_fill_colormap(
+    colormap = colormap::colormaps$greens, reverse = T) +
+  labs(title = "Internet Usage in Africa in 2015", 
+       subtitle = "As Percent of Population",
+       caption = "Source: World Bank Open Data")
+
+widgetframe::frameWidget(ggiraph(code = print(g)))
+
+
+
 
 # Source functions and postal code variables
 source(file.path(wd, "python/thesis_stats_vis_funcs.R"))
@@ -144,6 +205,8 @@ thesisdata <- subset(thesisdata, select = -c(index))
 # ShinyApp. Updating this map makes the app a bit more sluggish. Delete this
 # code if you get sufficiently annoyed with the sluggishness.
 suuralue <- readOGR(suuraluepath, use_iconv = TRUE, encoding = "UTF-8")
+
+# Preserve suuralue dataframe data
 suuralue_f <- merge(fortify(suuralue), as.data.frame(suuralue), by.x = "id", 
                     by.y = 0)
 
