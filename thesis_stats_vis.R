@@ -85,13 +85,15 @@ munsclippedpath <- file.path(wd, "python/paavo/hcr_muns_clipped.shp")
 
 
 
+
 ### POSTAL TEST ####
 # https://bhaskarvk.github.io/user2017.geodataviz/notebooks/03-Interactive-Maps.nb.html#using_leaflet
 library(colormap)
 library(ggiraph)
 library(widgetframe)
-library(hrbrthemes)
+#library(hrbrthemes)
 library(rgeos)
+library(classInt)
 
 postal_path <- file.path(wd, "pythonpostal.csv")
 postal <- read.csv(file = postal_path, 
@@ -113,38 +115,40 @@ data_f <- merge(ggplot2::fortify(data), as.data.frame(data), by.x = "id",
 
 # natural breaks, jenks
 #https://medium.com/@traffordDataLab/lets-make-a-map-in-r-7bd1d9366098
-library(classInt)
-#classes <- classIntervals(data_f$ua_forest, n = 5, style = "jenks")
-classes <- classIntervals(postal$ua_forest, n = 5, style = "jenks")
+classes <- classInt::classIntervals(postal$ua_forest, n = 5, style = "jenks")
 data_f <- data_f %>%
   mutate(jenks_ua_forest = cut(ua_forest, classes$brks, include.lowest = T))
 
+classes <- classInt::classIntervals(postal$answer_count, n = 5, style = "jenks")
+data_f <- data_f %>%
+  mutate(jenks_answer_count = cut(answer_count, classes$brks, include.lowest = T))
+
+
 
 # investigate stretching of map without labs
-# programmatic fill
 # Could not figure out how to use aes_string() and tooltip = sprintf() together
 # without substitute()
 # https://ggplot2.tidyverse.org/reference/aes_.html
-g <- ggplot(data_f) +
-  geom_polygon_interactive(
-    color = "black",
-    size = 0.4,
-    aes_string("long", "lat",
-        #group = "group",
-        fill = "jenks_ua_forest",
-        tooltip = substitute(sprintf(
-          "%s, %s<br/>mean parktime: %s<br/>mean walktime: %s",
-          id, nimi, parktime_mean, walktime_mean)))) +
-  hrbrthemes::theme_ipsum() +
-  scale_fill_brewer(palette = "PuBu",
-                    name = "Lotsa forest (%)") +
-  #colormap::scale_fill_colormap(
-  #  colormap = colormap::colormaps$greens, reverse = T) +
-  labs(title = "Map", 
-       subtitle = "It's map",
-       caption = "Source: source")
+ g <- ggplot(data_f) +
+   geom_polygon_interactive(
+     color = "black",
+     size = 0.2,
+     aes_string("long", "lat",
+                group = "group",
+                fill = "jenks_answer_count",
+                tooltip = substitute(sprintf(
+                  "%s, %s<br/>mean parktime: %s<br/>mean walktime: %s<br/>%s",
+                  id, nimi, parktime_mean, walktime_mean, answer_count)))) +
+   #hrbrthemes::theme_ipsum() +
+   scale_fill_brewer(palette = "PuBu",
+                     name = "Lotsa forest (%)") +
+   # labs(title = "Map",
+   #      subtitle = "It's map",
+   #      caption = "Source: source") +
+   coord_fixed()
 
 widgetframe::frameWidget(ggiraph(code = print(g)))
+
 
 
 
@@ -612,18 +616,20 @@ server <- function(input, output, session){
     g <- ggplot(data_f) +
       geom_polygon_interactive(
         color = "black",
+        size = 0.2,
         aes_string("long", "lat",
                    group = "group", 
                    fill = input$karttacol,
                    tooltip = substitute(sprintf(
                      "%s, %s<br/>mean parktime: %s<br/>mean walktime: %s", 
                      id, nimi, parktime_mean, walktime_mean)))) +
-      hrbrthemes::theme_ipsum() +
+      #hrbrthemes::theme_ipsum() +
       colormap::scale_fill_colormap(
         colormap = colormap::colormaps$greens, reverse = T) +
-      labs(title = "Map", 
-           subtitle = "It's map",
-           caption = "Source: source")
+      # labs(title = "Map", 
+      #      subtitle = "It's map",
+      #      caption = "Source: source") + 
+      coord_fixed()
     
     ggiraph(code = print(g))
   })
