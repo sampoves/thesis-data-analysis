@@ -4,7 +4,7 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 10.3.2020
+# 14.3.2020
 #
 # This is an interactive tool for analysing the results of my research survey.
 
@@ -71,7 +71,11 @@ library(htmltools)
 library(rgdal)
 library(RColorBrewer)
 library(shinyjs)
-
+library(colormap)
+library(ggiraph)
+library(widgetframe)
+library(rgeos)
+library(classInt)
 
 #### Preparation --------------------------------------------------------------- 
 
@@ -84,74 +88,6 @@ munsclippedpath <- file.path(wd, "python/paavo/hcr_muns_clipped.shp")
 
 # Source functions and postal code variables
 source(file.path(wd, "python/thesis_stats_vis_funcs.R"))
-
-
-
-### POSTAL TEST ---------------------------------------------------------------- 
-# https://bhaskarvk.github.io/user2017.geodataviz/notebooks/03-Interactive-Maps.nb.html#using_leaflet
-library(colormap)
-library(ggiraph)
-library(widgetframe)
-library(rgeos)
-library(classInt)
-
-postal_path <- file.path(wd, "pythonpostal.csv")
-postal <- read.csv(file = postal_path, 
-                   colClasses = c(posti_alue = "factor", kunta = "factor"),
-                   header = TRUE, sep = ",")
-postal <- postal[, c(2,3, 108:119)]
-
-crs <- sp::CRS("+init=epsg:3067")
-geometries <- lapply(postal[, "geometry"], "readWKT", p4s = crs)
-
-sp_tmp_ID <- mapply(sp::spChFIDs, geometries, as.character(postal[, 1]))
-row.names(postal) <- postal[, 1]
-data <- SpatialPolygonsDataFrame(
-  SpatialPolygons(unlist(lapply(sp_tmp_ID, function(x) x@polygons)), 
-                  proj4string = crs), data = postal)
-
-data_f <- merge(ggplot2::fortify(data), as.data.frame(data), by.x = "id", 
-                by.y = 0)
-
-# Create jenks breaks columns
-data_f <- CreateJenksColumn(data_f, "ua_forest", "jenks_ua_forest")
-data_f <- CreateJenksColumn(data_f, "answer_count", "jenks_answer_count")
-data_f <- CreateJenksColumn(data_f, "parktime_mean", "jenks_parktime")
-data_f <- CreateJenksColumn(data_f, "walktime_mean", "jenks_walktime")
-
-
-
-
-
-# investigate stretching of map without labs
-# Could not figure out how to use aes_string() and tooltip = sprintf() together
-# without substitute()
-# https://ggplot2.tidyverse.org/reference/aes_.html
- g <- ggplot(data_f) +
-   geom_polygon_interactive(
-     color = "black",
-     size = 0.2,
-     aes_string("long", "lat",
-                group = "group",
-                fill = "jenks_answer_count",
-                tooltip = substitute(sprintf(
-                  "%s, %s<br/>mean parktime: %s<br/>mean walktime: %s<br/>%s",
-                  id, nimi, parktime_mean, walktime_mean, answer_count)))) +
-   scale_fill_brewer(palette = "PuBu",
-                     name = "Lotsa forest (%)") +
-   # labs(title = "Map",
-   #      subtitle = "It's map",
-   #      caption = "Source: source") +
-   coord_fixed()
-
-#widgetframe::frameWidget(ggiraph(code = print(g)))
-
-
-
-
-
-# Source functions and postal code variables
-#source(file.path(wd, "python/thesis_stats_vis_funcs.R"))
 
 # These variables are used to subset dataframe thesisdata inside ShinyApp
 continuous <- c("parktime", "walktime") 
@@ -317,6 +253,56 @@ centroids2[16, "label"] <- ""
 #   with(centroids2, annotate(geom = "text", x = long, y = lat, label = label,
 #                            size = 3)) +
 #   theme(plot.margin = grid::unit(c(0, 0, 0, 0), "mm"), legend.position = "bottom")
+
+
+
+### Initialise interactive map ------------------------------------------------- 
+# Created with the help of:
+# https://bhaskarvk.github.io/user2017.geodataviz/notebooks/03-Interactive-Maps.nb.html
+
+postal_path <- file.path(wd, "pythonpostal.csv")
+postal <- read.csv(file = postal_path, 
+                   colClasses = c(posti_alue = "factor", kunta = "factor"),
+                   header = TRUE, sep = ",")
+postal <- postal[, c(2,3, 108:119)]
+
+crs <- sp::CRS("+init=epsg:3067")
+geometries <- lapply(postal[, "geometry"], "readWKT", p4s = crs)
+
+sp_tmp_ID <- mapply(sp::spChFIDs, geometries, as.character(postal[, 1]))
+row.names(postal) <- postal[, 1]
+data <- SpatialPolygonsDataFrame(
+  SpatialPolygons(unlist(lapply(sp_tmp_ID, function(x) x@polygons)), 
+                  proj4string = crs), data = postal)
+
+data_f <- merge(ggplot2::fortify(data), as.data.frame(data), by.x = "id", 
+                by.y = 0)
+
+# Create jenks breaks columns
+data_f <- CreateJenksColumn(data_f, "ua_forest", "jenks_ua_forest")
+data_f <- CreateJenksColumn(data_f, "answer_count", "jenks_answer_count")
+data_f <- CreateJenksColumn(data_f, "parktime_mean", "jenks_parktime")
+data_f <- CreateJenksColumn(data_f, "walktime_mean", "jenks_walktime")
+
+# Interactive map independent test
+# Could not figure out how to use aes_string() and tooltip = sprintf() together
+# without substitute()
+# https://ggplot2.tidyverse.org/reference/aes_.html
+# g <- ggplot(data_f) +
+#   geom_polygon_interactive(
+#     color = "black",
+#     size = 0.2,
+#     aes_string("long", "lat",
+#                group = "group",
+#                fill = "jenks_answer_count",
+#                tooltip = substitute(sprintf(
+#                  "%s, %s<br/>mean parktime: %s<br/>mean walktime: %s<br/>%s",
+#                  id, nimi, parktime_mean, walktime_mean, answer_count)))) +
+#   scale_fill_brewer(palette = "PuBu",
+#                     name = "Lotsa forest (%)") +
+#   coord_fixed()
+
+#widgetframe::frameWidget(ggiraph(code = print(g)))
 
 
 
