@@ -73,7 +73,7 @@ library(RColorBrewer)
 library(shinyjs)
 
 
-#### Preparation ####
+#### Preparation --------------------------------------------------------------- 
 
 # Important directories
 wd <- "C:/Sampon/Maantiede/Master of the Universe"
@@ -82,16 +82,16 @@ visitorpath <- file.path(wd, "leaflet_survey_results/visitors.csv")
 suuraluepath <- file.path(wd, "python/suuralueet/PKS_suuralue.kml")
 munsclippedpath <- file.path(wd, "python/paavo/hcr_muns_clipped.shp")
 
+# Source functions and postal code variables
+source(file.path(wd, "python/thesis_stats_vis_funcs.R"))
 
 
 
-
-### POSTAL TEST ####
+### POSTAL TEST ---------------------------------------------------------------- 
 # https://bhaskarvk.github.io/user2017.geodataviz/notebooks/03-Interactive-Maps.nb.html#using_leaflet
 library(colormap)
 library(ggiraph)
 library(widgetframe)
-#library(hrbrthemes)
 library(rgeos)
 library(classInt)
 
@@ -113,15 +113,13 @@ data <- SpatialPolygonsDataFrame(
 data_f <- merge(ggplot2::fortify(data), as.data.frame(data), by.x = "id", 
                 by.y = 0)
 
-# natural breaks, jenks
-#https://medium.com/@traffordDataLab/lets-make-a-map-in-r-7bd1d9366098
-classes <- classInt::classIntervals(postal$ua_forest, n = 5, style = "jenks")
-data_f <- data_f %>%
-  mutate(jenks_ua_forest = cut(ua_forest, classes$brks, include.lowest = T))
+# Create jenks breaks columns
+data_f <- CreateJenksColumn(data_f, "ua_forest", "jenks_ua_forest")
+data_f <- CreateJenksColumn(data_f, "answer_count", "jenks_answer_count")
+data_f <- CreateJenksColumn(data_f, "parktime_mean", "jenks_parktime")
+data_f <- CreateJenksColumn(data_f, "walktime_mean", "jenks_walktime")
 
-classes <- classInt::classIntervals(postal$answer_count, n = 5, style = "jenks")
-data_f <- data_f %>%
-  mutate(jenks_answer_count = cut(answer_count, classes$brks, include.lowest = T))
+
 
 
 
@@ -139,7 +137,6 @@ data_f <- data_f %>%
                 tooltip = substitute(sprintf(
                   "%s, %s<br/>mean parktime: %s<br/>mean walktime: %s<br/>%s",
                   id, nimi, parktime_mean, walktime_mean, answer_count)))) +
-   #hrbrthemes::theme_ipsum() +
    scale_fill_brewer(palette = "PuBu",
                      name = "Lotsa forest (%)") +
    # labs(title = "Map",
@@ -147,14 +144,14 @@ data_f <- data_f %>%
    #      caption = "Source: source") +
    coord_fixed()
 
-widgetframe::frameWidget(ggiraph(code = print(g)))
+#widgetframe::frameWidget(ggiraph(code = print(g)))
 
 
 
 
 
 # Source functions and postal code variables
-source(file.path(wd, "python/thesis_stats_vis_funcs.R"))
+#source(file.path(wd, "python/thesis_stats_vis_funcs.R"))
 
 # These variables are used to subset dataframe thesisdata inside ShinyApp
 continuous <- c("parktime", "walktime") 
@@ -210,7 +207,7 @@ thesisdata <- subset(thesisdata, select = -c(index))
 
 
 
-#### Prepare the context map for ShinyApp ####
+#### Prepare the context map for ShinyApp --------------------------------------
 
 # Prepare a context map for to visualise currently active areas in analysis
 # ShinyApp. Updating this map makes the app a bit more sluggish. Delete this
@@ -610,8 +607,26 @@ server <- function(input, output, session){
   width = 720,
   height = 700)
   
-  ### Interactive mappp ####
+  ### Interactive map ####
   output$interactive <- renderggiraph({
+    
+    if(input$karttacol == "jenks_ua_forest") {
+      brewerpal <- "YlGn"
+      legendname <- "Forest amount (%)"
+        
+    } else if (input$karttacol == "jenks_walktime") {
+      brewerpal <- "BuPu"
+      legendname <- "Walking time"
+        
+    } else if (input$karttacol == "jenks_parktime") {
+      brewerpal <- "BuGn"
+      legendname <- "Parking time"
+        
+    } else {
+      # answer_count
+      brewerpal <- "Reds"
+      legendname <- "Answer count"
+    }
     
     g <- ggplot(data_f) +
       geom_polygon_interactive(
@@ -621,25 +636,27 @@ server <- function(input, output, session){
                    group = "group", 
                    fill = input$karttacol,
                    tooltip = substitute(sprintf(
-                     "%s, %s<br/>mean parktime: %s<br/>mean walktime: %s", 
-                     id, nimi, parktime_mean, walktime_mean)))) +
-      #hrbrthemes::theme_ipsum() +
-      colormap::scale_fill_colormap(
-        colormap = colormap::colormaps$greens, reverse = T) +
+                     "%s, %s<br/>Mean parktime: %s min<br/>Mean walktime: %s min<br/>Answer count: %s",
+                     id, nimi, parktime_mean, walktime_mean, answer_count)))) +
+      scale_fill_brewer(palette = brewerpal,
+                        name = legendname) +
       # labs(title = "Map", 
       #      subtitle = "It's map",
       #      caption = "Source: source") + 
       coord_fixed()
     
-    ggiraph(code = print(g))
+    ggiraph(code = print(g), width_svg = 11, height_svg = 9, 
+            options = list(
+              opts_sizing(rescale = FALSE)))
   })
 }
 
-### ShinyApp UI elements ####
+### ShinyApp UI elements ------------------------------------------------------- 
 ui <- shinyUI(fluidPage(
   useShinyjs(),
   theme = shinytheme("slate"),
   
+  ### ShinyApp UI CSS ---------------------------------------------------------- 
   # Edit various CSS features of the ShinyApp such as the Brown-Forsythe test 
   # box and sidebarPanel (form.well) width. sidebarPanel width setting is 
   # important because the long explanations would break it otherwise. Also
@@ -679,6 +696,9 @@ ui <- shinyUI(fluidPage(
         max-width: 80vh;
         width: 250px;
         z-index: 50;
+      }
+      .girafe_container_std {
+        text-align: left;
       }"
     ))
   ),                    
@@ -694,7 +714,8 @@ ui <- shinyUI(fluidPage(
       HTML("<a href='#levenelink'>Levene</a> &mdash;"),
       HTML("<a href='#anovalink'>ANOVA</a> &mdash;"),
       HTML("<a href='#brownlink'>Brown-Forsythe</a> &mdash;"),
-      HTML("<a href='#maplink'>Context map</a>"),
+      HTML("<a href='#maplink'>Context map</a> &mdash;"),
+      HTML("<a href='#intmaplink'>Interactive map</a>"),
       HTML("</div>"),
       
       # walktime or parktime
@@ -735,8 +756,9 @@ ui <- shinyUI(fluidPage(
       actionButton("resetSubdivs", "Clear inactive subdivisions"),
       
       selectInput("karttacol",
-                  "Select colorss", 
-                  c("ykr_kesk_jalan", "answer_count", "parktime_mean", "walktime_mean")),
+                  "Select colorss",
+                  c("jenks_answer_count", "jenks_parktime", 
+                    "jenks_walktime", "jenks_ua_forest")),
       
       width = 3
     ),
@@ -791,12 +813,16 @@ ui <- shinyUI(fluidPage(
       HTML("<div id='maplink'</div>"),
       h3("Active subdivisions"),
       plotOutput("map"),
-      hr(),
       
       # This is an unfortunate hack to prevent the data providers from appearing
       # on top of the context map
       br(), br(), br(), br(), br(), br(), br(), br(), br(), br(), br(), br(),
       br(), br(), br(), hr(),
+      HTML("<div id='intmaplink'</div>"),
+      h3("Survey results on research area map"),
+      ggiraphOutput("interactive"),
+      
+      hr(),
       h3("Data providers"),
       HTML("<a https://hri.fi/data/dataset/paakaupunkiseudun-aluejakokartat>",
            "Municipality subdivisions</a>",
@@ -806,10 +832,7 @@ ui <- shinyUI(fluidPage(
            "<br><a https://www.stat.fi/tup/paavo/index_en.html>",
            "Postal code area boundaries</a> (C) Statistics Finland 2019.", 
            "Retrieved 27.6.2019. License <a https://creativecommons.org/licenses/by/4.0/deed.en>",
-           "CC BY 4.0</a>"),
-      br(),
-      hr(),
-      ggiraphOutput("interactive")
+           "CC BY 4.0</a>")
     )
   )
 ))
