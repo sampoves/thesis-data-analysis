@@ -27,7 +27,7 @@ CreateJenksColumn <- function(fortified, datacol, newcolname, classes_n = 5) {
   # Adapted from:
   # https://medium.com/@traffordDataLab/lets-make-a-map-in-r-7bd1d9366098
   
-  classes <- classInt::classIntervals(postal[, datacol], n = classes_n, 
+  classes <- classInt::classIntervals(fortified[, datacol], n = classes_n, 
                                       style = "jenks")
   result <- fortified %>%
     mutate(!!newcolname := cut(!!rlang::sym(datacol), classes$brks, 
