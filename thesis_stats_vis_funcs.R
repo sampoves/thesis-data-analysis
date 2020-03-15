@@ -33,6 +33,12 @@ CreateJenksColumn <- function(fortified, datacol, newcolname, classes_n = 5) {
     mutate(!!newcolname := cut(!!rlang::sym(datacol), classes$brks, 
                                include.lowest = T))
   
+  # Reverse column values to enable rising values from bottom to top in ggplot.
+  # In ggplot, use scale_fill_brewer(direction = -1) with this operation to flip
+  # the legend.
+  result[, newcolname] = factor(result[, newcolname], 
+                                levels = rev(levels(result[, newcolname])))
+  
   return(result)
 }
 

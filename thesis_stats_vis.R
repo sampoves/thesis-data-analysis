@@ -77,6 +77,7 @@ library(widgetframe)
 library(rgeos)
 library(classInt)
 
+
 #### Preparation --------------------------------------------------------------- 
 
 # Important directories
@@ -85,6 +86,7 @@ datapath <- file.path(wd, "pythonrecords.csv")
 visitorpath <- file.path(wd, "leaflet_survey_results/visitors.csv")
 suuraluepath <- file.path(wd, "python/suuralueet/PKS_suuralue.kml")
 munsclippedpath <- file.path(wd, "python/paavo/hcr_muns_clipped.shp")
+munspath <- file.path(wd, "python/paavo/hcr_muns.shp")
 
 # Source functions and postal code variables
 source(file.path(wd, "python/thesis_stats_vis_funcs.R"))
@@ -143,7 +145,7 @@ thesisdata <- subset(thesisdata, select = -c(index))
 
 
 
-#### Prepare the context map for ShinyApp --------------------------------------
+#### Context map for ShinyApp --------------------------------------------------
 
 # Prepare a context map for to visualise currently active areas in analysis
 # ShinyApp. Updating this map makes the app a bit more sluggish. Delete this
@@ -235,28 +237,28 @@ centroids2[16, "label"] <- ""
 
 
 # Independent ggplot maptest
-# ggplot() +
-#   geom_polygon(
-#     data = suuralue_f,
-#     aes(long, lat, group = group, fill = color),
-#     colour = "grey") +
-#   geom_polygon(
-#     data = muns_clipped_f,
-#     aes(long, lat, group = group),
-#     fill = NA,
-#     colour = "black") +
-#   coord_map(ylim = c(60.07, 60.42)) +
-#   scale_fill_identity("Currently active\nsubdivisions", labels = suuralue_f$Name,
-#                       breaks = suuralue_f$color, guide = "legend") +
-#   with(centroids, annotate(geom = "text", x = long, y = lat, label = label,
-#                            size = 4)) +
-#   with(centroids2, annotate(geom = "text", x = long, y = lat, label = label,
-#                            size = 3)) +
-#   theme(plot.margin = grid::unit(c(0, 0, 0, 0), "mm"), legend.position = "bottom")
+ggplot() +
+  geom_polygon(
+    data = suuralue_f,
+    aes(long, lat, group = group, fill = color),
+    colour = "grey") +
+  geom_polygon(
+    data = muns_clipped_f,
+    aes(long, lat, group = group),
+    fill = NA,
+    colour = "black") +
+  coord_map(ylim = c(60.07, 60.42)) +
+  scale_fill_identity("Currently active\nsubdivisions", labels = suuralue_f$Name,
+                      breaks = suuralue_f$color, guide = "legend") +
+  with(centroids, annotate(geom = "text", x = long, y = lat, label = label,
+                           size = 4)) +
+  with(centroids2, annotate(geom = "text", x = long, y = lat, label = label,
+                           size = 3)) +
+  theme(plot.margin = grid::unit(c(0, 0, 0, 0), "mm"), legend.position = "bottom")
 
 
 
-### Initialise interactive map ------------------------------------------------- 
+### Interactive map for ShinyApp ----------------------------------------------- 
 # Created with the help of:
 # https://bhaskarvk.github.io/user2017.geodataviz/notebooks/03-Interactive-Maps.nb.html
 
@@ -284,25 +286,48 @@ data_f <- CreateJenksColumn(data_f, "answer_count", "jenks_answer_count")
 data_f <- CreateJenksColumn(data_f, "parktime_mean", "jenks_parktime")
 data_f <- CreateJenksColumn(data_f, "walktime_mean", "jenks_walktime")
 
+# Get municipality borders
+muns <- readOGR(munspath)
+muns <- spTransform(muns, crs)
+
+# attempt to remove Espoo's inner ring, Kauniainen. Does not completely work,
+# a connecting line appears in ggplot despite using group parameter.
+#ring <- SpatialPolygons(list(Polygons(list(muns@polygons[[1]]@Polygons[[1]]), ID = 1)))
+#muns@polygons[1] <- ring@polygons
+
+munsf <- merge(fortify(muns), as.data.frame(muns), by.x = "id", by.y = 0)
+
 # Interactive map independent test
 # Could not figure out how to use aes_string() and tooltip = sprintf() together
 # without substitute()
 # https://ggplot2.tidyverse.org/reference/aes_.html
+
+# labels <- gsub("(])|(\\()|(\\[)", "", levels(data_f$jenks_ua_forest))
+# labels <- gsub(",", " \U2012 ", labels)
+#
 # g <- ggplot(data_f) +
 #   geom_polygon_interactive(
 #     color = "black",
 #     size = 0.2,
 #     aes_string("long", "lat",
 #                group = "group",
-#                fill = "jenks_answer_count",
+#                fill = "jenks_ua_forest",
 #                tooltip = substitute(sprintf(
 #                  "%s, %s<br/>mean parktime: %s<br/>mean walktime: %s<br/>%s",
 #                  id, nimi, parktime_mean, walktime_mean, answer_count)))) +
 #   scale_fill_brewer(palette = "PuBu",
-#                     name = "Lotsa forest (%)") +
-#   coord_fixed()
-
-#widgetframe::frameWidget(ggiraph(code = print(g)))
+#                     direction = -1,
+#                     name = "Lotsa answers",
+#                     labels = labels) +
+#   geom_polygon(data = munsf,
+#                aes(long, lat, group = group),
+#                linetype = "longdash",
+#                color = alpha("black", 0.6),
+#                fill = "NA",
+#                size = 0.4) +
+#   coord_fixed(ylim = c(6664000, 6700000))
+# 
+# widgetframe::frameWidget(ggiraph(code = print(g)))
 
 
 
@@ -586,7 +611,7 @@ server <- function(input, output, session){
                                size = 4)) +
       with(centroids2[!centroids2$label %in% gsub(".* ", "", c(input$subdivGroup)), ], 
            annotate(geom = "text", x = long, y = lat, label = label, size = 3)) +
-      theme(plot.margin = grid::unit(c(0,0,0,0), "mm"), 
+      theme(plot.margin = grid::unit(c(0, 0, 0, 0), "mm"), 
             legend.position = "bottom")
     mapp
   },
@@ -602,17 +627,21 @@ server <- function(input, output, session){
         
     } else if (input$karttacol == "jenks_walktime") {
       brewerpal <- "BuPu"
-      legendname <- "Walking time"
+      legendname <- "Walking time (min)"
         
     } else if (input$karttacol == "jenks_parktime") {
-      brewerpal <- "BuGn"
-      legendname <- "Parking time"
+      brewerpal <- "Oranges"
+      legendname <- "Parking time (min)"
         
     } else {
       # answer_count
       brewerpal <- "Reds"
       legendname <- "Answer count"
     }
+    
+    # Format map labels. Remove [, ], (, and ). Also add list dash
+    labels <- gsub("(])|(\\()|(\\[)", "", levels(data_f[, input$karttacol]))
+    labels <- gsub(",", " \U2012 ", labels)
     
     g <- ggplot(data_f) +
       geom_polygon_interactive(
@@ -625,11 +654,16 @@ server <- function(input, output, session){
                      "%s, %s<br/>Mean parktime: %s min<br/>Mean walktime: %s min<br/>Answer count: %s",
                      id, nimi, parktime_mean, walktime_mean, answer_count)))) +
       scale_fill_brewer(palette = brewerpal,
-                        name = legendname) +
-      # labs(title = "Map", 
-      #      subtitle = "It's map",
-      #      caption = "Source: source") + 
-      coord_fixed()
+                        direction = -1,
+                        name = legendname,
+                        labels = labels) +
+      geom_polygon(data = munsf,
+                   aes(long, lat, group = group),
+                   linetype = "longdash",
+                   color = alpha("black", 0.6), 
+                   fill = "NA",
+                   size = 0.4) +
+      coord_fixed(ylim = c(6664000, 6700000))
     
     ggiraph(code = print(g), width_svg = 11, height_svg = 9, 
             options = list(
@@ -804,6 +838,7 @@ ui <- shinyUI(fluidPage(
       # on top of the context map
       br(), br(), br(), br(), br(), br(), br(), br(), br(), br(), br(), br(),
       br(), br(), br(), hr(),
+      
       HTML("<div id='intmaplink'</div>"),
       h3("Survey results on research area map"),
       ggiraphOutput("interactive"),
