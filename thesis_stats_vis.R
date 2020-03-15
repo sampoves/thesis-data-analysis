@@ -237,24 +237,24 @@ centroids2[16, "label"] <- ""
 
 
 # Independent ggplot maptest
-ggplot() +
-  geom_polygon(
-    data = suuralue_f,
-    aes(long, lat, group = group, fill = color),
-    colour = "grey") +
-  geom_polygon(
-    data = muns_clipped_f,
-    aes(long, lat, group = group),
-    fill = NA,
-    colour = "black") +
-  coord_map(ylim = c(60.07, 60.42)) +
-  scale_fill_identity("Currently active\nsubdivisions", labels = suuralue_f$Name,
-                      breaks = suuralue_f$color, guide = "legend") +
-  with(centroids, annotate(geom = "text", x = long, y = lat, label = label,
-                           size = 4)) +
-  with(centroids2, annotate(geom = "text", x = long, y = lat, label = label,
-                           size = 3)) +
-  theme(plot.margin = grid::unit(c(0, 0, 0, 0), "mm"), legend.position = "bottom")
+# ggplot() +
+#   geom_polygon(
+#     data = suuralue_f,
+#     aes(long, lat, group = group, fill = color),
+#     colour = "grey") +
+#   geom_polygon(
+#     data = muns_clipped_f,
+#     aes(long, lat, group = group),
+#     fill = NA,
+#     colour = "black") +
+#   coord_map(ylim = c(60.07, 60.42)) +
+#   scale_fill_identity("Currently active\nsubdivisions", labels = suuralue_f$Name,
+#                       breaks = suuralue_f$color, guide = "legend") +
+#   with(centroids, annotate(geom = "text", x = long, y = lat, label = label,
+#                            size = 4)) +
+#   with(centroids2, annotate(geom = "text", x = long, y = lat, label = label,
+#                            size = 3)) +
+#   theme(plot.margin = grid::unit(c(0, 0, 0, 0), "mm"), legend.position = "bottom")
 
 
 
@@ -313,8 +313,8 @@ munsf <- merge(fortify(muns), as.data.frame(muns), by.x = "id", by.y = 0)
 #                group = "group",
 #                fill = "jenks_ua_forest",
 #                tooltip = substitute(sprintf(
-#                  "%s, %s<br/>mean parktime: %s<br/>mean walktime: %s<br/>%s",
-#                  id, nimi, parktime_mean, walktime_mean, answer_count)))) +
+#                  "%s, %s<br/>Answer count: %s</br>Mean parktime: %s<br/>Mean walktime: %s<br/>Forest (%%): %s",
+#                  id, nimi, answer_count, parktime_mean, walktime_mean, ua_forest)))) +
 #   scale_fill_brewer(palette = "PuBu",
 #                     direction = -1,
 #                     name = "Lotsa answers",
@@ -651,8 +651,9 @@ server <- function(input, output, session){
                    group = "group", 
                    fill = input$karttacol,
                    tooltip = substitute(sprintf(
-                     "%s, %s<br/>Mean parktime: %s min<br/>Mean walktime: %s min<br/>Answer count: %s",
-                     id, nimi, parktime_mean, walktime_mean, answer_count)))) +
+                     "%s, %s<br/>Answer count: %s</br>Mean parktime: %s<br/>Mean walktime: %s<br/>Forest (%%): %s",
+                     id, nimi, answer_count, parktime_mean, walktime_mean, 
+                     ua_forest)))) +
       scale_fill_brewer(palette = brewerpal,
                         direction = -1,
                         name = legendname,
@@ -765,7 +766,12 @@ ui <- shinyUI(fluidPage(
         "Select inactive groups",
         choiceNames = c("Item A", "Item B", "Item C"),
         choiceValues = c("a", "b", "c")),
-
+      
+      selectInput("karttacol",
+                  "Select Jenks breaks parameter for the interactive map",
+                  c("jenks_answer_count", "jenks_parktime", 
+                    "jenks_walktime", "jenks_ua_forest")),
+      
       checkboxGroupInput(
         "subdivGroup",
         HTML("Select inactive subdivisions <p style='font-size: 9px'>",
@@ -774,12 +780,7 @@ ui <- shinyUI(fluidPage(
         choiceValues = sort(as.character(unique(thesisdata$subdiv)))),
 
       actionButton("resetSubdivs", "Clear inactive subdivisions"),
-      
-      selectInput("karttacol",
-                  "Select colorss",
-                  c("jenks_answer_count", "jenks_parktime", 
-                    "jenks_walktime", "jenks_ua_forest")),
-      
+
       width = 3
     ),
   
