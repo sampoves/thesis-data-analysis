@@ -17,7 +17,7 @@ library(rlang)
 
 
 
-CreateJenksColumn <- function(fortified, datacol, newcolname, classes_n = 5) {
+CreateJenksColumn <- function(fortified, postal, datacol, newcolname, classes_n = 5) {
   
   # Use this function to create a column in fortified dataframe that can be
   # used to portray Jenks breaks colouring in a ggplot map. Dplyr note: to
@@ -27,7 +27,7 @@ CreateJenksColumn <- function(fortified, datacol, newcolname, classes_n = 5) {
   # Adapted from:
   # https://medium.com/@traffordDataLab/lets-make-a-map-in-r-7bd1d9366098
   
-  classes <- classInt::classIntervals(fortified[, datacol], n = classes_n, 
+  classes <- classInt::classIntervals(postal[, datacol], n = classes_n, 
                                       style = "jenks")
   result <- fortified %>%
     mutate(!!newcolname := cut(!!rlang::sym(datacol), classes$brks, 
