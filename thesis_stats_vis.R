@@ -241,6 +241,8 @@ centroids2[12, "long"] <- centroids2[12, "long"] + 0.05
 centroids2[16, "label"] <- ""
 
 
+
+
 # Independent ggplot maptest
 # ggplot() +
 #   geom_polygon(
@@ -260,6 +262,33 @@ centroids2[16, "label"] <- ""
 #   with(centroids2, annotate(geom = "text", x = long, y = lat, label = label,
 #                            size = 3)) +
 #   theme(plot.margin = grid::unit(c(0, 0, 0, 0), "mm"), legend.position = "bottom")
+
+# GGIRAPH TEST
+# g2 <- ggplot() +
+#   geom_polygon_interactive(
+#     data = suuralue_f,
+#     size = 0.2,
+#     aes(long, lat, group = group, fill = color),
+#     colour = "grey") +
+#   geom_polygon(
+#     data = muns_clipped_f,
+#     aes(long, lat, group = group),
+#     color = "black",
+#     fill = NA,
+#     size = 0.4) +
+#   coord_map(ylim = c(60.07, 60.42)) +
+#   scale_fill_identity("Currently active\nsubdivisions", 
+#                       labels = suuralue_f$Name,
+#                       breaks = suuralue_f$color, guide = "legend") +
+#   with(centroids, annotate(geom = "text", x = long, y = lat, label = label,
+#                            size = 4)) +
+#   with(centroids2, annotate(geom = "text", x = long, y = lat, label = label,
+#                             size = 3)) +
+#   theme(plot.margin = grid::unit(c(0, 0, 0, 0), "mm"), legend.position = "bottom")
+# 
+# widgetframe::frameWidget(ggiraph(code = print(g2)))
+
+
 
 
 
@@ -285,31 +314,25 @@ data <- SpatialPolygonsDataFrame(
 data_f <- merge(ggplot2::fortify(data), as.data.frame(data), by.x = "id", 
                 by.y = 0)
 
-# Create jenks breaks columns
-#data_f <- CreateJenksColumn(data_f, postal, "ua_forest", "jenks_ua_forest")
-#data_f <- CreateJenksColumn(data_f, postal, "answer_count", "jenks_answer_count")
-#data_f <- CreateJenksColumn(data_f, postal, "parktime_mean", "jenks_parktime")
-#data_f <- CreateJenksColumn(data_f, postal, "walktime_mean", "jenks_walktime")
-
 # Get municipality borders
 muns <- readOGR(munspath)
 muns <- spTransform(muns, crs)
-
-# attempt to remove Espoo's inner ring, Kauniainen. Does not completely work,
-# a connecting line appears in ggplot despite using group parameter.
-#ring <- SpatialPolygons(list(Polygons(list(muns@polygons[[1]]@Polygons[[1]]), ID = 1)))
-#muns@polygons[1] <- ring@polygons
-
 munsf <- merge(fortify(muns), as.data.frame(muns), by.x = "id", by.y = 0)
 
+
+
 # Interactive map independent test
+
 # Could not figure out how to use aes_string() and tooltip = sprintf() together
 # without substitute()
 # https://ggplot2.tidyverse.org/reference/aes_.html
 
 # labels <- gsub("(])|(\\()|(\\[)", "", levels(data_f$jenks_ua_forest))
 # labels <- gsub(",", " \U2012 ", labels)
-#
+# data_f <- CreateJenksColumn(data_f, postal, "ua_forest", "jenks_ua_forest")
+# data_f <- CreateJenksColumn(data_f, postal, "answer_count", "jenks_answer_count")
+# data_f <- CreateJenksColumn(data_f, postal, "parktime_mean", "jenks_parktime")
+# data_f <- CreateJenksColumn(data_f, postal, "walktime_mean", "jenks_walktime")
 # g <- ggplot(data_f) +
 #   geom_polygon_interactive(
 #     color = "black",
@@ -589,24 +612,56 @@ server <- function(input, output, session){
   })
   
   ### Context map ####
-  output$map <- renderPlot({
+  output$map <- renderggiraph({
     
     # Count active subdivs
     active_subdivs <- 23 - length(input$subdivGroup)
     
-    mapp <- ggplot() + 
-      geom_polygon(data = suuralue_f,
-                   aes(long, lat, group = group, fill = "#3d3d3d"),
-                   colour = NA) +
+    # mapp <- ggplot() + 
+    #   geom_polygon(
+    #     data = suuralue_f,
+    #     aes(long, lat, group = group, fill = "#3d3d3d"),
+    #     colour = NA) +
+    #   geom_polygon(
+    #     data = suuralue_f[!suuralue_f$Name %in% c(input$subdivGroup), ], 
+    #     aes(long, lat, group = group, fill = color),
+    #     colour = "grey") +
+    #   geom_polygon(
+    #     data = muns_clipped_f, 
+    #     aes(long, lat, group = group), 
+    #     fill = NA, 
+    #     colour = "black") +
+    #   coord_map(ylim = c(60.07, 60.42)) +
+    #   scale_fill_identity(paste0("Currently active\nsubdivisions\n(", 
+    #                              active_subdivs, " out of 23)"), 
+    #                       labels = suuralue_f$Name, breaks = suuralue_f$color, 
+    #                       guide = "legend") +
+    #   with(centroids, annotate(geom = "text", x = long, y = lat, label = label, 
+    #                            size = 4)) +
+    #   with(centroids2[!centroids2$label %in% gsub(".* ", "", c(input$subdivGroup)), ], 
+    #        annotate(geom = "text", x = long, y = lat, label = label, size = 3)) +
+    #   theme(plot.margin = grid::unit(c(0, 0, 0, 0), "mm"), 
+    #         legend.position = "bottom")
+    # mapp
+    
+    
+    # GGIRAPH
+    g2 <- ggplot() +
       geom_polygon(
+        data = suuralue_f,
+        aes(long, lat, group = group, fill = "#3d3d3d"),
+        colour = NA) +
+      geom_polygon_interactive(
         data = suuralue_f[!suuralue_f$Name %in% c(input$subdivGroup), ], 
+        size = 0.2,
         aes(long, lat, group = group, fill = color),
         colour = "grey") +
       geom_polygon(
-        data = muns_clipped_f, 
-        aes(long, lat, group = group), 
-        fill = NA, 
-        colour = "black") +
+        data = muns_clipped_f,
+        aes(long, lat, group = group),
+        color = "black",
+        fill = NA,
+        size = 0.4) +
       coord_map(ylim = c(60.07, 60.42)) +
       scale_fill_identity(paste0("Currently active\nsubdivisions\n(", 
                                  active_subdivs, " out of 23)"), 
@@ -618,15 +673,17 @@ server <- function(input, output, session){
            annotate(geom = "text", x = long, y = lat, label = label, size = 3)) +
       theme(plot.margin = grid::unit(c(0, 0, 0, 0), "mm"), 
             legend.position = "bottom")
-    mapp
-  },
-  width = 720,
-  height = 700)
+    
+    ggiraph(code = print(g2), width_svg = 14, height_svg = 12, 
+            options = list(
+              opts_sizing(rescale = FALSE)))
+  })
   
   ### Interactive map ####
   output$interactive <- renderggiraph({
     
-    # Create jenks breaks columns
+    # Create jenks breaks columns here so that user gets the control of Jenks
+    # breaks classes
     data_f <- CreateJenksColumn(data_f, postal, "ua_forest", "jenks_ua_forest", input$jenks_n)
     data_f <- CreateJenksColumn(data_f, postal, "answer_count", "jenks_answer_count", input$jenks_n)
     data_f <- CreateJenksColumn(data_f, postal, "parktime_mean", "jenks_parktime", input$jenks_n)
@@ -665,7 +722,6 @@ server <- function(input, output, session){
                      "%s, %s<br/>Answer count: %s</br>Mean parktime: %s<br/>Mean walktime: %s<br/>Forest (%%): %s",
                      id, nimi, answer_count, parktime_mean, walktime_mean, 
                      ua_forest)))) +#,
-                   #data_id = substitute(id))) + #this enables css events and lasso selection
       scale_fill_brewer(palette = brewerpal,
                         direction = -1,
                         name = legendname,
@@ -681,7 +737,6 @@ server <- function(input, output, session){
             legend.text = element_text(size = 14))
     
     ggiraph(code = print(g), width_svg = 14, height_svg = 12, 
-            #hover_css = "cursor:pointer;stroke-width:2px;stroke:black;stroke-opacity:0.6",
             options = list(
               opts_sizing(rescale = FALSE)))
   })
@@ -868,7 +923,7 @@ ui <- shinyUI(fluidPage(
       
       HTML("<div id='maplink'</div>"),
       h3("8 Active subdivisions"),
-      plotOutput("map"),
+      ggiraphOutput("map"),
       
       # This is an unfortunate hack to prevent the data providers from appearing
       # on top of the context map
