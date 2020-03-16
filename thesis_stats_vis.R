@@ -4,7 +4,7 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 14.3.2020
+# 16.3.2020
 #
 # This is an interactive tool for analysing the results of my research survey.
 
@@ -54,6 +54,11 @@ gc()
 #install.packages("rgdal")
 #install.packages("RColorBrewer")
 #install.packages("shinyjs")
+#install.packages("colormap")
+#install.packages("ggiraph")
+#install.packages("widgetframe")
+#install.packages("rgeos")
+#install.packages("classInt")
 
 # Libraries
 library(onewaytests)
@@ -281,10 +286,10 @@ data_f <- merge(ggplot2::fortify(data), as.data.frame(data), by.x = "id",
                 by.y = 0)
 
 # Create jenks breaks columns
-data_f <- CreateJenksColumn(data_f, postal, "ua_forest", "jenks_ua_forest")
-data_f <- CreateJenksColumn(data_f, postal, "answer_count", "jenks_answer_count")
-data_f <- CreateJenksColumn(data_f, postal, "parktime_mean", "jenks_parktime")
-data_f <- CreateJenksColumn(data_f, postal, "walktime_mean", "jenks_walktime")
+#data_f <- CreateJenksColumn(data_f, postal, "ua_forest", "jenks_ua_forest")
+#data_f <- CreateJenksColumn(data_f, postal, "answer_count", "jenks_answer_count")
+#data_f <- CreateJenksColumn(data_f, postal, "parktime_mean", "jenks_parktime")
+#data_f <- CreateJenksColumn(data_f, postal, "walktime_mean", "jenks_walktime")
 
 # Get municipality borders
 muns <- readOGR(munspath)
@@ -621,6 +626,12 @@ server <- function(input, output, session){
   ### Interactive map ####
   output$interactive <- renderggiraph({
     
+    # Create jenks breaks columns
+    data_f <- CreateJenksColumn(data_f, postal, "ua_forest", "jenks_ua_forest", input$jenks_n)
+    data_f <- CreateJenksColumn(data_f, postal, "answer_count", "jenks_answer_count", input$jenks_n)
+    data_f <- CreateJenksColumn(data_f, postal, "parktime_mean", "jenks_parktime", input$jenks_n)
+    data_f <- CreateJenksColumn(data_f, postal, "walktime_mean", "jenks_walktime", input$jenks_n)
+    
     if(input$karttacol == "jenks_ua_forest") {
       brewerpal <- "YlGn"
       legendname <- "Forest amount (%)"
@@ -706,6 +717,10 @@ ui <- shinyUI(fluidPage(
       #boxplot, #barplot, #hist {
         max-width: 1000px;
       }
+      #resetSubdivs {
+        width: 100%;
+        padding: 8px 0px 8px 0px;
+      }
       #contents {
         border: 5px solid #2e3338;
         border-radius: 5px;
@@ -732,18 +747,19 @@ ui <- shinyUI(fluidPage(
   sidebarLayout(
     sidebarPanel(
       HTML("<div id='contents'>"),
-      HTML("<a href='#descrilink'>Descriptives</a> &mdash;"),
-      HTML("<a href='#histlink'>Histogram</a> &mdash;"),
-      HTML("<a href='#barplotlink'>Barplot</a> &mdash;"),
-      HTML("<a href='#boxplotlink'>Boxplot</a> &mdash;"),
-      HTML("<a href='#levenelink'>Levene</a> &mdash;"),
-      HTML("<a href='#anovalink'>ANOVA</a> &mdash;"),
-      HTML("<a href='#brownlink'>Brown-Forsythe</a> &mdash;"),
-      HTML("<a href='#maplink'>Context map</a> &mdash;"),
-      HTML("<a href='#intmaplink'>Interactive map</a>"),
+      HTML("<a href='#descrilink'>1 Descriptives</a> &mdash;"),
+      HTML("<a href='#histlink'>2 Histogram</a> &mdash;"),
+      HTML("<a href='#barplotlink'>3 Barplot</a> &mdash;"),
+      HTML("<a href='#boxplotlink'>4 Boxplot</a> &mdash;"),
+      HTML("<a href='#levenelink'>5 Levene</a> &mdash;"),
+      HTML("<a href='#anovalink'>6 ANOVA</a> &mdash;"),
+      HTML("<a href='#brownlink'>7 Brown-Forsythe</a> &mdash;"),
+      HTML("<a href='#maplink'>8 Context map</a> &mdash;"),
+      HTML("<a href='#intmaplink'>9 Interactive map</a>"),
       HTML("</div>"),
       
       # walktime or parktime
+      HTML("<div id='contents'>"),
       selectInput("resp", 
                  "Response (continuous)",
                  names(thesisdata[continuous])),
@@ -760,22 +776,35 @@ ui <- shinyUI(fluidPage(
         condition = 
           "input.expl == 'likert' || input.expl == 'parkspot' || input.expl == 'timeofday'",
         selectInput(
-          "barplot", "Y axis for Distribution of ordinal variables",
+          "barplot", 
+          HTML("Y axis for Distribution of ordinal variables <p style='font-size: 9px'>",
+               "(3 Distribution of ordinal variables)</p>"),
           names(thesisdata[c("zipcode", "likert", "walktime")]),
       )),
       
       # These are changed with the observer function
       checkboxGroupInput(
         "checkGroup", 
-        "Select inactive groups",
+        "Select inactive groups in current explanatory variable",
         choiceNames = c("Item A", "Item B", "Item C"),
         choiceValues = c("a", "b", "c")),
+      HTML("</div>"),
       
+      # Interactive map jenks breaks options
+      HTML("<div id='contents'>"),
       selectInput("karttacol",
-                  "Select Jenks breaks parameter for the interactive map",
+                  HTML("Select Jenks breaks parameter for the interactive map <p style='font-size: 9px'>",
+                       "(9 Interactive map)</p>"),
                   c("jenks_answer_count", "jenks_parktime", 
                     "jenks_walktime", "jenks_ua_forest")),
       
+      sliderInput("jenks_n",
+                  "Select amount of Jenks classes", 
+                  min = 2, max = 8, value = 5),
+      HTML("</div>"),
+      
+      # Overriding all options (except interactive map), select inactive subdivs
+      HTML("<div id='contents'>"),
       checkboxGroupInput(
         "subdivGroup",
         HTML("Select inactive subdivisions <p style='font-size: 9px'>",
@@ -784,19 +813,21 @@ ui <- shinyUI(fluidPage(
         choiceValues = sort(as.character(unique(thesisdata$subdiv)))),
 
       actionButton("resetSubdivs", "Clear inactive subdivisions"),
-
+      HTML("</div>"),
+      
       width = 3
     ),
   
     mainPanel(
       HTML("<div id='descrilink'</div>"),
-      h3("Descriptive statistics"),
-      p("If N is distributed somewhat equally, Levene test is not required."),
+      h3("1 Descriptive statistics"),
+      #p("If N is distributed somewhat equally, Levene test is not required."),
       tableOutput("descri"),
       hr(),
       
       HTML("<div id='histlink'</div>"),
-      h3("Histogram"),
+      h3("2 Histogram"),
+      p("For the response (continuous) variables"),
       plotOutput("hist"),
       hr(),
       
@@ -804,19 +835,19 @@ ui <- shinyUI(fluidPage(
       conditionalPanel(
         condition = 
           "input.expl == 'likert' || input.expl == 'parkspot' || input.expl == 'timeofday'",
-        h3("Distribution of ordinal variables"),
+        h3("3 Distribution of ordinal variables"),
         p("This plot appears when likert, parkspot or timeofday is selected as explanatory (ordinal) variable"),
         plotOutput("barplot"),
         hr()
       ),
       
       HTML("<div id='boxplotlink'</div>"),
-      h3("Boxplot"),
+      h3("4 Boxplot"),
       plotOutput("boxplot", height = "500px"),
       hr(),
       
       HTML("<div id='levenelink'</div>"),
-      h3("Test of Homogeneity of Variances"),
+      h3("5 Test of Homogeneity of Variances"),
       p("Levene value needs to be at least 0.05 for ANOVA test to be meaningful. If under 0.05, employ Brown-Forsythe test."),
       tableOutput("levene"),
       p("Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1", 
@@ -824,19 +855,19 @@ ui <- shinyUI(fluidPage(
       hr(),
       
       HTML("<div id='anovalink'</div>"),
-      h3("Analysis of variance (ANOVA)"),
+      h3("6 Analysis of variance (ANOVA)"),
       tableOutput("anova"),
       p("Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1", 
         style = "font-size:12px;margin-top:-12px"),
       hr(),
       
       HTML("<div id='brownlink'</div>"),
-      h3("Brown-Forsythe"),
+      h3("7 Brown-Forsythe"),
       verbatimTextOutput("brownf"),
       hr(),
       
       HTML("<div id='maplink'</div>"),
-      h3("Active subdivisions"),
+      h3("8 Active subdivisions"),
       plotOutput("map"),
       
       # This is an unfortunate hack to prevent the data providers from appearing
@@ -845,7 +876,7 @@ ui <- shinyUI(fluidPage(
       br(), br(), br(), hr(),
       
       HTML("<div id='intmaplink'</div>"),
-      h3("Survey results on research area map"),
+      h3("9 Survey results on research area map"),
       ggiraphOutput("interactive"),
       
       hr(),
