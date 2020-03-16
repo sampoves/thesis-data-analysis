@@ -183,7 +183,7 @@ muns_clipped <- spTransform(muns_clipped,
 muns_clipped_f <- merge(fortify(muns_clipped), as.data.frame(muns_clipped), 
                         by.x = "id", by.y = 0)
 
-# Annotate muns in ggplot:
+# Annotate municipalities in ggplot:
 # https://stackoverflow.com/a/28963405/9455395
 centroids <- setNames(
   do.call("rbind.data.frame", by(muns_clipped_f, muns_clipped_f$nimi, function(x) 
@@ -240,9 +240,6 @@ centroids2[12, "lat"] <- centroids2[12, "lat"] + 0.08
 centroids2[12, "long"] <- centroids2[12, "long"] + 0.05
 centroids2[16, "label"] <- ""
 
-
-
-
 # Independent ggplot maptest
 # g2 <- ggplot() +
 #   geom_polygon_interactive(
@@ -270,21 +267,22 @@ centroids2[16, "label"] <- ""
 
 
 
-
-
 ### Interactive map for ShinyApp ----------------------------------------------- 
 # Created with the help of:
 # https://bhaskarvk.github.io/user2017.geodataviz/notebooks/03-Interactive-Maps.nb.html
 
+# Get postal code area data calculated in Python. Contains some interesting
+# variables for visualisation
 postal_path <- file.path(wd, "pythonpostal.csv")
 postal <- read.csv(file = postal_path, 
                    colClasses = c(posti_alue = "factor", kunta = "factor"),
                    header = TRUE, sep = ",")
 postal <- postal[, c(2, 3, 108:119)]
 
+# postal geometries are in well-known text format. Some processing is needed to
+# utilise these polygons in R.
 crs <- sp::CRS("+init=epsg:3067")
-geometries <- lapply(postal[, "geometry"], "readWKT", p4s = crs)
-
+geometries <- lapply(postal[, "geometry"], "readWKT", p4s = crs) #rgeos::readWKT()
 sp_tmp_ID <- mapply(sp::spChFIDs, geometries, as.character(postal[, 1]))
 row.names(postal) <- postal[, 1]
 data <- SpatialPolygonsDataFrame(
@@ -294,7 +292,7 @@ data <- SpatialPolygonsDataFrame(
 data_f <- merge(ggplot2::fortify(data), as.data.frame(data), by.x = "id", 
                 by.y = 0)
 
-# Get municipality borders
+# Get municipality borders from shapefile
 muns <- readOGR(munspath)
 muns <- spTransform(muns, crs)
 munsf <- merge(fortify(muns), as.data.frame(muns), by.x = "id", by.y = 0)
@@ -954,12 +952,14 @@ visitor_xts <- xts(x = visitordata$X, order.by = visitordata$ts_first)
 records_xts <- xts(x = thesisdata_for_xts$X, 
                    order.by = thesisdata_for_xts$timestamp)
 
+
+
 # Event timestamps are read from thesis_stats_vis_funcs.R
 visitor_server <- function(input, output) {
   
   output$dygraph <- renderUI({
     visitor_graph <- list(
-      dygraph(records_xts, main = "records", group = "thesis") %>%
+      dygraph(records_xts, main = "Received records", group = "thesis") %>%
         dyOptions(drawPoints = TRUE, pointSize = 2) %>%
         dyRangeSelector(height = 70)  %>%
         
@@ -981,7 +981,7 @@ visitor_server <- function(input, output) {
         dyEvent(lisaakaupunkia2, "Reminder, Lisää kaupunkia Helsinkiin", labelLoc = "bottom") %>%
         dyEvent(misc3, "Email list reminders, GIS-velhot FB group", labelLoc = "bottom"),
       
-      dygraph(visitor_xts, main = "visitors", group = "thesis") %>%
+      dygraph(visitor_xts, main = "Unique first visits", group = "thesis") %>%
         dyOptions(drawPoints = TRUE, pointSize = 2) %>%
         dyRangeSelector(height = 70)  %>%
         
@@ -1007,40 +1007,44 @@ visitor_server <- function(input, output) {
   })
 }
 
+### Visitor UI elements --------------------------------------------------------
 visitor_ui <- basicPage(
+  
+  # CSS tricks. Most importantly create white background box for the dygraph
+  # and center it. In centering parent and child element are essential and
+  # their text-align: center; and display: inline-block; parameters.
   tags$head(
     tags$style(HTML("
       html, body {
         width: 100%;
         text-align: center;
-        background-color: grey;
+        background-color: #272b30;
       }
-      #dygraph {
+      h2, p {
+        color: #c8c8c8;
+      }
+      .contentsp {
+        text-align: center;
+      }
+      .contentsc {
+        border: 5px solid #2e3338;
+        border-radius: 10px;
+        padding: 12px;
+        margin-top: 15px;
+        background: white;
         display: inline-block;
-      }
-      .verticalLine {
-      border-radius: 25px;
-        border-left: 750px solid white; 
-        height: 1050px; 
-        position: absolute; 
-        left: 40%; 
-      }
-      .verticalLine2 {
-      border-radius: 25px;
-        border-left: 700px solid white; 
-        height: 1050px; 
-        position: absolute; 
-        right: 40%; 
       }"
-                    
     ))
   ),
-  titlePanel("Received responses and survey page first visits"),
-  tags$div(class = "verticalLine"),
-  tags$div(class = "verticalLine2"),
-  uiOutput("dygraph")
+
+  titlePanel("Sampo Vesanen MSc thesis research survey: received responses and survey page first visits"),
+  p("Click and hold, then drag and release to zoom to a period of time. Double click to return to the full view."),
+  HTML("<div class='contentsp'><div class='contentsc'>"),
+  uiOutput("dygraph"),
+  HTML("</div></div>")
 )
 shinyApp(visitor_ui, visitor_server)
+
 
 
 
