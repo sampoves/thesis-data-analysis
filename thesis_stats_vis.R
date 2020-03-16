@@ -244,26 +244,6 @@ centroids2[16, "label"] <- ""
 
 
 # Independent ggplot maptest
-# ggplot() +
-#   geom_polygon(
-#     data = suuralue_f,
-#     aes(long, lat, group = group, fill = color),
-#     colour = "grey") +
-#   geom_polygon(
-#     data = muns_clipped_f,
-#     aes(long, lat, group = group),
-#     fill = NA,
-#     colour = "black") +
-#   coord_map(ylim = c(60.07, 60.42)) +
-#   scale_fill_identity("Currently active\nsubdivisions", labels = suuralue_f$Name,
-#                       breaks = suuralue_f$color, guide = "legend") +
-#   with(centroids, annotate(geom = "text", x = long, y = lat, label = label,
-#                            size = 4)) +
-#   with(centroids2, annotate(geom = "text", x = long, y = lat, label = label,
-#                            size = 3)) +
-#   theme(plot.margin = grid::unit(c(0, 0, 0, 0), "mm"), legend.position = "bottom")
-
-# GGIRAPH TEST
 # g2 <- ggplot() +
 #   geom_polygon_interactive(
 #     data = suuralue_f,
@@ -300,7 +280,7 @@ postal_path <- file.path(wd, "pythonpostal.csv")
 postal <- read.csv(file = postal_path, 
                    colClasses = c(posti_alue = "factor", kunta = "factor"),
                    header = TRUE, sep = ",")
-postal <- postal[, c(2,3, 108:119)]
+postal <- postal[, c(2, 3, 108:119)]
 
 crs <- sp::CRS("+init=epsg:3067")
 geometries <- lapply(postal[, "geometry"], "readWKT", p4s = crs)
@@ -495,14 +475,17 @@ server <- function(input, output, session){
       
       p <- ggplot(inputdata, aes_string(x = input$expl, y = input$resp)) + 
         geom_boxplot() + 
-        theme(axis.text.x = element_text(size = 12, angle = 45, hjust = 1))
+        theme(axis.text.x = element_text(size = 12, angle = 45, hjust = 1),
+              axis.text = element_text(size = 12),
+              axis.title = element_text(size = 14))
     } else {
       
       p <- ggplot(inputdata, aes_string(x = input$expl, y = input$resp)) + 
-        geom_boxplot()
+        geom_boxplot() +
+        theme(axis.text = element_text(size = 12),
+              axis.title = element_text(size = 14))
     }
     p
-    
   })
 
   
@@ -533,7 +516,6 @@ server <- function(input, output, session){
       tick_interval <- 200
     }
     
-    # Draw ggplot2 plot
     plo <- 
       ggplot(inputdata, aes(x = get(explanatorycol), 
                             y = factor(get(barplotval)), 
@@ -543,9 +525,12 @@ server <- function(input, output, session){
                          expand = expansion(mult = c(0, .1))) +
       xlab(explanatorycol) +
       ylab(yax) +
-      scale_fill_discrete(name = barplotval)
-      theme(legend.position = "right")
-    
+      scale_fill_discrete(name = barplotval) +
+      theme(legend.position = "bottom",
+            legend.title = element_text(size = 15),
+            legend.text = element_text(size = 14),
+            axis.text = element_text(size = 12),
+            axis.title = element_text(size = 14))
     plo
   })
   
@@ -617,61 +602,47 @@ server <- function(input, output, session){
     # Count active subdivs
     active_subdivs <- 23 - length(input$subdivGroup)
     
-    # mapp <- ggplot() + 
-    #   geom_polygon(
-    #     data = suuralue_f,
-    #     aes(long, lat, group = group, fill = "#3d3d3d"),
-    #     colour = NA) +
-    #   geom_polygon(
-    #     data = suuralue_f[!suuralue_f$Name %in% c(input$subdivGroup), ], 
-    #     aes(long, lat, group = group, fill = color),
-    #     colour = "grey") +
-    #   geom_polygon(
-    #     data = muns_clipped_f, 
-    #     aes(long, lat, group = group), 
-    #     fill = NA, 
-    #     colour = "black") +
-    #   coord_map(ylim = c(60.07, 60.42)) +
-    #   scale_fill_identity(paste0("Currently active\nsubdivisions\n(", 
-    #                              active_subdivs, " out of 23)"), 
-    #                       labels = suuralue_f$Name, breaks = suuralue_f$color, 
-    #                       guide = "legend") +
-    #   with(centroids, annotate(geom = "text", x = long, y = lat, label = label, 
-    #                            size = 4)) +
-    #   with(centroids2[!centroids2$label %in% gsub(".* ", "", c(input$subdivGroup)), ], 
-    #        annotate(geom = "text", x = long, y = lat, label = label, size = 3)) +
-    #   theme(plot.margin = grid::unit(c(0, 0, 0, 0), "mm"), 
-    #         legend.position = "bottom")
-    # mapp
-    
-    
-    # GGIRAPH
     g2 <- ggplot() +
+      # Background grey subdivs appear when inactive subdivs present
       geom_polygon(
         data = suuralue_f,
         aes(long, lat, group = group, fill = "#3d3d3d"),
         colour = NA) +
+      
+      # Subdivisions proper
       geom_polygon_interactive(
         data = suuralue_f[!suuralue_f$Name %in% c(input$subdivGroup), ], 
         size = 0.2,
         aes(long, lat, group = group, fill = color),
         colour = "grey") +
+      
+      # Municipality borders
       geom_polygon(
         data = muns_clipped_f,
         aes(long, lat, group = group),
-        color = "black",
         fill = NA,
+        color = "black",
         size = 0.4) +
       coord_map(ylim = c(60.07, 60.42)) +
+      
+      # Legend contents
       scale_fill_identity(paste0("Currently active\nsubdivisions\n(", 
                                  active_subdivs, " out of 23)"), 
                           labels = suuralue_f$Name, breaks = suuralue_f$color, 
                           guide = "legend") +
-      with(centroids, annotate(geom = "text", x = long, y = lat, label = label, 
-                               size = 4)) +
+      
+      # Annotations. centroids2 is subdiv labels, centroids is municipality
+      # labels.
+      with(centroids, 
+           annotate(geom = "text", x = long, y = lat, label = label, size = 5,
+                    fontface = 2)) +
       with(centroids2[!centroids2$label %in% gsub(".* ", "", c(input$subdivGroup)), ], 
-           annotate(geom = "text", x = long, y = lat, label = label, size = 3)) +
-      theme(plot.margin = grid::unit(c(0, 0, 0, 0), "mm"), 
+           annotate(geom = "text", x = long, y = lat, label = label, size = 4)) +
+      
+      # Tight layout and legend properties
+      theme(plot.margin = grid::unit(c(0, 0, 0, 0), "mm"),
+            legend.title = element_text(size = 15),
+            legend.text = element_text(size = 14),
             legend.position = "bottom")
     
     ggiraph(code = print(g2), width_svg = 14, height_svg = 12, 
@@ -715,17 +686,23 @@ server <- function(input, output, session){
       geom_polygon_interactive(
         color = "black",
         size = 0.2,
+        
+        # aes_string() is to facilitate interactive map tooltip creation
         aes_string("long", "lat",
                    group = "group", 
                    fill = input$karttacol,
                    tooltip = substitute(sprintf(
                      "%s, %s<br/>Answer count: %s</br>Mean parktime: %s<br/>Mean walktime: %s<br/>Forest (%%): %s",
                      id, nimi, answer_count, parktime_mean, walktime_mean, 
-                     ua_forest)))) +#,
+                     ua_forest)))) +
+      
+      # Jenks classes colouring and labels
       scale_fill_brewer(palette = brewerpal,
                         direction = -1,
                         name = legendname,
                         labels = labels) +
+      
+      # Municipality borders
       geom_polygon(data = munsf,
                    aes(long, lat, group = group),
                    linetype = "longdash",
@@ -924,17 +901,13 @@ ui <- shinyUI(fluidPage(
       HTML("<div id='maplink'</div>"),
       h3("8 Active subdivisions"),
       ggiraphOutput("map"),
-      
-      # This is an unfortunate hack to prevent the data providers from appearing
-      # on top of the context map
-      br(), br(), br(), br(), br(), br(), br(), br(), br(), br(), br(), br(),
-      br(), br(), br(), hr(),
-      
+      hr(),
+  
       HTML("<div id='intmaplink'</div>"),
       h3("9 Survey results on research area map"),
       ggiraphOutput("interactive"),
-      
       hr(),
+      
       h3("Data providers"),
       HTML("<a https://hri.fi/data/dataset/paakaupunkiseudun-aluejakokartat>",
            "Municipality subdivisions</a>",
