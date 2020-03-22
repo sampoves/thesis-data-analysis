@@ -4,7 +4,7 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 16.3.2020
+# 22.3.2020
 #
 # This is an interactive tool for analysing the results of my research survey.
 
@@ -83,6 +83,7 @@ library(rgeos)
 library(classInt)
 
 
+
 #### Preparation --------------------------------------------------------------- 
 
 # Important directories
@@ -157,7 +158,7 @@ thesisdata <- subset(thesisdata, select = -c(index))
 # code if you get sufficiently annoyed with the sluggishness.
 suuralue <- readOGR(suuraluepath, use_iconv = TRUE, encoding = "UTF-8")
 
-# Preserve suuralue dataframe data
+# This preserves suuralue dataframe data
 suuralue_f <- merge(fortify(suuralue), as.data.frame(suuralue), by.x = "id", 
                     by.y = 0)
 
@@ -174,6 +175,7 @@ levels(suuralue_f$Name) <- c("Vantaa Aviapolis", "Helsinki Southern",
                              "Espoo Suur-Matinkylä", "Espoo Suur-Tapiola", 
                              "Vantaa Tikkurila", "Espoo Vanha-Espoo",
                              "Helsinki Östersundom")
+
 suuralue_f$Name <- factor(suuralue_f$Name, levels = sort(levels(suuralue_f$Name)))
 
 # Get municipality borders
@@ -446,15 +448,40 @@ server <- function(input, output, session){
     
     responsecol <- input$resp
     explanatorycol <- input$expl
+    binwidth <- input$bin
     
     inputdata <- thesisdata[!thesisdata[[explanatorycol]] %in% c(input$checkGroup), ]
     inputdata <- inputdata[!inputdata$subdiv %in% c(input$subdivGroup), ]
     
-    hist(inputdata[[responsecol]],
-         main = paste("Histogram for", responsecol),
-         xlab = responsecol)
+    p <- ggplot(inputdata, aes(x = !!sym(responsecol))) + 
+      geom_histogram(color = "black", fill = "grey", binwidth = binwidth) +
+      
+      # Vertical lines for mean and median, respectively
+      geom_vline(aes(xintercept = mean(!!sym(responsecol)),
+                     color = "mean"),
+                 linetype = "longdash", 
+                 size = 1) +
+      geom_vline(aes(xintercept = median(!!sym(responsecol)),
+                     color = "median"),
+                 linetype = "longdash", 
+                 size = 1) +
+      theme(legend.title = element_text(size = 15),
+            legend.text = element_text(size = 14),
+            axis.text = element_text(size = 12),
+            axis.title = element_text(size = 14)) +
+    
+      # build legend
+      scale_color_manual(name = paste("Vertical lines\nfor", responsecol), 
+                         values = c(median = "blue", mean = "red")) +
+      
+      # Conditional histogram bar labeling. No label for zero
+      stat_bin(binwidth = binwidth, 
+               geom = "text", 
+               aes(label = ifelse(..count.. > 0, ..count.., "")), 
+               vjust = -0.65)
+    p
   })
-  
+
   
   #### Boxplot ####
   output$boxplot <- renderPlot({
@@ -469,7 +496,7 @@ server <- function(input, output, session){
     legendnames <- levels(unique(inputdata[[explanatorycol]]))
     
     # ggplot2 plotting. Rotate labels if enough classes
-    if(length(legendnames) > 5){
+    if(length(legendnames) > 5) {
       
       p <- ggplot(inputdata, aes_string(x = input$expl, y = input$resp)) + 
         geom_boxplot() + 
@@ -797,6 +824,12 @@ ui <- shinyUI(fluidPage(
       selectInput("expl",
                  "Explanatory (ordinal)", 
                  names(thesisdata[ordinal])),
+      
+      # Allow user to access histogram binwidth
+      sliderInput("bin",
+                  HTML("Select binwidth for the current response variable <p style='font-size: 9px'>",
+                       "(2 Histogram)</p>"), 
+                  min = 1, max = 10, value = 2),
       
       # Provide user possibility to see distribution of answers within the
       # ordinal variables.
