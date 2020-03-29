@@ -4,7 +4,7 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 22.3.2020
+# 29.3.2020
 #
 # This is an interactive tool for analysing the results of my research survey.
 
@@ -88,7 +88,7 @@ library(classInt)
 
 # Important directories
 wd <- "C:/Sampon/Maantiede/Master of the Universe"
-datapath <- file.path(wd, "pythonrecords.csv")
+datapath <- file.path(wd, "records_for_r.csv")
 visitorpath <- file.path(wd, "leaflet_survey_results/visitors.csv")
 suuraluepath <- file.path(wd, "python/suuralueet/PKS_suuralue.kml")
 munsclippedpath <- file.path(wd, "python/paavo/hcr_muns_clipped.shp")
@@ -275,11 +275,11 @@ centroids2[16, "label"] <- ""
 
 # Get postal code area data calculated in Python. Contains some interesting
 # variables for visualisation
-postal_path <- file.path(wd, "pythonpostal.csv")
+postal_path <- file.path(wd, "postal_for_r.csv")
 postal <- read.csv(file = postal_path, 
                    colClasses = c(posti_alue = "factor", kunta = "factor"),
                    header = TRUE, sep = ",")
-postal <- postal[, c(2, 3, 108:119)]
+postal <- postal[, c(2, 3, 108:121)]
 
 # postal geometries are in well-known text format. Some processing is needed to
 # utilise these polygons in R.
@@ -682,20 +682,30 @@ server <- function(input, output, session){
     # breaks classes
     data_f <- CreateJenksColumn(data_f, postal, "ua_forest", "jenks_ua_forest", input$jenks_n)
     data_f <- CreateJenksColumn(data_f, postal, "answer_count", "jenks_answer_count", input$jenks_n)
-    data_f <- CreateJenksColumn(data_f, postal, "parktime_mean", "jenks_parktime", input$jenks_n)
-    data_f <- CreateJenksColumn(data_f, postal, "walktime_mean", "jenks_walktime", input$jenks_n)
+    data_f <- CreateJenksColumn(data_f, postal, "parktime_mean", "jenks_park_mean", input$jenks_n)
+    data_f <- CreateJenksColumn(data_f, postal, "walktime_mean", "jenks_walk_mean", input$jenks_n)
+    data_f <- CreateJenksColumn(data_f, postal, "parktime_median", "jenks_park_median", input$jenks_n)
+    data_f <- CreateJenksColumn(data_f, postal, "walktime_median", "jenks_walk_median", input$jenks_n)
     
     if(input$karttacol == "jenks_ua_forest") {
       brewerpal <- "YlGn"
       legendname <- "Forest amount (%)"
         
-    } else if (input$karttacol == "jenks_walktime") {
+    } else if (input$karttacol == "jenks_park_mean") {
       brewerpal <- "BuPu"
-      legendname <- "Walking time (min)"
+      legendname <- "Parking time, mean (min)"
         
-    } else if (input$karttacol == "jenks_parktime") {
+    } else if (input$karttacol == "jenks_walk_mean") {
       brewerpal <- "Oranges"
-      legendname <- "Parking time (min)"
+      legendname <- "Parking time, mean (min)"
+      
+    } else if (input$karttacol == "jenks_park_median") {
+      brewerpal <- "BuGn"
+      legendname <- "Parking time, median (min)"
+      
+    } else if (input$karttacol == "jenks_walk_median") {
+      brewerpal <- "OrRd"
+      legendname <- "Walking time, median (min)"
         
     } else {
       # answer_count
@@ -707,6 +717,15 @@ server <- function(input, output, session){
     labels <- gsub("(])|(\\()|(\\[)", "", levels(data_f[, input$karttacol]))
     labels <- gsub(",", " \U2012 ", labels)
     
+    tooltip_content <- paste0(
+      "%s, %s<br/>",
+      "Answer count: %s</br>",
+      "<p style='padding-top: 2px;'>Mean parktime: %s</br>",
+      "Median parktime: %s</p>",
+      "<p style='padding-top: 2px;'>Mean walktime: %s<br/>",
+      "Median walktime: %s</p>",
+      "Forest (%%): %s<br/>")
+    
     g <- ggplot(data_f) +
       geom_polygon_interactive(
         color = "black",
@@ -716,10 +735,9 @@ server <- function(input, output, session){
         aes_string("long", "lat",
                    group = "group", 
                    fill = input$karttacol,
-                   tooltip = substitute(sprintf(
-                     "%s, %s<br/>Answer count: %s</br>Mean parktime: %s<br/>Mean walktime: %s<br/>Forest (%%): %s",
-                     id, nimi, answer_count, parktime_mean, walktime_mean, 
-                     ua_forest)))) +
+                   tooltip = substitute(sprintf(tooltip_content,
+                     id, nimi, answer_count, parktime_mean, parktime_median, 
+                     walktime_mean, walktime_median, ua_forest * 100)))) +
       
       # Jenks classes colouring and labels
       scale_fill_brewer(palette = brewerpal,
@@ -858,8 +876,8 @@ ui <- shinyUI(fluidPage(
       selectInput("karttacol",
                   HTML("Select Jenks breaks parameter for the interactive map <p style='font-size: 9px'>",
                        "(9 Interactive map)</p>"),
-                  c("jenks_answer_count", "jenks_parktime", 
-                    "jenks_walktime", "jenks_ua_forest")),
+                  c("jenks_answer_count", "jenks_park_mean", "jenks_park_median", 
+                    "jenks_walk_mean", "jenks_walk_median", "jenks_ua_forest")),
       
       sliderInput("jenks_n",
                   "Select amount of Jenks classes", 
