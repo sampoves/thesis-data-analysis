@@ -20,7 +20,6 @@ an unique IP address is an unique person.
 
 
 TODO, maybe
-    - fix crs mismatches
     - user "oe4guro3dh", remove from visitors. Also, see what's going on with
     the discrepancy. the three records really do not exist in visitors
 """
@@ -234,7 +233,7 @@ grid_sindex = grid.sindex # GeoPandas spatial index
 
 # Use i to create new rows in GeoDataFrame grid_areas
 i = 0
-for idx, postalarea in postal.iterrows():   
+for postalarea in postal.itertuples():   
 
     precise_matches = spatialIndexFunc(grid_sindex, grid, postalarea.geometry)
     
@@ -246,7 +245,7 @@ for idx, postalarea in postal.iterrows():
 
     # Iterate through all rows in current zipcode and see if each YKR_ID is
     # in grid_areas or not
-    for inner_idx, row in thisZip.iterrows():
+    for row in thisZip.itertuples():
 
         # this YKR_ID does not yet exist in grid_areas
         if grid_areas[grid_areas["YKR_ID"].isin([row.YKR_ID])].empty == True:
@@ -336,7 +335,7 @@ with open(os.path.join(wd, "duplicates.txt"), "a+") as f:
             f.write("\nDuplicates detected for ip code {0}\n".format(
                     theseRecords.ip.unique()[0]))
             dupl = theseRecords[theseRecords.zipcode.duplicated(keep=False)]
-            dupl = dupl.groupby(["zipcode"]).agg(
+            dupl = dupl.groupby("zipcode").agg(
                     {"id": lambda x: x.tolist(),
                      "timestamp": lambda x: x.tolist(), 
                      "ip": "first",
@@ -463,10 +462,7 @@ dictKey = {"keskustan jalankulkuvyöhyke": "ykr_kesk_jalan",
 # geom_grouper prevents multiple instances of same zones in the dict
 geom_grouper = lambda x: x.unary_union
 
-for row in postal.iterrows():
-    
-    # row is tuple, change that to have better code readability
-    row = row[1]
+for row in postal.itertuples():
     
     # Intersect current Polygon with urban zones shapefile
     thisPol = gpd.GeoDataFrame(geometry=[row.geometry])
@@ -485,9 +481,9 @@ for row in postal.iterrows():
     
     # Insert this dict into all zipcode rows
     thisDict = [{
-        thisRow[1].vyohselite: 
-            round(thisRow[1].geometry.area / thisPol.unary_union.area, 3)
-        } for thisRow in group.iterrows()]
+        thisRow.vyohselite: 
+            round(thisRow.geometry.area / thisPol.unary_union.area, 3)
+        } for thisRow in group.itertuples()]
     
     # iterate thisDict, list of dictionaries to insert values in postal
     for item in thisDict:
@@ -497,7 +493,7 @@ for row in postal.iterrows():
             # placement then use dictKey dictionary to tell which column to 
             # append in. Finally append current value v
             postal.loc[postal.posti_alue == row.posti_alue, dictKey[k]] = v
-    
+  
 # Calculate ykr_novalue
 postal["ykr_novalue"] = postal.apply(
         lambda row: 1 - (row.ykr_kesk_jalan + row.ykr_kesk_reuna +
@@ -566,15 +562,15 @@ postal = postal.rename(columns={"zipcode": "posti_alue"})
 # Reclassify using this clumsy nested np.where(). Use values calculated in
 # getJenksBreaks()
 records["ua_forest"] = np.where(
-        records["ua_forest"] < 0.062,
+        records.ua_forest < 0.062,
         "Scarce forest", 
-        (np.where(records["ua_forest"] < 0.167,
+        (np.where(records.ua_forest < 0.167,
                   "Some forest", 
-                  (np.where(records["ua_forest"] < 0.288, 
+                  (np.where(records.ua_forest < 0.288, 
                             "Moderate forest", 
-                            (np.where(records["ua_forest"] < 0.495, 
+                            (np.where(records.ua_forest < 0.495, 
                                       "Mostly forest", 
-                                      (np.where(records["ua_forest"] < 1, 
+                                      (np.where(records.ua_forest < 1, 
                                                 "Predominantly forest",
                                                 "novalue"))))))))).tolist()
 
@@ -593,15 +589,15 @@ largestYkr = largestYkr.rename(columns={"posti_alue": "zipcode",
 records = pd.merge(records, largestYkr, on="zipcode")
 
 # Rename ykr zone records to human readable versions
-for idx, row in enumerate(records.iterrows()):
+for row in records.itertuples():
     
     for realname, abbr in dictKey.items():
         
-        if row[1].ykr_zone == abbr:
-            records.loc[idx, "ykr_zone"] = realname
+        if row.ykr_zone == abbr:
+            records.loc[row.Index, "ykr_zone"] = realname
         
-        elif row[1].ykr_zone == "ykr_novalue":
-            records.loc[idx, "ykr_zone"] = "novalue"
+        elif row.ykr_zone == "ykr_novalue":
+            records.loc[row.Index, "ykr_zone"] = "novalue"
         
     
 
@@ -666,11 +662,11 @@ records["subdiv"] = 0
 # thesis_data_zipcodes.py, assign subdivision names to dataframe records
 for varname, fullname in subdiv_dict.items():
 
-    for idx, row in enumerate(records.iterrows()):
-        thisZip = row[1].zipcode
+    for row in records.itertuples():
+        thisZip = row.zipcode
         
         if thisZip in eval(varname):
-            records.loc[idx, "subdiv"] = fullname
+            records.loc[row.Index, "subdiv"] = fullname
     
 
 
@@ -804,7 +800,7 @@ firstfile.to_csv(ttm_sampo + firstfilename, sep=";", index=None)
 # PLOT AMOUNT OF RECORDS
 # Plot with layers as function
 parkingPlot(postal, "answer_count", 0) 
-parkingPlot(postal[postal["kunta"] == "091"], "answer_count", 0) #amount for Hki
+parkingPlot(postal[postal.kunta == "091"], "answer_count", 0) #amount for Hki
 parkingPlot(postal, "walktime_mean", 1) #PLOT WALKTIME MEAN
 parkingPlot(postal, "parktime_mean", 1) #PLOT PARKTIME MEAN
 parkingPlot(postal, "ua_forest", 1) #PLOT PARKTIME MEAN
@@ -812,21 +808,23 @@ parkingPlot(postal, "ua_forest", 1) #PLOT PARKTIME MEAN
 # Get mean-std-min-max-quantiles of municipalities
 descri_postal = postal.iloc[:, [4, 113, 114, 115, 116, 117]]
 descri_postal.describe()
-descri_postal[postal["kunta"] == "091"].describe() #hki
-descri_postal[postal["kunta"] == "092"].describe() #esp
-descri_postal[postal["kunta"] == "235"].describe() #kau
-descri_postal[postal["kunta"] == "049"].describe() #van
+descri_postal[postal.kunta == "091"].describe() #hki
+descri_postal[postal.kunta == "092"].describe() #esp
+descri_postal[postal.kunta == "235"].describe() #kau
+descri_postal[postal.kunta == "049"].describe() #van
+
+
 
 #####################
 ### EXPORT TO CSV ###
 #####################
 
-# data to csv for R. "pythonrecords.csv"
-#records.to_csv(wd + "records.csv", encoding="Windows-1252")
-#postal.to_csv(wd + "postal.csv", encoding="Windows-1252")
+# Data to csv for more processing in R.
+#records.to_csv("records_for_r.csv", encoding="Windows-1252")
+#postal.to_csv("postal_for_r.csv", encoding="Windows-1252")
 
-# For Shinyapps.io. Huge problems with character encoding down the line if
-# Ascii-UTF-8 conversion is not done here.
+# For Shinyapps.io. There are huge problems with character encoding down the 
+# line if Ascii-UTF-8 conversion is not done here.
 #import unicodedata
 #records["subdiv"] = records["subdiv"].apply(lambda val: unicodedata.normalize("NFKD", val).encode("ascii", "ignore").decode())
 #records["ykr_zone"] = records["ykr_zone"].apply(lambda val: unicodedata.normalize("NFKD", val).encode("ascii", "ignore").decode())
