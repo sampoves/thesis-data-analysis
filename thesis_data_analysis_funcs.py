@@ -20,244 +20,24 @@ from matplotlib.offsetbox import (TextArea, DrawingArea, OffsetImage,
                                   AnnotationBbox)
 import random
 
-def plot_polygon(polygonList):
+
+
+def spatialIndexFunc(s_index, s_index_source, thisGeom):
     '''
-    Insert Polygons in lists! If only one Polygon, then use list with one
-    value, for example plot_polygon([Polygon]).
+    Employ spatial index in a for loop. This function assumes you have already
+    set up a SpatialIndex and entered for loop. Use this to get the precise
+    matches for a specific Shapely geometry.
     
-    Code by Kevin Dwyer, HumanGeo blog. Edited by Sampo Vesanen
-    View alpha shape polygons in pylab
-    
-    An useful general Polygon viewing tool, just stack them and view them
-    
-    Input       List of Polygons
-    Returns     matplotlib view
-    '''
-    
-    def createPolygonPatch(pol, alpha):
-        '''
-        Declutter code, create PolygonPatch inside this function. For now
-        the function only accepts the input Polygon and a value for transparency.
-        '''
-        thisPatch = PolygonPatch(pol, 
-                         fc=np.random.rand(3,), # each object gets a random color
-                         ec=np.random.rand(3,), 
-                         fill=True,
-                         alpha=alpha,
-                         zorder=-1)
-        return thisPatch
-    
-    # keeps track if Point is detected
-    polIsPoint = 0
-    
-    # Allow user to forget the use of unary_union when building list of
-    # GeoDataFrames. If item in loop is instance GeoDataFrame, perform
-    # unary_union on it, else don't make changes.
-    polygonList = [item.unary_union if isinstance(item, gpd.GeoDataFrame) else \
-                   item for item in polygonList]
-    
-    fig = plt.figure(figsize=(14,12))
-    ax = fig.add_subplot(111)
-    margin = 1000 # Give resuls more space. Original was .3
-    x_min, y_min, x_max, y_max = cascaded_union(polygonList).bounds
-    envArea = cascaded_union(polygonList).envelope.area
-    ax.set_xlim([x_min - margin, x_max + margin])
-    ax.set_ylim([y_min - margin, y_max + margin])
-    
-    # Prevents Polygon distortion in matplotlib window
-    ax.axes.set_aspect("equal")
-    
-    for pol in polygonList:
-        # allow Points and MultiPoints in plot_polygon(). Also implemented 
-        # cascaded union envelope size based Point buffer
-        if isinstance(pol, (Point, MultiPoint)):
-            # if envArea is zero, buffer is 10, otherwise formula
-            pol = pol.buffer(10 if envArea == 0.0 else 20 * math.log(envArea))
-            polIsPoint = 1
-
-        thisPatch = createPolygonPatch(pol, 1)
-        ax.add_patch(thisPatch)
-        
-        # insert halo of sorts for Points for better visibility
-        if polIsPoint == 1 and envArea != 0:
-            bgpol = createPolygonPatch(pol.buffer(1000), 0.5)
-            ax.add_patch(bgpol)
-            polIsPoint = 0
-            
-    plt.tight_layout()
-
-    return fig
-
-
-
-def plot_polygons(dictionary):
-    '''
-    Plot as many Polygons as needed. All presented in one figure. For testing
-    purposes. Pretty useful for checking out multiple Polygons fast.
-    
-    # Function expects dictionaries with following logic. facecolor and 
-    # edgecolor are to be presented in hex
-    # {"polygonName": "facecolor_edgecolor_alpha_fillboolean"}
-    
-    Input       a dictionary in the format presented above
-    Returns     Matplotlib map view
-    
+    s_index             your SpatialIndex
+    s_index_source      the GeoDataFrame which was used to create s_index
+    thisGeom            Shapely geometry
     '''
     
-    def testEval(str):
-        '''
-        Check if string has # in front. If no, then eval()
-        
-        Input       a string
-        Returns     eval'ed string or the same as input
-        '''
-        if str[:1] != "#":
-            return eval(str)
-        
-        else:
-            return str
+    possible_matches_idx = list(s_index.intersection(thisGeom.bounds))
+    possible_matches = s_index_source.iloc[possible_matches_idx]
+    precise_matches = possible_matches[possible_matches.intersects(thisGeom)]
     
-    
-    fig = plt.figure(figsize=(14,12))
-    ax = fig.add_subplot(111)
-    margin = 1000 # Give resuls more space. Original was .3
-    
-    # Get all Polygons as shapely features in list, then cascaded_union and 
-    # bounds
-    x_min, y_min, x_max, y_max = cascaded_union(
-            [eval(pol) for pol in dictionary]).bounds
-    
-    ax.set_xlim([x_min-margin, x_max+margin])
-    ax.set_ylim([y_min-margin, y_max+margin])
-    
-    # prevents Polygon distortion in matplotlib window
-    ax.axes.set_aspect("equal") 
-    
-    for pol, allsettings in dictionary.items():
-        # Split settings of a Polygon to parts
-        theseSettings = allsettings.split("_") 
-        
-        # allow Points in plot_polygons() NOT TESTED
-        #if isinstance(pol, Point):
-        #    pol = pol.centroid.buffer(8)
-        
-        thisPatch = PolygonPatch(eval(pol), 
-                                 fc=testEval(theseSettings[0]), # facecolor
-                                 ec=testEval(theseSettings[1]), # edgecolor
-                                 alpha=eval(theseSettings[2]), # opacity
-                                 fill=eval(theseSettings[3]), # fill boolean
-                                 zorder=-1)
-        ax.add_patch(thisPatch)
-    
-    return fig
-
-
-
-def parkingPlot(df, column, zeroAllowed):
-    '''
-    Plot results as function. Functionally it is quite limited.
-    '''
-    # Plot with layers. Base is basemap for zipcodes without answers
-    base = df.plot(linewidth=0.8, 
-                   edgecolor="0.8", 
-                   color="white", 
-                   figsize=(24, 12))
-
-    if zeroAllowed == 0:
-        # now plot all non-zero areas on top of base
-        df.loc[df[column]!=0].plot(
-                ax=base, 
-                column=column, 
-                cmap="OrRd", 
-                linewidth=0.8,
-                figsize=(24, 12), 
-                edgecolor="0.8", 
-                scheme='fisher_jenks',
-                legend=True)
-    else:
-        # zero allowed but null is forbidden
-        df.loc[~df[column].isnull()].plot(
-                ax=base, 
-                column=column, 
-                cmap="OrRd", 
-                linewidth=0.8,
-                figsize=(24, 12), 
-                edgecolor="0.8", 
-                scheme='fisher_jenks',
-                legend=True)
-    
-    # annotate
-    annotationFunction(df, column)
-    plt.tight_layout()
-
-
-
-def annotationFunction(df, rowname):
-    '''
-    Annotate postal code areas in Matplotlib plot.
-    Df is the dataframe to fetch shapes from, rowname gives the value to
-    the annotations.
-    '''
-    for idx, row in df.iterrows():
-        annotation = "{0}, {1}".format(row['nimi'], str(row[rowname]))
-        plt.annotate(s=annotation, xy=row['coords'],
-                     horizontalalignment='center')
-
-
-
-def polygonCoordsToTuple(gdf):
-    '''
-    Shapely Polygons to tuple. Used in annotation
-    '''
-    geoSeries = gdf["geometry"].apply(lambda x: x.representative_point().coords[:])
-    geoSeries = [coords[0] for coords in geoSeries]
-    
-    return geoSeries
-
-
-
-def convertToDatetime(dataframe, columnName):
-    '''
-    Declutter code
-    '''
-    return pd.to_datetime(dataframe[columnName], format="%d-%m-%Y %H:%M:%S") 
-
-
-
-def convertToDatetimeVar2(dataframe, columnName):
-    '''
-    Declutter code
-    '''
-    return pd.to_datetime(dataframe[columnName], format="%Y-%m-%d %H:%M:%S")
-
-
-
-def detect_outlier(data):
-    """
-    Input may be a list or a Series.
-    
-    1) We write a function that takes numeric data as an input argument.
-    2) We find the mean and standard deviation of the all the data points
-    3) We find the z score for each of the data point in the dataset and if the 
-    z score is greater than 3 than we can classify that point as an outlier. 
-    Any point outside of 3 standard deviations would be an outlier.
-    
-    Adapted from code by Renu Khandelwal:
-    https://medium.com/datadriveninvestor/finding-outliers-in-dataset-using-python-efc3fce6ce32
-    """
-    outliers = []
-    threshold = 3
-    mean_1 = np.mean(data)
-    std_1 = np.std(data)
-    
-    # adding idx enables us to keep track of outlier value position in a
-    # dataframe. Return answers as a list of tuples
-    for idx, value in enumerate(data):
-        z_score = (value - mean_1) / std_1 
-        if np.abs(z_score) > threshold:
-            outliers.append((idx, value))
-            
-    return outliers
+    return precise_matches
 
 
 
@@ -470,18 +250,7 @@ def getJenksBreaks(dataList, numClass):
 
 
 
-def random_color():
-    '''
-    Get a light random color for matplotlib
-    
-    Code adapted from Stack Overflow user Yakir Tsuberi:
-    https://stackoverflow.com/a/50906743/9455395
-    '''
-    
-    rand = lambda: random.randint(150, 255)
-    return "#%02X%02X%02X" % (rand(), rand(), rand())
-
-
+### Travel time comparison function and assisting functions -------------------
 
 def travelTimeComparison(grid, forest, postal, records, listOfTuples, ttm_path, 
                          detectOutliers=False, printStats=False, plotIds=False):
@@ -852,3 +621,244 @@ def travelTimeComparison(grid, forest, postal, records, listOfTuples, ttm_path,
     result = result.drop(columns=["index"])
     
     return result
+
+
+
+def polygonCoordsToTuple(gdf):
+    '''
+    Shapely Polygons to tuple. Used in annotation
+    '''
+    geoSeries = gdf["geometry"].apply(lambda x: x.representative_point().coords[:])
+    geoSeries = [coords[0] for coords in geoSeries]
+    
+    return geoSeries
+
+
+
+def random_color():
+    '''
+    Get a light random color for matplotlib
+    
+    Code adapted from Stack Overflow user Yakir Tsuberi:
+    https://stackoverflow.com/a/50906743/9455395
+    '''
+    
+    rand = lambda: random.randint(150, 255)
+    return "#%02X%02X%02X" % (rand(), rand(), rand())
+
+
+
+def detect_outlier(data):
+    """
+    Input may be a list or a Series.
+    
+    1) We write a function that takes numeric data as an input argument.
+    2) We find the mean and standard deviation of the all the data points
+    3) We find the z score for each of the data point in the dataset and if the 
+    z score is greater than 3 than we can classify that point as an outlier. 
+    Any point outside of 3 standard deviations would be an outlier.
+    
+    Adapted from code by Renu Khandelwal:
+    https://medium.com/datadriveninvestor/finding-outliers-in-dataset-using-python-efc3fce6ce32
+    """
+    outliers = []
+    threshold = 3
+    mean_1 = np.mean(data)
+    std_1 = np.std(data)
+    
+    # adding idx enables us to keep track of outlier value position in a
+    # dataframe. Return answers as a list of tuples
+    for idx, value in enumerate(data):
+        z_score = (value - mean_1) / std_1 
+        if np.abs(z_score) > threshold:
+            outliers.append((idx, value))
+            
+    return outliers
+
+
+
+
+### For visualisation ---------------------------------------------------------
+
+def plot_polygon(polygonList):
+    '''
+    Insert Polygons in lists! If only one Polygon, then use list with one
+    value, for example plot_polygon([Polygon]).
+    
+    Code by Kevin Dwyer, HumanGeo blog. Edited by Sampo Vesanen
+    View alpha shape polygons in pylab
+    
+    An useful general Polygon viewing tool, just stack them and view them
+    
+    Input       List of Polygons
+    Returns     matplotlib view
+    '''
+    
+    def createPolygonPatch(pol, alpha):
+        '''
+        Declutter code, create PolygonPatch inside this function. For now
+        the function only accepts the input Polygon and a value for transparency.
+        '''
+        thisPatch = PolygonPatch(pol, 
+                         fc=np.random.rand(3,), # each object gets a random color
+                         ec=np.random.rand(3,), 
+                         fill=True,
+                         alpha=alpha,
+                         zorder=-1)
+        return thisPatch
+    
+    # keeps track if Point is detected
+    polIsPoint = 0
+    
+    # Allow user to forget the use of unary_union when building list of
+    # GeoDataFrames. If item in loop is instance GeoDataFrame, perform
+    # unary_union on it, else don't make changes.
+    polygonList = [item.unary_union if isinstance(item, gpd.GeoDataFrame) else \
+                   item for item in polygonList]
+    
+    fig = plt.figure(figsize=(14,12))
+    ax = fig.add_subplot(111)
+    margin = 1000 # Give resuls more space. Original was .3
+    x_min, y_min, x_max, y_max = cascaded_union(polygonList).bounds
+    envArea = cascaded_union(polygonList).envelope.area
+    ax.set_xlim([x_min - margin, x_max + margin])
+    ax.set_ylim([y_min - margin, y_max + margin])
+    
+    # Prevents Polygon distortion in matplotlib window
+    ax.axes.set_aspect("equal")
+    
+    for pol in polygonList:
+        # allow Points and MultiPoints in plot_polygon(). Also implemented 
+        # cascaded union envelope size based Point buffer
+        if isinstance(pol, (Point, MultiPoint)):
+            # if envArea is zero, buffer is 10, otherwise formula
+            pol = pol.buffer(10 if envArea == 0.0 else 20 * math.log(envArea))
+            polIsPoint = 1
+
+        thisPatch = createPolygonPatch(pol, 1)
+        ax.add_patch(thisPatch)
+        
+        # insert halo of sorts for Points for better visibility
+        if polIsPoint == 1 and envArea != 0:
+            bgpol = createPolygonPatch(pol.buffer(1000), 0.5)
+            ax.add_patch(bgpol)
+            polIsPoint = 0
+            
+    plt.tight_layout()
+
+    return fig
+
+
+
+def plot_polygons(dictionary):
+    '''
+    Plot as many Polygons as needed. All presented in one figure. For testing
+    purposes. Pretty useful for checking out multiple Polygons fast.
+    
+    # Function expects dictionaries with following logic. facecolor and 
+    # edgecolor are to be presented in hex
+    # {"polygonName": "facecolor_edgecolor_alpha_fillboolean"}
+    
+    Input       a dictionary in the format presented above
+    Returns     Matplotlib map view
+    
+    '''
+    
+    def testEval(str):
+        '''
+        Check if string has # in front. If no, then eval()
+        
+        Input       a string
+        Returns     eval'ed string or the same as input
+        '''
+        if str[:1] != "#":
+            return eval(str)
+        
+        else:
+            return str
+    
+    
+    fig = plt.figure(figsize=(14,12))
+    ax = fig.add_subplot(111)
+    margin = 1000 # Give resuls more space. Original was .3
+    
+    # Get all Polygons as shapely features in list, then cascaded_union and 
+    # bounds
+    x_min, y_min, x_max, y_max = cascaded_union(
+            [eval(pol) for pol in dictionary]).bounds
+    
+    ax.set_xlim([x_min-margin, x_max+margin])
+    ax.set_ylim([y_min-margin, y_max+margin])
+    
+    # prevents Polygon distortion in matplotlib window
+    ax.axes.set_aspect("equal") 
+    
+    for pol, allsettings in dictionary.items():
+        # Split settings of a Polygon to parts
+        theseSettings = allsettings.split("_") 
+        
+        # allow Points in plot_polygons() NOT TESTED
+        #if isinstance(pol, Point):
+        #    pol = pol.centroid.buffer(8)
+        
+        thisPatch = PolygonPatch(eval(pol), 
+                                 fc=testEval(theseSettings[0]), # facecolor
+                                 ec=testEval(theseSettings[1]), # edgecolor
+                                 alpha=eval(theseSettings[2]), # opacity
+                                 fill=eval(theseSettings[3]), # fill boolean
+                                 zorder=-1)
+        ax.add_patch(thisPatch)
+    
+    return fig
+
+
+
+def parkingPlot(df, column, zeroAllowed):
+    '''
+    Plot results as function. Functionally it is quite limited.
+    '''
+    # Plot with layers. Base is basemap for zipcodes without answers
+    base = df.plot(linewidth=0.8, 
+                   edgecolor="0.8", 
+                   color="white", 
+                   figsize=(24, 12))
+
+    if zeroAllowed == 0:
+        # now plot all non-zero areas on top of base
+        df.loc[df[column]!=0].plot(
+                ax=base, 
+                column=column, 
+                cmap="OrRd", 
+                linewidth=0.8,
+                figsize=(24, 12), 
+                edgecolor="0.8", 
+                scheme='fisher_jenks',
+                legend=True)
+    else:
+        # zero allowed but null is forbidden
+        df.loc[~df[column].isnull()].plot(
+                ax=base, 
+                column=column, 
+                cmap="OrRd", 
+                linewidth=0.8,
+                figsize=(24, 12), 
+                edgecolor="0.8", 
+                scheme='fisher_jenks',
+                legend=True)
+    
+    # annotate
+    annotationFunction(df, column)
+    plt.tight_layout()
+
+
+
+def annotationFunction(df, rowname):
+    '''
+    Annotate postal code areas in Matplotlib plot.
+    Df is the dataframe to fetch shapes from, rowname gives the value to
+    the annotations.
+    '''
+    for idx, row in df.iterrows():
+        annotation = "{0}, {1}".format(row['nimi'], str(row[rowname]))
+        plt.annotate(s=annotation, xy=row['coords'],
+                     horizontalalignment='center')

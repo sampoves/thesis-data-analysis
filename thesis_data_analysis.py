@@ -83,7 +83,7 @@ ykr_vyoh = gpd.overlay(ykr_vyoh,
 
 # From Urban Atlas 2012 Helsinki area preserve only forests
 forest = gpd.read_file(ua_forest_path, encoding="utf-8")
-forest = forest[forest["ITEM2012"] == "Forests"]
+forest = forest[forest.ITEM2012 == "Forests"]
 
 
 
@@ -92,9 +92,12 @@ forest = forest[forest["ITEM2012"] == "Forests"]
 ###########################
 
 # Timestamps to datetime format
-records["timestamp"] = convertToDatetime(records, "timestamp")
-visitors["ts_first"] = convertToDatetimeVar2(visitors, "ts_first")
-visitors["ts_latest"] = convertToDatetimeVar2(visitors, "ts_latest")
+records["timestamp"] = pd.to_datetime(
+        records.timestamp, format="%d-%m-%Y %H:%M:%S") 
+visitors["ts_first"] = pd.to_datetime(
+        visitors.ts_first, format="%Y-%m-%d %H:%M:%S")
+visitors["ts_latest"] = pd.to_datetime(
+        visitors.ts_latest, format="%Y-%m-%d %H:%M:%S")
 
 # visitors, records: remove author's home visits and three records inputted by
 # the author. Additionally, I have visited the survey from the university, 
@@ -227,17 +230,13 @@ for idx, geom in enumerate(postal.geometry):
 grid_areas = gpd.GeoDataFrame(columns=["YKR_ID", "zipcode", "largest_area", 
                                        "total_area"])
 crs = grid.crs
-spatial_index = grid.sindex # GeoPandas spatial index
+grid_sindex = grid.sindex # GeoPandas spatial index
 
 # Use i to create new rows in GeoDataFrame grid_areas
 i = 0
 for idx, postalarea in postal.iterrows():   
 
-    possible_matches_index = list(
-            spatial_index.intersection(postalarea.geometry.bounds))
-    possible_matches = grid.iloc[possible_matches_index]
-    precise_matches = possible_matches[
-            possible_matches.intersects(postalarea.geometry)]
+    precise_matches = spatialIndexFunc(grid_sindex, grid, postalarea.geometry)
     
     # Make the current zipcode to a GeoDataFrame
     thisZip = gpd.overlay(precise_matches,
@@ -300,7 +299,7 @@ grid = pd.concat(
 # Create groupby aggregations of the records. One can use this DataFrame to
 # see how each respondent (or, specifically, one IP address) answered to the 
 # survey.
-visitors_grp = records.groupby(["ip"]).agg({
+visitors_grp = records.groupby("ip").agg({
         "id": "count", 
         "timestamp": lambda x: x.tolist(),
         "zipcode": lambda x: x.tolist(),
@@ -331,7 +330,7 @@ open("duplicates.txt", "w").close()
 # the discussion about this to the thesis.
 with open(os.path.join(wd, "duplicates.txt"), "a+") as f:
     for visitor in records.ip.unique():
-        theseRecords = records.loc[records['ip'] == visitor]
+        theseRecords = records.loc[records.ip == visitor]
         
         if(theseRecords["zipcode"].is_unique) == False:
             f.write("\nDuplicates detected for ip code {0}\n".format(
@@ -365,7 +364,7 @@ illegal = []
 invalid = 6
 
 for idx, (park_value, walk_value, ip_value) in enumerate(
-        zip(records["parktime"], records["walktime"], records["ip"])):
+        zip(records.parktime, records.walktime, records.ip)):
     
     if (park_value >= 60 or walk_value >= 60):
         print("Illegal walktime and/or parktime detected:", idx, park_value, 
@@ -497,7 +496,7 @@ for row in postal.iterrows():
             # Add data to postal. In .loc square brackets select correct row of 
             # placement then use dictKey dictionary to tell which column to 
             # append in. Finally append current value v
-            postal.loc[postal["posti_alue"] == row.posti_alue, dictKey[k]] = v
+            postal.loc[postal.posti_alue == row.posti_alue, dictKey[k]] = v
     
 # Calculate ykr_novalue
 postal["ykr_novalue"] = postal.apply(
@@ -506,87 +505,36 @@ postal["ykr_novalue"] = postal.apply(
         row.ykr_alakesk_jalan + row.ykr_autovyoh), axis=1)
 
 # Make sure rounding does not cause trouble in the calculation above
-postal["ykr_novalue"].loc[postal["ykr_novalue"] < 0] = 0
+postal["ykr_novalue"].loc[postal.ykr_novalue < 0] = 0
 
 
 # Urban Atlas 2012 forest
 
-postal2 = postal.copy()
-
-
 # Reproject the geometries by replacing the values with projected ones
-#forest["geometry"] = forest["geometry"].to_crs(epsg=3067)
 forest = forest.to_crs(epsg=3067)
 crs = forest.crs
-
-# Iterate over postal code areas and then intersect with the forest layer
-for row in postal.itertuples():
-    thisPol = gpd.GeoDataFrame(geometry=[row.geometry], crs=crs)
-    thisIntersect = gpd.overlay(thisPol, forest, how="intersection")
-    if thisIntersect.empty == False:
-        forestpercent = thisIntersect.unary_union.area / thisPol.area
-        
-        # append forest data to column "ua_forest"
-        postal.loc[postal["posti_alue"] == row.posti_alue, "ua_forest"] = round(
-                forestpercent[0], 3)
-    if row.posti_alue == "00230":
-        break
-
-
-
-
-# EXPERIMENTAL
-# WORKS; IS MUCH FASTER
-
-def spatialIndexFunc(s_index, s_index_source, thisGeom):
-    '''
-    s_index_source means the Gdf which was used to create s_index
-    '''
-    
-    possible_matches_idx = list(s_index.intersection(thisGeom.bounds))
-    possible_matches = forest.iloc[possible_matches_idx]
-    precise_matches = possible_matches[possible_matches.intersects(thisGeom)]
-    
-    return precise_matches
 
 # Employ GeoPandas spatial index. We will reduce the extent to process
 # the intersections and this will greatly trim down the time needed for the
 # calculation.
-s_index = forest.sindex 
+forest_sindex = forest.sindex
 
-for row2 in postal2.itertuples():
+for row in postal.itertuples():
     
-    thisPol2 = gpd.GeoDataFrame(geometry=[row2.geometry], crs=crs)
-    thisGeom = thisPol2.loc[0, "geometry"]
-    
-    # Spatial index
-    #possible_matches_idx = list(s_index.intersection(thisGeom.bounds))
-    #possible_matches = forest.iloc[possible_matches_idx]
-    #precise_matches = possible_matches[possible_matches.intersects(thisGeom)]
-    precise_matches = spatialIndexFunc(s_index, forest, thisGeom)
+    thisPol = gpd.GeoDataFrame(geometry=[row.geometry], crs=crs)
+    thisGeom = thisPol.loc[0, "geometry"]
+    precise_matches = spatialIndexFunc(forest_sindex, forest, thisGeom)
     
     # precise_matches may be empty, so check for that
     if precise_matches.empty == False:
-        thisIntersect = gpd.overlay(thisPol2, precise_matches, how="intersection")
+        thisIntersect = gpd.overlay(thisPol, precise_matches, how="intersection")
     
         if thisIntersect.empty == False:
-            forestpercent = thisIntersect.unary_union.area / thisPol2.area
+            forestpercent = thisIntersect.unary_union.area / thisPol.area
             
             # append forest data to column "ua_forest"
-            postal2.loc[postal2["posti_alue"] == row2.posti_alue, "ua_forest"] = round(
+            postal.loc[postal.posti_alue == row.posti_alue, "ua_forest"] = round(
                     forestpercent[0], 3)
-#    if row2.posti_alue == "00230":
-#        break
-
-
-
-
-
-
-
-
-
-
 
 
 
