@@ -466,7 +466,7 @@ geom_grouper = lambda x: x.unary_union
 
 for row in postal.iterrows():
     
-    # row is tuple, change that to have better readability
+    # row is tuple, change that to have better code readability
     row = row[1]
     
     # Intersect current Polygon with urban zones shapefile
@@ -490,9 +490,6 @@ for row in postal.iterrows():
             round(thisRow[1].geometry.area / thisPol.unary_union.area, 3)
         } for thisRow in group.iterrows()]
     
-    # Print report
-    #print("{0} {1} \n{2}\n".format(row.posti_alue, row.nimi, thisDict))
-    
     # iterate thisDict, list of dictionaries to insert values in postal
     for item in thisDict:
         for k, v in item.items():
@@ -514,29 +511,82 @@ postal["ykr_novalue"].loc[postal["ykr_novalue"] < 0] = 0
 
 # Urban Atlas 2012 forest
 
-# Reproject the geometries by replacing the values with projected ones
-forest["geometry"] = forest["geometry"].to_crs(epsg=3067)
+postal2 = postal.copy()
 
-# Iterate over postal areas and then intersect with forest layer
-for row in postal.iterrows():
-    row = row[1]
-    thisPol = gpd.GeoDataFrame(geometry=[row.geometry])
+
+# Reproject the geometries by replacing the values with projected ones
+#forest["geometry"] = forest["geometry"].to_crs(epsg=3067)
+forest = forest.to_crs(epsg=3067)
+crs = forest.crs
+
+# Iterate over postal code areas and then intersect with the forest layer
+for row in postal.itertuples():
+    thisPol = gpd.GeoDataFrame(geometry=[row.geometry], crs=crs)
     thisIntersect = gpd.overlay(thisPol, forest, how="intersection")
     if thisIntersect.empty == False:
         forestpercent = thisIntersect.unary_union.area / thisPol.area
         
-        # print report
-        #print("zipcode {0} {1} is {2} % forest".format(
-        #        row.posti_alue, row.nimi, 
-        #        round(forestpercent[0], 3) * 100))
-        
         # append forest data to column "ua_forest"
         postal.loc[postal["posti_alue"] == row.posti_alue, "ua_forest"] = round(
                 forestpercent[0], 3)
-    #else:
-    #    # print forestless report
-    #    print("zipcode {0} {1} is forestless".format(row.posti_alue,
-    #          row.nimi))
+    if row.posti_alue == "00230":
+        break
+
+
+
+
+# EXPERIMENTAL
+# WORKS; IS MUCH FASTER
+
+def spatialIndexFunc(s_index, s_index_source, thisGeom):
+    '''
+    s_index_source means the Gdf which was used to create s_index
+    '''
+    
+    possible_matches_idx = list(s_index.intersection(thisGeom.bounds))
+    possible_matches = forest.iloc[possible_matches_idx]
+    precise_matches = possible_matches[possible_matches.intersects(thisGeom)]
+    
+    return precise_matches
+
+# Employ GeoPandas spatial index. We will reduce the extent to process
+# the intersections and this will greatly trim down the time needed for the
+# calculation.
+s_index = forest.sindex 
+
+for row2 in postal2.itertuples():
+    
+    thisPol2 = gpd.GeoDataFrame(geometry=[row2.geometry], crs=crs)
+    thisGeom = thisPol2.loc[0, "geometry"]
+    
+    # Spatial index
+    #possible_matches_idx = list(s_index.intersection(thisGeom.bounds))
+    #possible_matches = forest.iloc[possible_matches_idx]
+    #precise_matches = possible_matches[possible_matches.intersects(thisGeom)]
+    precise_matches = spatialIndexFunc(s_index, forest, thisGeom)
+    
+    # precise_matches may be empty, so check for that
+    if precise_matches.empty == False:
+        thisIntersect = gpd.overlay(thisPol2, precise_matches, how="intersection")
+    
+        if thisIntersect.empty == False:
+            forestpercent = thisIntersect.unary_union.area / thisPol2.area
+            
+            # append forest data to column "ua_forest"
+            postal2.loc[postal2["posti_alue"] == row2.posti_alue, "ua_forest"] = round(
+                    forestpercent[0], 3)
+#    if row2.posti_alue == "00230":
+#        break
+
+
+
+
+
+
+
+
+
+
 
 
 
