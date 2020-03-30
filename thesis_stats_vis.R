@@ -242,31 +242,6 @@ centroids2[12, "lat"] <- centroids2[12, "lat"] + 0.08
 centroids2[12, "long"] <- centroids2[12, "long"] + 0.05
 centroids2[16, "label"] <- ""
 
-# Independent ggplot maptest
-# g2 <- ggplot() +
-#   geom_polygon_interactive(
-#     data = suuralue_f,
-#     size = 0.2,
-#     aes(long, lat, group = group, fill = color),
-#     colour = "grey") +
-#   geom_polygon(
-#     data = muns_clipped_f,
-#     aes(long, lat, group = group),
-#     color = "black",
-#     fill = NA,
-#     size = 0.4) +
-#   coord_map(ylim = c(60.07, 60.42)) +
-#   scale_fill_identity("Currently active\nsubdivisions", 
-#                       labels = suuralue_f$Name,
-#                       breaks = suuralue_f$color, guide = "legend") +
-#   with(centroids, annotate(geom = "text", x = long, y = lat, label = label,
-#                            size = 4)) +
-#   with(centroids2, annotate(geom = "text", x = long, y = lat, label = label,
-#                             size = 3)) +
-#   theme(plot.margin = grid::unit(c(0, 0, 0, 0), "mm"), legend.position = "bottom")
-# 
-# widgetframe::frameWidget(ggiraph(code = print(g2)))
-
 
 
 ### Interactive map for ShinyApp ----------------------------------------------- 
@@ -280,6 +255,15 @@ postal <- read.csv(file = postal_path,
                    colClasses = c(posti_alue = "factor", kunta = "factor"),
                    header = TRUE, sep = ",")
 postal <- postal[, c(2, 3, 108:121)]
+
+# postal ua_forest * 100 for easier to view plotting
+postal[, "ua_forest"] <- postal[, "ua_forest"] * 100
+
+# create column which reports the largest ykr zone in each postal code area
+largest_ykr <- colnames(postal[, 4:10])[apply(postal[, 4:10], 1, which.max)]
+largest_ykr <- gsub("ykr_", "", largest_ykr)
+largest_ykr_no <- as.numeric(apply(postal[, 4:10], 1, max)) * 100
+postal <- cbind(postal, largest_ykr = paste(largest_ykr, largest_ykr_no))
 
 # postal geometries are in well-known text format. Some processing is needed to
 # utilise these polygons in R.
@@ -298,44 +282,6 @@ data_f <- merge(ggplot2::fortify(data), as.data.frame(data), by.x = "id",
 muns <- readOGR(munspath)
 muns <- spTransform(muns, crs)
 munsf <- merge(fortify(muns), as.data.frame(muns), by.x = "id", by.y = 0)
-
-
-
-# Interactive map independent test
-
-# Could not figure out how to use aes_string() and tooltip = sprintf() together
-# without substitute()
-# https://ggplot2.tidyverse.org/reference/aes_.html
-
-# labels <- gsub("(])|(\\()|(\\[)", "", levels(data_f$jenks_ua_forest))
-# labels <- gsub(",", " \U2012 ", labels)
-# data_f <- CreateJenksColumn(data_f, postal, "ua_forest", "jenks_ua_forest")
-# data_f <- CreateJenksColumn(data_f, postal, "answer_count", "jenks_answer_count")
-# data_f <- CreateJenksColumn(data_f, postal, "parktime_mean", "jenks_parktime")
-# data_f <- CreateJenksColumn(data_f, postal, "walktime_mean", "jenks_walktime")
-# g <- ggplot(data_f) +
-#   geom_polygon_interactive(
-#     color = "black",
-#     size = 0.2,
-#     aes_string("long", "lat",
-#                group = "group",
-#                fill = "jenks_ua_forest",
-#                tooltip = substitute(sprintf(
-#                  "%s, %s<br/>Answer count: %s</br>Mean parktime: %s<br/>Mean walktime: %s<br/>Forest (%%): %s",
-#                  id, nimi, answer_count, parktime_mean, walktime_mean, ua_forest)))) +
-#   scale_fill_brewer(palette = "PuBu",
-#                     direction = -1,
-#                     name = "Lotsa answers",
-#                     labels = labels) +
-#   geom_polygon(data = munsf,
-#                aes(long, lat, group = group),
-#                linetype = "longdash",
-#                color = alpha("black", 0.6),
-#                fill = "NA",
-#                size = 0.4) +
-#   coord_fixed(ylim = c(6664000, 6700000))
-# 
-# widgetframe::frameWidget(ggiraph(code = print(g)))
 
 
 
@@ -653,16 +599,24 @@ server <- function(input, output, session){
       # Legend contents
       scale_fill_identity(paste0("Currently active\nsubdivisions\n(", 
                                  active_subdivs, " out of 23)"), 
-                          labels = suuralue_f$Name, breaks = suuralue_f$color, 
+                          labels = suuralue_f$Name, 
+                          breaks = suuralue_f$color, 
                           guide = "legend") +
       
       # Annotations. centroids2 is subdiv labels, centroids is municipality
       # labels.
-      with(centroids, 
-           annotate(geom = "text", x = long, y = lat, label = label, size = 5,
-                    fontface = 2)) +
+      with(centroids, annotate(geom = "text", 
+                               x = long, 
+                               y = lat, 
+                               label = label, 
+                               size = 5,
+                               fontface = 2)) +
       with(centroids2[!centroids2$label %in% gsub(".* ", "", c(input$subdivGroup)), ], 
-           annotate(geom = "text", x = long, y = lat, label = label, size = 4)) +
+           annotate(geom = "text", 
+                    x = long, 
+                    y = lat, 
+                    label = label, 
+                    size = 4)) +
       
       # Tight layout and legend properties
       theme(plot.margin = grid::unit(c(0, 0, 0, 0), "mm"),
@@ -670,9 +624,10 @@ server <- function(input, output, session){
             legend.text = element_text(size = 14),
             legend.position = "bottom")
     
-    ggiraph(code = print(g2), width_svg = 14, height_svg = 12, 
-            options = list(
-              opts_sizing(rescale = FALSE)))
+    ggiraph(code = print(g2), 
+            width_svg = 14, 
+            height_svg = 12, 
+            options = list(opts_sizing(rescale = FALSE)))
   })
   
   ### Interactive map ####
@@ -693,19 +648,19 @@ server <- function(input, output, session){
         
     } else if (input$karttacol == "jenks_park_mean") {
       brewerpal <- "BuPu"
-      legendname <- "Parking time, mean (min)"
+      legendname <- "Parking time,\nmean (min)"
         
     } else if (input$karttacol == "jenks_walk_mean") {
       brewerpal <- "Oranges"
-      legendname <- "Parking time, mean (min)"
+      legendname <- "Parking time,\nmean (min)"
       
     } else if (input$karttacol == "jenks_park_median") {
       brewerpal <- "BuGn"
-      legendname <- "Parking time, median (min)"
+      legendname <- "Parking time,\nmedian (min)"
       
     } else if (input$karttacol == "jenks_walk_median") {
       brewerpal <- "OrRd"
-      legendname <- "Walking time, median (min)"
+      legendname <- "Walking time,\nmedian (min)"
         
     } else {
       # answer_count
@@ -718,13 +673,14 @@ server <- function(input, output, session){
     labels <- gsub(",", " \U2012 ", labels)
     
     tooltip_content <- paste0(
-      "%s, %s<br/>",
-      "Answer count: %s</br>",
-      "<p style='padding-top: 2px;'>Mean parktime: %s</br>",
-      "Median parktime: %s</p>",
-      "<p style='padding-top: 2px;'>Mean walktime: %s<br/>",
-      "Median walktime: %s</p>",
-      "Forest (%%): %s<br/>")
+      "<div>%s, %s<br/>",
+      "Answer count: <b>%s</b></div>",
+      "<div style='padding-top: 3px;'>Mean parktime: %s</br>",
+      "Median parktime: %s</div>",
+      "<div style='padding-top: 3px;'>Mean walktime: %s</br>",
+      "Median walktime: %s</div>",
+      "<div style='padding-top: 3px;'>Forest (%%): %s</br>",
+      "Largest YKR (%%): %s</div>")
     
     g <- ggplot(data_f) +
       geom_polygon_interactive(
@@ -737,7 +693,8 @@ server <- function(input, output, session){
                    fill = input$karttacol,
                    tooltip = substitute(sprintf(tooltip_content,
                      id, nimi, answer_count, parktime_mean, parktime_median, 
-                     walktime_mean, walktime_median, ua_forest * 100)))) +
+                     walktime_mean, walktime_median, ua_forest, 
+                     largest_ykr)))) +
       
       # Jenks classes colouring and labels
       scale_fill_brewer(palette = brewerpal,
@@ -756,9 +713,10 @@ server <- function(input, output, session){
       theme(legend.title = element_text(size = 15),
             legend.text = element_text(size = 14))
     
-    ggiraph(code = print(g), width_svg = 14, height_svg = 12, 
-            options = list(
-              opts_sizing(rescale = FALSE)))
+    ggiraph(code = print(g), 
+            width_svg = 14, 
+            height_svg = 12, 
+            options = list(opts_sizing(rescale = FALSE)))
   })
 }
 
@@ -845,8 +803,8 @@ ui <- shinyUI(fluidPage(
       
       # Allow user to access histogram binwidth
       sliderInput("bin",
-                  HTML("Select binwidth for the current response variable <p style='font-size: 9px'>",
-                       "(2 Histogram)</p>"), 
+                  HTML("Select binwidth for the current response variable", 
+                       "<p style='font-size: 9px'>(2 Histogram)</p>"), 
                   min = 1, max = 10, value = 2),
       
       # Provide user possibility to see distribution of answers within the
@@ -874,8 +832,8 @@ ui <- shinyUI(fluidPage(
       # Interactive map jenks breaks options
       HTML("<div id='contents'>"),
       selectInput("karttacol",
-                  HTML("Select Jenks breaks parameter for the interactive map <p style='font-size: 9px'>",
-                       "(9 Interactive map)</p>"),
+                  HTML("Select Jenks breaks parameter for the interactive map", 
+                       "<p style='font-size: 9px'>(9 Interactive map)</p>"),
                   c("jenks_answer_count", "jenks_park_mean", "jenks_park_median", 
                     "jenks_walk_mean", "jenks_walk_median", "jenks_ua_forest")),
       
@@ -963,8 +921,19 @@ ui <- shinyUI(fluidPage(
            "(C) Helsingin, Espoon, Vantaan ja Kauniaisten mittausorganisaatiot",
            "2011. Aineisto on muokkaamaton. License",
            "<a https://creativecommons.org/licenses/by/4.0/deed.en> CC BY 4.0</a>",
+           
            "<br><a https://www.stat.fi/tup/paavo/index_en.html>",
            "Postal code area boundaries</a> (C) Statistics Finland 2019.", 
+           "Retrieved 27.6.2019. License <a https://creativecommons.org/licenses/by/4.0/deed.en>",
+           "CC BY 4.0</a>",
+           
+           "<br><a https://land.copernicus.eu/local/urban-atlas/urban-atlas-2012>",
+           "Urban Atlas 2012</a> (C) European Environment Agency 2016.", 
+           "Retrieved 27.6.2019. License <a https://land.copernicus.eu/local/urban-atlas/urban-atlas-2012?tab=metadata>",
+           "available at Copernicus.eu</a>",
+           
+           "<br><a http://metatieto.ymparisto.fi:8080/geoportal/catalog/search/resource/details.page?uuid={B374BBB2-1EDF-4CF6-B11B-04E0017E9A26}>",
+           "Yhdyskuntarakenteen vyöhykkeet 2017</a> (C) Finnish Environment Institute 2019.", 
            "Retrieved 27.6.2019. License <a https://creativecommons.org/licenses/by/4.0/deed.en>",
            "CC BY 4.0</a>")
     )
