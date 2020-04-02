@@ -720,82 +720,22 @@ while i < 50:
 
 #l = [("5985086", "5866836"), ("5981923", "5980266")]
 traveltime = travelTimeComparison(grid, forest, postal, records, l, ttm_path, 
-                                  detectOutliers=False, printStats=False, 
-                                  plotIds=False)
+                                  printStats=False, plotIds=False)
 
 # get means for all columns, see differences
-traveltime[["car_r_drivetime", "car_m_drivetime", "car_sl_drivetime", 
-            "thesis_r_drivetime","thesis_m_drivetime", 
-            "thesis_sl_drivetime"]].mean(axis=0)
+round(traveltime[["car_r_drivetime", "car_m_drivetime", "car_sl_drivetime",
+                  "car_r_pct", "car_m_pct", "car_sl_pct",
+                  "thesis_r_drivetime","thesis_m_drivetime", 
+                  "thesis_sl_drivetime", "thesis_r_pct", "thesis_m_pct", 
+                  "thesis_sl_pct"]].mean(axis=0), 2)
 
 
-
-# THIS NEXT PART IS PROBABLY EXTRANEOUS
-# also unfinished
-
-# create my own TTM18? Idea: only car data, with my data added. Check how much
-# parking time is increased on average compared to 0.42min
-
-# procedure:
-# -- check files with notPresent
-# -- check rows for notPresent
-# -- calculate my data for all other files
-import glob
-all_files = glob.glob(
-        r"C:\Sampon\Maantiede\Master of the Universe\HelsinkiTravelTimeMatrix2018\**\*.txt", 
-        recursive=True)
-all_files = all_files[1:] #drop readme
-
-# my data
-ttm_sampo = r"C:\Sampon\Maantiede\Master of the Universe\HelsinkiTravelTimeSampo"
-
-# check files for notPresent. Change value type to string
-notPresent2 = [str(i) for i in notPresent] 
-accepted = [value for value in all_files if value[97:104] not in notPresent2]
-
-# check rows for notPresent. Drop all not car related columns
-firstfile = pd.read_csv(accepted[0], sep=";")
-firstfile = firstfile.drop(columns=firstfile.columns[2:13]) 
-firstfilename = "\\" + accepted[0].split("\\")[-1]
-firstfoldername = "\\" + accepted[0].split("\\")[-2]
-
-# all rows of firstfile where from_id is not in notPresent2
-firstfile = firstfile[~firstfile.from_id.isin(notPresent2)]
-
-# save txt, first check if directory exists
-if not os.path.exists(ttm_sampo + firstfoldername):
-    os.mkdir(ttm_sampo + firstfoldername)
-
-firstfile.to_csv(ttm_sampo + firstfilename, sep=";", index=None)
-
-# NB! should not run this for loop!! Probably pretty efficient, but runs
-# through the entire TTM18, requires 10Gb+ space
-#for file in accepted:
-#    thisFile = pd.read_csv(item, sep=";")
-#    thisFile = thisFile.drop(columns=thisFile.columns[2:13]) 
-#    thisFilename = "\\" + item.split("\\")[-1]
-#    thisFoldername = "\\" + item.split("\\")[-2]
-#    
-#    # all rows of firstfile where from_id is not in notPresent2
-#    thisFile = thisFile[~thisFile.from_id.isin(notPresent2)]
-#    
-#    # save txt, first check if directory exists
-#    if not os.path.exists(ttm_sampo + thisFoldername):
-#        os.mkdir(ttm_sampo + thisFoldername)
-#    
-#    thisFile.to_csv(ttm_sampo + thisFilename, sep=";", index=None)
-
-
-
-
-
-
+    
 ############################
 ### VISUALISE & DESCRIBE ###
 ############################
-# Needs more advanced plotting. Compare to other data I have available,
-# population, area etc
-#https://towardsdatascience.com/lets-make-a-map-using-geopandas-pandas-and-matplotlib-to-make-a-chloropleth-map-dddc31c1983d
+# These visualisations are mostly obsolete. Most visual mapping is now done
+# in R.
 
 # PLOT AMOUNT OF RECORDS
 # Plot with layers as function

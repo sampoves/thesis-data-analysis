@@ -4,7 +4,7 @@ Created on Sun May 12 22:54:34 2019
 
 @author: Sampo Vesanen
 
-Functions for thesis data crunch
+Functions for thesis data crunch. Find essential functions on top.
 """
 
 # Import functions
@@ -253,7 +253,7 @@ def getJenksBreaks(dataList, numClass):
 ### Travel time comparison function and assisting functions -------------------
 
 def travelTimeComparison(grid, forest, postal, records, listOfTuples, ttm_path, 
-                         detectOutliers=False, printStats=False, plotIds=False):
+                         printStats=False, plotIds=False):
     '''
     Compare Travel-Time Matrix 2018 (from here on TTM) data with my Thesis 
     survey data. This function produces a dataframe with one row for each tuple 
@@ -266,12 +266,12 @@ def travelTimeComparison(grid, forest, postal, records, listOfTuples, ttm_path,
     - entire travel time with speed limits, no other impedances (car_sl_t) = 
         all parktime data as averaged
         
-    Additional note: If thesis_r_ or thesis_m_ is nan, it means that this
+    Additional note: If "thesis_r_" or "thesis_m_" is nan, it means that this
     destination does not have data for that timeofday option. This is more
     likely to happen in postal code areas with low amounts of responses.
     
-    If car_r_t, car_m_t and car_sl_t are nan, it means that there is no way
-    to reach the destination from the origin.
+    If "car_r_t", "car_m_t" and "car_sl_t" are nan, it means that there is no 
+    way to reach the destination from the origin.
     
     Resulting columns in the result dataframe are as follows:
         "from_id"               YKR ID of origin
@@ -374,8 +374,8 @@ def travelTimeComparison(grid, forest, postal, records, listOfTuples, ttm_path,
         destfile = destfile.drop(delCol, axis=1)
         
         # Slice destination and origin from GeoDataFrame grid. 
-        dest = grid.loc[grid["YKR_ID"] == int(destinationId)].reset_index()
-        orig = grid.loc[grid["YKR_ID"] == int(originId)].reset_index()
+        dest = grid.loc[grid.YKR_ID == int(destinationId)].reset_index()
+        orig = grid.loc[grid.YKR_ID == int(originId)].reset_index()
         
         # ID data to current dataframe row
         thisRow.loc[0, "from_id"] = originId
@@ -393,7 +393,7 @@ def travelTimeComparison(grid, forest, postal, records, listOfTuples, ttm_path,
         
         # Get TTM2018 data for the origin
         # Match origin and destination
-        car = destfile.loc[destfile["from_id"] == int(originId)].reset_index()
+        car = destfile.loc[destfile.from_id == int(originId)].reset_index()
         car = car.loc[car.index[0]]
 
         # Get all thesis survey data about destination postal code area
@@ -420,43 +420,6 @@ def travelTimeComparison(grid, forest, postal, records, listOfTuples, ttm_path,
         parktime1 = thisZipcode.loc[thisZipcode.timeofday == 1]["parktime"]
         parktime2 = thisZipcode.loc[thisZipcode.timeofday == 2]["parktime"]
         parktime_all = thisZipcode["parktime"]
-        
-        if detectOutliers == True:
-            
-            print("\n==================================")
-            print("=== OUTLIER REPORT for {0} ===".format(
-                    thisRow.loc[0, "from_id"]))
-            print("==================================")
-            print("If empty, no outliers detected.")
-            
-            # only detect outliers if enough values
-            if len(parktime1) > 3:
-                outliers = detect_outlier(parktime1)
-                
-                # report to user if outliers found
-                if len(outliers) > 0:
-                    print("Outliers detected in rush hour for destinationId {0} (Read: [(index, outlier value)]: {1}"
-                          .format(destinationId, outliers))
-                
-                # Iteratively remove outliers from current Series
-                for idx, value in outliers:
-                    parktime1 = parktime1[parktime1.index != idx]
-                
-            if len(parktime2) > 3:
-                outliers = detect_outlier(parktime2)
-                if len(outliers) > 0:
-                    print("Outliers detected in midday traffic for destinationId {0} (Read: [(index, outlier value)]: {1}"
-                          .format(destinationId, outliers))
-                for idx, value in outliers:
-                    parktime2 = parktime2[parktime2.index != idx]
-                    
-            if len(parktime_all) > 3:
-                outliers = detect_outlier(parktime_all)
-                if len(outliers) > 0:
-                    print("Outliers detected in parktime_all for destinationId {0}: {1}"
-                          .format(destinationId, outliers))
-                for idx, value in outliers:
-                    parktime_all = parktime_all[parktime_all.index != idx]
 
         thisRow.loc[0, "thesis_r_sfp"] = round(parktime1.mean(), 2)
         thisRow.loc[0, "thesis_m_sfp"] = round(parktime2.mean(), 2)
@@ -509,9 +472,11 @@ def travelTimeComparison(grid, forest, postal, records, listOfTuples, ttm_path,
         result = result.append(thisRow, sort=False)
         
         if printStats == True:
-            print("\n==============================")
-            print("=== STATISTICS for {0} ===".format(thisRow.loc[0, "from_id"]))
-            print("==============================")
+            print("\n=========================================")
+            print("=== STATISTICS for {0} to {1} ==="
+                  .format(thisRow.loc[0, "from_id"], thisRow.loc[0, "to_id"]))
+            print("=========================================")
+            
             print("Origin is located in postal code area {0}. Destination in {1}"
                   .format(thisRow.loc[0, "from_name"], thisRow.loc[0, "to_name"]))
             print("\n--- Travel time matrix 2018 ----")
@@ -523,44 +488,44 @@ def travelTimeComparison(grid, forest, postal, records, listOfTuples, ttm_path,
                   .format(car_sl_t))
             
             print("\n--- Inferred facts from TTM 2018 ---")
+            
             print("\nSearching for parking is 0.42 minutes in this context")
             print("\nEntire travel time in rush hour traffic minus searching for parking: {0} min"
                   .format(car_r_drivetime))
             print("-- SFP represents {0} % of total travel time in rush hour"
-                  .format(car_r_pct * 100))
+                  .format(str(round(car_r_pct * 100, 2))))
             print("Entire travel time in midday traffic minus searching for parking: {0} min"
                   .format(car_m_drivetime))
             print("-- SFP represents {0} % of total travel time in midday traffic"
-                  .format(car_m_pct * 100))
+                  .format(str(round(car_m_pct * 100, 2))))
             print("Entire travel time in speed limits minus searching for parking: {0} min"
                   .format(car_sl_drivetime))
             print("-- SFP represents {0} % of total travel time in speed limits"
-                  .format(car_sl_pct * 100))
+                  .format(str(round(car_sl_pct * 100, 2))))
             
             print("\n --- Sampo Vesanen thesis ---")
+            
             if values_in_dest < 20:
-                print("Warning, low amount (< 20) of responses in origin zipcode: {0}"
-                      .format(values_in_dest))
-            if len(detect_outlier(list(thisZipcode.parktime))) != 0:
-                print("Additional warning, possible outliers detected in origin parktime data: {0}"
-                      .format(detect_outlier(list(thisZipcode.parktime))))
+                print("Warning, low amount (< 20) of responses in destination ({0}): {1}"
+                      .format(thisRow.loc[0, "to_name"], values_in_dest))
             print("\nParktime (Searching for parking) in rush hour traffic: {0} min"
                   .format(thesis_r_sfp))
             print("Parktime (SFP) in midday traffic: {0} min"
                   .format(thesis_m_sfp))
             print("Parktime (SFP) generally: {0} min".format(thesis_sl_sfp))
+            
             print("\nEntire travel time in rush hour traffic minus thesis data searching for parking: {0} min"
                   .format(thesis_r_drivetime))
             print("-- SFP represents {0} % of total travel time in rush hour"
-                  .format(thesis_r_pct * 100))
+                  .format(str(round(thesis_r_pct * 100, 2))))
             print("Entire travel time in midday traffic minus thesis data searching for parking: {0} min"
                   .format(thesis_m_drivetime))
             print("-- SFP represents {0} % of total travel time in midday traffic"
-                  .format(thesis_m_pct * 100))
+                  .format(str(round(thesis_m_pct * 100, 2))))
             print("Entire travel time following speed limits without any additional impedances minus thesis data searching for parking: {0} min"
                   .format(thesis_sl_drivetime))
             print("-- SFP represents {0} % of total travel time when following speed limits\n\n"
-                  .format(thesis_sl_pct * 100))
+                  .format(str(round(thesis_sl_pct * 100, 2))))
         
         # Plot origin and destination
         if plotIds == True:
