@@ -411,6 +411,16 @@ server <- function(input, output, session){
                      color = "median"),
                  linetype = "longdash", 
                  size = 1) +
+      
+      # This is kernel density estimate, a smoothed version of the histogram.
+      # Usually geom_density() sets the scale for y axis, but here we will
+      # continue using count/frequency. This requires some work on our behalf.
+      # Idea from here: https://stackoverflow.com/a/27612438/9455395
+      #geom_density(aes(y = binwidth * ..count..)) +
+      geom_density(aes(y = ..density.. * (nrow(inputdata) * binwidth)), 
+                   colour = alpha("black", 0.4),
+                   adjust = binwidth) +
+      
       theme(legend.title = element_text(size = 15),
             legend.text = element_text(size = 14),
             axis.text = element_text(size = 12),
@@ -693,8 +703,7 @@ server <- function(input, output, session){
                    fill = input$karttacol,
                    tooltip = substitute(sprintf(tooltip_content,
                      id, nimi, answer_count, parktime_mean, parktime_median, 
-                     walktime_mean, walktime_median, ua_forest, 
-                     largest_ykr)))) +
+                     walktime_mean, walktime_median, ua_forest, largest_ykr)))) +
       
       # Jenks classes colouring and labels
       scale_fill_brewer(palette = brewerpal,
