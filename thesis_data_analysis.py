@@ -609,7 +609,7 @@ records["ykr_zone"] = records.ykr_zone.map(dictKey)
 
 # View further information about subdivisions in script thesis_data_zipcodes.py.
             
-# Create column for subdivision name to DataFrame "records"
+# Create column for subdivision name in DataFrame "records"
 records["subdiv"] = 0
 
 # Using dictionary subdiv_dict and lists of zipcodes from 
@@ -617,7 +617,11 @@ records["subdiv"] = 0
 for varname, fullname in subdiv_dict.items():
     records.loc[records.zipcode.isin(eval(varname)), "subdiv"] = fullname
 
-    
+
+
+#### This point marks the Python complete data of my thesis. ####
+
+
 
 #######################################
 ### UTILISE TRAVEL-TIME MATRIX 2018 ###
@@ -657,9 +661,9 @@ round(traveltime[["car_r_drivetime", "car_m_drivetime", "car_sl_drivetime",
 # Plot with layers as function
 parkingPlot(postal, "answer_count", 0) 
 parkingPlot(postal[postal.kunta == "091"], "answer_count", 0) #amount for Hki
-parkingPlot(postal, "walktime_mean", 1) #PLOT WALKTIME MEAN
-parkingPlot(postal, "parktime_mean", 1) #PLOT PARKTIME MEAN
-parkingPlot(postal, "ua_forest", 1) #PLOT PARKTIME MEAN
+parkingPlot(postal, "walktime_mean", 1) # plot walktime mean
+parkingPlot(postal, "parktime_mean", 1) # plot parktime mean
+parkingPlot(postal, "ua_forest", 1) # plot parktime mean
 
 # Get mean-std-min-max-quantiles of municipalities
 descri_postal = postal.iloc[:, [4, 113, 114, 115, 116, 117]]
