@@ -248,7 +248,7 @@ for postalarea in postal.itertuples():
     for row in thisZip.itertuples():
 
         # this YKR_ID does not yet exist in grid_areas
-        if grid_areas[grid_areas["YKR_ID"].isin([row.YKR_ID])].empty == True:
+        if grid_areas[grid_areas.YKR_ID.isin([row.YKR_ID])].empty == True:
 
             grid_areas.loc[i, "YKR_ID"] = row.YKR_ID
             grid_areas.loc[i, "zipcode"] = postalarea.posti_alue
@@ -331,7 +331,7 @@ with open(os.path.join(wd, "duplicates.txt"), "a+") as f:
     for visitor in records.ip.unique():
         theseRecords = records.loc[records.ip == visitor]
         
-        if(theseRecords["zipcode"].is_unique) == False:
+        if(theseRecords.zipcode.is_unique) == False:
             f.write("\nDuplicates detected for ip code {0}\n".format(
                     theseRecords.ip.unique()[0]))
             dupl = theseRecords[theseRecords.zipcode.duplicated(keep=False)]
@@ -375,13 +375,13 @@ for idx, (park_value, walk_value, ip_value) in enumerate(
 # Illegal contains all IPs which have values equal or above 60 as answers. 
 # DataFrame "illegal_df" shows all records made by these IP addresses
 illegal = list(set(illegal))
-illegal_df = records[records["ip"].isin(illegal)]
+illegal_df = records[records.ip.isin(illegal)]
 
 # Drop the records which have values equal or above 60 as answer. Drop the same
 # IP address codes from visitors as well.
 records = records.drop(records.index[delList])
 records = records.reset_index()
-visitors = visitors[~visitors["ip"].isin(illegal)]
+visitors = visitors[~visitors.ip.isin(illegal)]
 visitors = visitors.reset_index()
 
 
@@ -393,7 +393,7 @@ visitors = visitors.reset_index()
 # Reclassify ykr_vyoh. Reclassification is created as in Finnish Environment
 # Institute website (Only available in Finnish)
 #https://www.ymparisto.fi/fi-FI/Elinymparisto_ja_kaavoitus/Yhdyskuntarakenne/Tietoa_yhdyskuntarakenteesta/Yhdyskuntarakenteen_vyohykkeet
-ykr_vyoh["vyohselite"] = ykr_vyoh["vyohselite"].replace(
+ykr_vyoh["vyohselite"] = ykr_vyoh.vyohselite.replace(
         {"keskustan reunavyöhyke/intensiivinen joukkoliikenne": 
             "keskustan reunavyöhyke", 
          "keskustan reunavyöhyke/joukkoliikenne": 
@@ -448,7 +448,6 @@ statistics.calculateStats()
 # question. Together with checking out how much forest is there in research 
 # area we could find some interesting results in the statistical analysis.
 
-
 # YKR zones
 
 # Dictionary key to help allocation of values
@@ -485,7 +484,7 @@ for row in postal.itertuples():
             round(thisRow.geometry.area / thisPol.unary_union.area, 3)
         } for thisRow in group.itertuples()]
     
-    # iterate thisDict, list of dictionaries to insert values in postal
+    # Iterate thisDict, list of dictionaries to insert values in "postal"
     for item in thisDict:
         for k, v in item.items():
             
@@ -551,13 +550,13 @@ postal = postal.rename(columns={"zipcode": "posti_alue"})
 # Calculate jenks breaks for ua_forest. Use breaks to reclassify values
 # in records. We will use code created by GitHub user Drewda. This is now
 # commented because calculation time takes about 20 seconds
-#breaks = getJenksBreaks(records["ua_forest"].tolist(), 5)
+#breaks = getJenksBreaks(records.ua_forest.tolist(), 5)
 
 # See the breaks on plot
-#plt.figure(figsize = (10, 8))
-#hist = plt.hist(records["ua_forest"], bins=20, align="left", color="g")
+#plt.figure(figsize=(10, 8))
+#hist = plt.hist(records.ua_forest, bins=20, align="left", color="g")
 #for b in breaks:
-#    plt.vlines(b, ymin=0, ymax = max(hist[0]))
+#    plt.vlines(b, ymin=0, ymax=max(hist[0]))
 
 # Reclassify using this clumsy nested np.where(). Use values calculated in
 # getJenksBreaks()
@@ -574,7 +573,7 @@ records["ua_forest"] = np.where(
                                                 "Predominantly forest",
                                                 "novalue"))))))))).tolist()
 
-# Use largest percentage for a class in each zipcode!
+# Use largest percentage for a class in each zipcode
 ykrColumns = ["ykr_alakesk_jalan", "ykr_autovyoh", "ykr_int_joukko", 
         "ykr_joukkoliik", "ykr_kesk_jalan", "ykr_kesk_reuna", "ykr_novalue"]
 
@@ -588,18 +587,13 @@ largestYkr = largestYkr.rename(columns={"posti_alue": "zipcode",
 # zipcodes
 records = pd.merge(records, largestYkr, on="zipcode")
 
-# Rename ykr zone records to human readable versions
-for row in records.itertuples():
-    
-    for realname, abbr in dictKey.items():
-        
-        if row.ykr_zone == abbr:
-            records.loc[row.Index, "ykr_zone"] = realname
-        
-        elif row.ykr_zone == "ykr_novalue":
-            records.loc[row.Index, "ykr_zone"] = "novalue"
-        
-    
+# Reverse dictKey, add entry for "ykr_novalue". Then rename ykr zone records 
+# to human readable versions
+dictKey = {v: k for k, v in dictKey.items()}
+dictKey["ykr_novalue"] = "novalue"
+records["ykr_zone"] = records.ykr_zone.map(dictKey)
+
+
 
 ################################
 ### Divisions by postal code ###
@@ -613,95 +607,17 @@ for row in records.itertuples():
 # (for example Lippajärvi-Järvenperä and Sepänkylä-Kuurinniitty) and just 
 # south of Helsinki-Vantaa airport.
 
-# View further information about subdivisions in script thesis_data_zipcodes.py
+# View further information about subdivisions in script thesis_data_zipcodes.py.
             
-# View Helsinki subdivisions on map
-#postal[postal.posti_alue.isin(hkiSouth)].plot()
-#postal[postal.posti_alue.isin(hkiWest)].plot()
-#postal[postal.posti_alue.isin(hkiCentral)].plot()
-#postal[postal.posti_alue.isin(hkiNorth)].plot()
-#postal[postal.posti_alue.isin(hkiNortheast)].plot()
-#postal[postal.posti_alue.isin(hkiSoutheast)].plot()
-#postal[postal.posti_alue.isin(hkiEast)].plot()
-#postal[postal.posti_alue.isin(hkiOster)].plot()
-#postal[postal.posti_alue.isin(hkiSouth + hkiWest + hkiCentral + hkiNorth +
-#                              hkiNortheast + hkiSoutheast + hkiEast +
-#                              hkiOster)].plot()
-
-# View Espoo subdivisions on map
-#postal[postal.posti_alue.isin(espLeppavaara)].plot()
-#postal[postal.posti_alue.isin(espTapiola)].plot()
-#postal[postal.posti_alue.isin(espMatinkyla)].plot()
-#postal[postal.posti_alue.isin(espEspoonlahti)].plot()
-#postal[postal.posti_alue.isin(espKauklahti)].plot()
-#postal[postal.posti_alue.isin(espVanhaespoo)].plot()
-#postal[postal.posti_alue.isin(espPohjoisespoo)].plot()
-#postal[postal.posti_alue.isin(espLeppavaara + espTapiola + espMatinkyla +
-#                              espEspoonlahti + espKauklahti + espVanhaespoo +
-#                              espPohjoisespoo)].plot()
-
-# View Vantaa subdivisions on map
-#postal[postal.posti_alue.isin(vanMyyrmaki)].plot()
-#postal[postal.posti_alue.isin(vanKivisto)].plot()
-#postal[postal.posti_alue.isin(vanAviapolis)].plot()
-#postal[postal.posti_alue.isin(vanTikkurila)].plot()
-#postal[postal.posti_alue.isin(vanKoivukyla)].plot()
-#postal[postal.posti_alue.isin(vanKorso)].plot()
-#postal[postal.posti_alue.isin(vanHakunila)].plot()
-#postal[postal.posti_alue.isin(vanMyyrmaki + vanKivisto + vanAviapolis +
-#                              vanTikkurila + vanKoivukyla + vanKorso +
-#                              vanHakunila)].plot()
-
-
-# Insert subvision names to records
-
-# Create column for subdivisions information to records
+# Create column for subdivision name to DataFrame "records"
 records["subdiv"] = 0
 
 # Using dictionary subdiv_dict and lists of zipcodes from 
-# thesis_data_zipcodes.py, assign subdivision names to dataframe records
+# "thesis_data_zipcodes.py", assign subdivision names to dataframe "records"
 for varname, fullname in subdiv_dict.items():
+    records.loc[records.zipcode.isin(eval(varname)), "subdiv"] = fullname
 
-    for row in records.itertuples():
-        thisZip = row.zipcode
-        
-        if thisZip in eval(varname):
-            records.loc[row.Index, "subdiv"] = fullname
     
-
-
-##############################
-### CORINE LAND COVER 2018 ###
-##############################
-
-# Use Corine Land Cover 2018 shapefile to find the most common land cover type
-# in level 3 for each zipcode.
-            
-# Do not utilise this for the time being. There are significant problems with
-# trying to put the levels into my data.
-
-## Import Corine Land Cover 2018, select only relevant area
-#clc2018 = gpd.read_file(
-#        r"C:\Sampon\Maantiede\Master of the Universe\clc2018_fi20m\clc2018eu25ha.shp", 
-#        encoding="utf-8")
-#clc2018 = gpd.overlay(clc2018, gpd.GeoDataFrame(geometry=resarea.buffer(500)),
-#                      how="intersection")
-
-#clc_df = pd.DataFrame({"zipcode": postal.posti_alue, "clc": "none"})
-
-##for row in postal.iterrows():
-#    thisRow = row[1]
-#    thisPol = gpd.GeoDataFrame(geometry=[thisRow.geometry])
-#    thisInters = gpd.overlay(clc2018, thisPol, how="intersection")    
-#    level3 = thisInters.dissolve(by="Level3")
-#    level3["area"] = level3.area
-#    pos = level3["area"].idxmax()
-#    clc_df.loc[row[0], "clc"] = level3.loc[pos, "Level3Eng"]
-
-## merge clc data with records
-#records = records.merge(clc_df, left_on="zipcode", right_on="zipcode")
-
-
 
 #######################################
 ### UTILISE TRAVEL-TIME MATRIX 2018 ###
@@ -712,7 +628,7 @@ for varname, fullname in subdiv_dict.items():
 l = []
 i = 0
 while i < 50:
-    # In valuerange make sure no grid cells outside research area are accepted
+    # In "valuerange" make sure no grid cells outside research area are accepted
     valuerange = set(grid.YKR_ID.astype(str)) - set(list(map(str, notPresent)))
     vals = random.sample(valuerange, 2)
     l.append(tuple(vals))
@@ -766,10 +682,10 @@ descri_postal[postal.kunta == "049"].describe() #van
 # For Shinyapps.io. There are huge problems with character encoding down the 
 # line if Ascii-UTF-8 conversion is not done here.
 #import unicodedata
-#records["subdiv"] = records["subdiv"].apply(lambda val: unicodedata.normalize("NFKD", val).encode("ascii", "ignore").decode())
-#records["ykr_zone"] = records["ykr_zone"].apply(lambda val: unicodedata.normalize("NFKD", val).encode("ascii", "ignore").decode())
-#records.to_csv(wd + "/shinyrecords.csv", encoding="utf-8")
+#records["subdiv"] = records.subdiv.apply(lambda val: unicodedata.normalize("NFKD", val).encode("ascii", "ignore").decode())
+#records["ykr_zone"] = records.ykr_zone.apply(lambda val: unicodedata.normalize("NFKD", val).encode("ascii", "ignore").decode())
+#records.to_csv("shinyrecords.csv", encoding="utf-8")
 
-#postal["nimi"] = postal["nimi"].apply(lambda val: unicodedata.normalize("NFKD", val).encode("ascii", "ignore").decode())
-#postal["namn"] = postal["namn"].apply(lambda val: unicodedata.normalize("NFKD", val).encode("ascii", "ignore").decode())
-#postal.to_csv(wd + "/shinypostal.csv", encoding="utf-8")
+#postal["nimi"] = postal.nimi.apply(lambda val: unicodedata.normalize("NFKD", val).encode("ascii", "ignore").decode())
+#postal["namn"] = postal.namn.apply(lambda val: unicodedata.normalize("NFKD", val).encode("ascii", "ignore").decode())
+#postal.to_csv("shinypostal.csv", encoding="utf-8")

@@ -285,3 +285,44 @@ subdiv_dict = {"hkiSouth": "Helsinki Southern",
                "vanKorso": "Vantaa Korso",
                "vanHakunila": "Vantaa Hakunila",
                "kauniainen": "Kauniainen"}
+
+
+# View subdivisions on map. You will be able to run these commands after 
+# running the main script.
+
+# View Helsinki subdivisions on map
+#postal[postal.posti_alue.isin(hkiSouth)].plot()
+#postal[postal.posti_alue.isin(hkiWest)].plot()
+#postal[postal.posti_alue.isin(hkiCentral)].plot()
+#postal[postal.posti_alue.isin(hkiNorth)].plot()
+#postal[postal.posti_alue.isin(hkiNortheast)].plot()
+#postal[postal.posti_alue.isin(hkiSoutheast)].plot()
+#postal[postal.posti_alue.isin(hkiEast)].plot()
+#postal[postal.posti_alue.isin(hkiOster)].plot()
+#postal[postal.posti_alue.isin(hkiSouth + hkiWest + hkiCentral + hkiNorth +
+#                              hkiNortheast + hkiSoutheast + hkiEast +
+#                              hkiOster)].plot()
+
+# View Espoo subdivisions on map
+#postal[postal.posti_alue.isin(espLeppavaara)].plot()
+#postal[postal.posti_alue.isin(espTapiola)].plot()
+#postal[postal.posti_alue.isin(espMatinkyla)].plot()
+#postal[postal.posti_alue.isin(espEspoonlahti)].plot()
+#postal[postal.posti_alue.isin(espKauklahti)].plot()
+#postal[postal.posti_alue.isin(espVanhaespoo)].plot()
+#postal[postal.posti_alue.isin(espPohjoisespoo)].plot()
+#postal[postal.posti_alue.isin(espLeppavaara + espTapiola + espMatinkyla +
+#                              espEspoonlahti + espKauklahti + espVanhaespoo +
+#                              espPohjoisespoo)].plot()
+
+# View Vantaa subdivisions on map
+#postal[postal.posti_alue.isin(vanMyyrmaki)].plot()
+#postal[postal.posti_alue.isin(vanKivisto)].plot()
+#postal[postal.posti_alue.isin(vanAviapolis)].plot()
+#postal[postal.posti_alue.isin(vanTikkurila)].plot()
+#postal[postal.posti_alue.isin(vanKoivukyla)].plot()
+#postal[postal.posti_alue.isin(vanKorso)].plot()
+#postal[postal.posti_alue.isin(vanHakunila)].plot()
+#postal[postal.posti_alue.isin(vanMyyrmaki + vanKivisto + vanAviapolis +
+#                              vanTikkurila + vanKoivukyla + vanKorso +
+#                              vanHakunila)].plot()
