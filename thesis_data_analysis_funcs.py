@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd 
 import matplotlib.pyplot as plt
 from descartes import PolygonPatch
-from shapely.geometry import Point, MultiPoint
+from shapely.geometry import Point, MultiPoint, Polygon
 from shapely.ops import cascaded_union
 from matplotlib.offsetbox import (TextArea, DrawingArea, OffsetImage,
                                   AnnotationBbox)
@@ -250,87 +250,140 @@ def getJenksBreaks(dataList, numClass):
 def travelTimeComparison(grid, forest, postal, records, listOfTuples, ttm_path, 
                          printStats=False, plotIds=False):
     '''
-    Compare Travel-Time Matrix 2018 (from here on TTM) data with my Thesis 
-    survey data. This function produces a dataframe with one row for each tuple 
-    inputted into it. This function calculates many descriptives about these 
-    two datasets.
+    Compare Travel-Time Matrix 2018 (from here on "TTM") private car data with 
+    my thesis survey data. This function produces a DataFrame with one row for 
+    each tuple inputted into it. This function calculates many descriptives 
+    about these two datasets.
     
     In this thesis we assume:
-    - rush hour (car_r_t) = "Weekday, rush hour (07:00-09:00 and 15:00-17:00)", 
-    - midday (car_m_t) = "Weekday, other than rush hour"
-    - entire travel time with speed limits, no other impedances (car_sl_t) = 
+    - rush hour (ttm_r_t) = "Weekday, rush hour (07:00-09:00 and 15:00-17:00)", 
+    - midday (ttm_m_t) = "Weekday, other than rush hour"
+    - entire travel time with speed limits, no other impedances (ttm_sl_t) = 
         all parktime data as averaged
+    - as in the literature, searching for parking in TTM is 0.42 minutes.
+    - as stated in literature, walking to destination in TTM is 2.5 minutes in 
+        Helsinki center and 2.0 minutes elsewhere
         
     Additional note: If "thesis_r_" or "thesis_m_" is nan, it means that this
     destination does not have data for that timeofday option. This is more
     likely to happen in postal code areas with low amounts of responses.
     
-    If "car_r_t", "car_m_t" and "car_sl_t" are nan, it means that there is no 
-    way to reach the destination from the origin.
+    If "ttm_r_t", "ttm_m_t" and "ttm_sl_t" are nan, it means that there is no 
+    way to reach the destination from the origin in TTM.
     
-    Resulting columns in the result dataframe are as follows:
+    Resulting columns in the result DataFrame are as follows:
         "from_id"               YKR ID of origin
         "from_name"             Postal area name of origin
         "to_id"                 YKR ID of destination
         "to_name"               Postal area name of destination
-        "car_r_t"               TTM: entire travel time in rush hour traffic
-                                (minutes)
-        "car_m_t"               TTM: entire travel time in midday traffic
-                                (minutes)
-        "car_sl_t"              TTM: entire travel time following speed limits
-                                without any additional impedances (minutes)
-        "car_r_drivetime"       TTM: entire travel time in rush hour traffic 
-                                minus searching for parking (SFP: 0.42min)
-                                (minutes)
-        "car_m_drivetime"       TTM: entire travel time in midday traffic minus
-                                searching for parking (SFP: 0.42min) (minutes)
-        "car_sl_drivetime"      TTM: entire travel time following speed limits
+        
+        "ttm_r_t"               TTM: entire travel time in rush hour traffic
+                                in a private car (minutes)
+        "ttm_m_t"               TTM: entire travel time in midday traffic
+                                in a private car (minutes)
+        "ttm_sl_t"              TTM: entire travel time following speed limits
+                                without any additional impedances in a private
+                                car (minutes)
+        "ttm_sfp"               TTM: Time used to search for parking (0.42 min)
+        "ttm_wtd"               TTM: Time used to walk to the destination from 
+                                the parked car (2.5 or 2.0 minutes)
+        "ttm_r_drivetime"       TTM: entire travel time in rush hour traffic 
+                                minus searching for parking and walking to the
+                                destination (minutes)
+        "ttm_m_drivetime"       TTM: entire travel time in midday traffic minus
+                                SFP and WTD (minutes)
+        "ttm_sl_drivetime"      TTM: entire travel time following speed limits
                                 without any additional impedances minus
-                                searching for parking (SFP: 0.42min) (minutes)
-        "car_r_pct"             TTM: how many percent is SFP of car_r_t
+                                SFP and WTD (minutes)
+        "ttm_r_pct"             TTM: how many percent is SFP and WTD of ttm_r_t
                                 (percent)
-        "car_m_pct"             TTM: how many percent is SFP of car_m_t  
+        "ttm_m_pct"             TTM: how many percent is SFP and WTD of ttm_m_t  
                                 (percent)
-        "car_sl_pct"            TTM: how many percent is SFP of car_sl_t
+        "ttm_sl_pct"            TTM: how many percent is SFP and WTD of ttm_sl_t
                                 (percent)
+                                
         "values_in_dest"        Thesis: amount of records in destination postal
                                 code area
-        "thesis_r_sfp"          Thesis: searching for parking in destination
-                                postal code area in rush hour traffic
+        "thesis_r_sfp"          Thesis: Averaged searching for parking in 
+                                destination postal code area in rush hour 
+                                traffic (minutes)
+        "thesis_m_sfp"          Thesis: Averaged SFP in destination postal code 
+                                area in midday traffic (minutes)
+        "thesis_sl_sfp"         Thesis: Averaged SFP in destination postal code 
+                                area generally (all parktime values averaged)
                                 (minutes)
-        "thesis_m_sfp"          Thesis: SFP in destination postal code area
-                                in midday traffic (minutes)
-        "thesis_sl_sfp"         Thesis: SFP in destination postal code area
-                                generally (all parktime values averaged)
-                                (minutes)
-        "thesis_r_pct"          Thesis: how many percent is thesis SFP of
-                                TTM entire travel time in rush hour traffic
-                                (percent)
-        "thesis_m_pct"          Thesis: how many percent is thesis SFP of
-                                TTM entire travel time in midday traffic 
-                                (percent)
-        "thesis_sl_pct"         Thesis: how many percent is thesis SFP of
-                                TTM entire travel time following speed limits
-                                without any additional impedances (percent)
-        "thesis_r_drivetime"    TTM: Entire travel time in rush hour traffic
-                                minus Thesis data rush hour SFP (minutes)
-        "thesis_m_drivetime"    TTM: Entire travel time in midday traffic minus
-                                thesis data midday SFP (minutes)
-        "thesis_sl_drivetime"   TTM: Entire travel time following speed limits
-                                without any additional impedances minus thesis
-                                data general (all values averaged) SFP (minutes)
+        "thesis_r_wtd"          Thesis: Averaged walking to the destination 
+                                from the parked car in destination postal code 
+                                area in rush hour traffic hours (minutes)
+        "thesis_m_wtd"          Thesis: averaged WTD in destination postal code 
+                                area in midday hours (minutes)
+        "thesis_sl_wtd"         Thesis: Averaged WTD in destination postal code 
+                                area generally (all walktime values are 
+                                averaged) (minutes)
+        "thesis_r_drivetime"    Thesis: Entire TTM travel time in rush hour 
+                                traffic minus Thesis data rush hour SFP and
+                                WTD (minutes)
+        "thesis_m_drivetime"    Thesis: Entire TTM travel time in midday traffic 
+                                minus thesis data midday SFP and WTD (minutes)
+        "thesis_sl_drivetime"   Thesis: Entire TTM travel time following speed 
+                                limits without any additional impedances minus 
+                                thesis data general (all values averaged) SFP 
+                                and WTD (minutes)
+        "thesis_r_pct"          Thesis: how many percent is thesis SFP and 
+                                thesis WTD of the entire TTM travel time in 
+                                rush hour traffic (percent)
+        "thesis_m_pct"          Thesis: how many percent is thesis SFP and
+                                thesis WTD of the entire TTM travel time in 
+                                midday traffic (percent)
+        "thesis_sl_pct"         Thesis: how many percent is thesis SFP and
+                                thesis WTD of the entire TTM travel time 
+                                following speed limits without any additional 
+                                impedances (percent)
     '''
     
     result = pd.DataFrame(
-            columns=["from_id", "from_name", "to_id", "to_name", "car_r_t", 
-                     "car_m_t", "car_sl_t", "car_r_drivetime", "car_m_drivetime", 
-                     "car_sl_drivetime", "car_r_pct", "car_m_pct", "car_sl_pct", 
-                     "values_in_dest", "thesis_r_sfp", "thesis_m_sfp", 
-                     "thesis_sl_sfp", "thesis_r_pct", "thesis_m_pct", 
-                     "thesis_sl_pct", "thesis_r_drivetime", "thesis_m_drivetime", 
-                     "thesis_sl_drivetime"])
+            columns=["from_id", "from_name", "to_id", "to_name", "ttm_r_t", 
+                     "ttm_m_t", "ttm_sl_t", "ttm_sfp", "ttm_wtd", 
+                     "ttm_r_drivetime", "ttm_m_drivetime", "ttm_sl_drivetime", 
+                     "ttm_r_pct", "ttm_m_pct", "ttm_sl_pct", "values_in_dest", 
+                     "thesis_r_sfp", "thesis_m_sfp", "thesis_sl_sfp",
+                     "thesis_r_wtd", "thesis_m_wtd", "thesis_sl_wtd",
+                     "thesis_r_drivetime", "thesis_m_drivetime", 
+                     "thesis_sl_drivetime", "thesis_r_pct", "thesis_m_pct", 
+                     "thesis_sl_pct"])
     template = result.copy()
     template.loc[0] = 0
+    
+    
+    # Determine longer walking times in the Helsinki center
+    
+    # In the Travel time matrix 2018 all parking takes 0.42 minutes. The 
+    # research team used the bounding box below to define an area in center of 
+    # Helsinki to denote an area where people walk a longer time to their cars. 
+    # This can, conversely, used to measure walking distances from car to main
+    # destination. Produce list "walk_center" to keep track of postal code 
+    # areas inside the walking center Helsinki. 
+    
+    # Inside the walking center people walk 180 meters (2.5 min) to their 
+    # destination. Outside the walking center people walk 130 meters (2 minutes) 
+    # to their destination. Polygon source: Henrikki Tenkanen. Walking 
+    # distances are from "Kurri & Laakso, 2002. Parking policy measures and 
+    # their effects in the Helsinki metropolitan area".
+    walkingHki = Polygon([(387678.024778, 6675360.99039), 
+                          (387891.53396, 6670403.35286),
+                          (383453.380944, 6670212.21613), 
+                          (383239.871737, 6675169.85373),
+                          (387678.024778, 6675360.99039)])
+    walkingHki = gpd.GeoDataFrame(geometry=[walkingHki], crs=postal.crs)
+    
+    full_walk_center = postal[postal.intersects(walkingHki.unary_union)].reset_index()
+    inters_walk_center = gpd.overlay(postal, 
+                                     walkingHki,
+                                     how="intersection").reset_index()
+    walk_center = full_walk_center[inters_walk_center.area / 
+                                   full_walk_center.area > 0.5]
+    walk_center = list(walk_center.posti_alue)
+    
     
     if plotIds == True:
         # background layers for matplotlib. Use these to have all origin and
@@ -348,17 +401,17 @@ def travelTimeComparison(grid, forest, postal, records, listOfTuples, ttm_path,
                     edgecolor="black",
                     facecolor="none")
 
-    # Iterate through all ids inputted by user
+    # Iterate through all ids inputted by user in the parameter "listOfTuples"
     for originId, destinationId in list(listOfTuples):
         
         # This code is meant to compare 2018 Travel-Time Matrix results to my 
-        # results. Get origin and destination points from TTM data, then 
+        # thesis results. Get origin and destination points from TTM data, then 
         # compare to zipcodes mean in my data
         
-        # copy dataframe template to produce this row of data
+        # Copy DataFrame template to produce this row of data
         thisRow = template.copy()
 
-        # Origin and destinations are read from list of tuples. Read relevant 
+        # Origins and destinations are read from a list of tuples. Read relevant 
         # text file location from "ttm_path"
         traveltimepath = ttm_path.format(destinationId[:4], destinationId)
         
@@ -368,11 +421,11 @@ def travelTimeComparison(grid, forest, postal, records, listOfTuples, ttm_path,
         delCol = list(destfile.columns[2:13])
         destfile = destfile.drop(delCol, axis=1)
         
-        # Slice destination and origin from GeoDataFrame grid. 
+        # Slice destination and origin from GeoDataFrame "grid". 
         dest = grid.loc[grid.YKR_ID == int(destinationId)].reset_index()
         orig = grid.loc[grid.YKR_ID == int(originId)].reset_index()
         
-        # ID data to current dataframe row
+        # Insert id data into "thisRow", the current row being processed
         thisRow.loc[0, "from_id"] = originId
         thisRow.loc[0, "to_id"] = destinationId
         thisRow.loc[0, "from_name"] = postal.loc[
@@ -381,165 +434,206 @@ def travelTimeComparison(grid, forest, postal, records, listOfTuples, ttm_path,
                 postal.intersects(dest.geometry[0]), "nimi"].values[0]
         
         # Convert dest and orig geometry to Point for later use in plotting.
-        # If this is done earlier, the naming of the zipcode above can fail
-        # in cases
+        # If this is done earlier, the naming of the zipcode above can fail.
         dest["geometry"] = dest.centroid
         orig["geometry"] = orig.centroid
-        
+
         # Get TTM2018 data for the origin
         # Match origin and destination
-        car = destfile.loc[destfile.from_id == int(originId)].reset_index()
-        car = car.loc[car.index[0]]
+        ttm = destfile.loc[destfile.from_id == int(originId)].reset_index()
+        ttm = ttm.loc[ttm.index[0]]
 
         # Get all thesis survey data about destination postal code area
-        thisZipcode = records.loc[records.zipcode == dest.zipcode[0]]
+        thisZip = records.loc[records.zipcode == dest.zipcode[0]]
         
-        # Travel-time Matrix 2018, entire travel times. Detect nodata values
-        # (-1) and assign np.nan if detected.
-        thisRow.loc[0, "car_r_t"] = np.nan if car[3] == -1 else car[3]
-        thisRow.loc[0, "car_m_t"] = np.nan if car[5] == -1 else car[5]
-        thisRow.loc[0, "car_sl_t"] =  np.nan if car[7] == -1 else car[7]
-        thisRow.loc[0, "values_in_dest"] = len(thisZipcode)
-        car_r_t = thisRow.loc[0, "car_r_t"]
-        car_m_t = thisRow.loc[0, "car_m_t"] 
-        car_sl_t = thisRow.loc[0, "car_sl_t"]
+        # parktime and walktime in thesis survey data, destination postal
+        # code area. Get timeofday == 1 (rush hour), 2 (midday) and all.
+        parktime1 = thisZip.loc[thisZip.timeofday == 1]["parktime"]
+        parktime2 = thisZip.loc[thisZip.timeofday == 2]["parktime"]
+        parktime_all = thisZip.parktime
+        
+        walktime1 = thisZip.loc[thisZip.timeofday == 1]["walktime"]
+        walktime2 = thisZip.loc[thisZip.timeofday == 2]["walktime"]
+        walktime_all = thisZip.walktime
+        
+        
+        #### Populate current row ####
+        
+        # Travel-time Matrix 2018, entire travel times with private car. Detect 
+        # nodata values (-1) and assign np.nan if detected.
+        thisRow.loc[0, "ttm_r_t"] = np.nan if ttm[3] == -1 else ttm[3]
+        thisRow.loc[0, "ttm_m_t"] = np.nan if ttm[5] == -1 else ttm[5]
+        thisRow.loc[0, "ttm_sl_t"] =  np.nan if ttm[7] == -1 else ttm[7]
+        ttm_r_t = thisRow.loc[0, "ttm_r_t"]
+        ttm_m_t = thisRow.loc[0, "ttm_m_t"] 
+        ttm_sl_t = thisRow.loc[0, "ttm_sl_t"]
+           
+        # "ttm_xx_drivetime" is the entire TTM travel time minus searching for 
+        # parking (TTM value) and walking from the parked car to destination 
+        # (TTM value), in the given time of day
+        ttm_sfp = 0.42
+        ttm_wtd = 2.5 if thisZip.zipcode.isin(walk_center).any() else 2.0
+        ttm_park_process = ttm_sfp + ttm_wtd
+
+        thisRow.loc[0, "ttm_sfp"] = ttm_sfp
+        thisRow.loc[0, "ttm_wtd"] = ttm_wtd
+        thisRow.loc[0, "ttm_r_drivetime"] = ttm_r_t - ttm_park_process
+        thisRow.loc[0, "ttm_m_drivetime"] = ttm_m_t - ttm_park_process
+        thisRow.loc[0, "ttm_sl_drivetime"] = ttm_sl_t - ttm_park_process
+        ttm_r_drivetime = thisRow.loc[0, "ttm_r_drivetime"]
+        ttm_m_drivetime = thisRow.loc[0, "ttm_m_drivetime"]
+        ttm_sl_drivetime = thisRow.loc[0, "ttm_sl_drivetime"]
+        
+        # In Travel-Time Matrix data, how much searching for parking 
+        # and walking to destination from parked car constituted of the total 
+        # travel time?
+        thisRow.loc[0, "ttm_r_pct"] = round(ttm_park_process / ttm_r_t, 3)
+        thisRow.loc[0, "ttm_m_pct"] = round(ttm_park_process / ttm_m_t, 3)
+        thisRow.loc[0, "ttm_sl_pct"] = round(ttm_park_process / ttm_sl_t, 3)
+        ttm_r_pct = thisRow.loc[0, "ttm_r_pct"]
+        ttm_m_pct = thisRow.loc[0, "ttm_m_pct"]
+        ttm_sl_pct = thisRow.loc[0, "ttm_sl_pct"]
+
+        # Amount of thesis survey responses in destination postal code   
+        thisRow.loc[0, "values_in_dest"] = len(thisZip)
         values_in_dest = thisRow.loc[0, "values_in_dest"]
         
-        # Searching for parking for thesis survey data, in destination postal
-        # code area. In this phase we optionally test if there are any outliers
-        # in parktime values. This can be helpful to prevent seemingly erroneous
-        # data from distorting a series of values in a postal code area with
-        # low amount of responses.
-        
-        # Record all values
-        parktime1 = thisZipcode.loc[thisZipcode.timeofday == 1]["parktime"]
-        parktime2 = thisZipcode.loc[thisZipcode.timeofday == 2]["parktime"]
-        parktime_all = thisZipcode.parktime
-
+        # Averaged searching for parking in destination postal code using
+        # thesis survey data
         thisRow.loc[0, "thesis_r_sfp"] = round(parktime1.mean(), 2)
         thisRow.loc[0, "thesis_m_sfp"] = round(parktime2.mean(), 2)
         thisRow.loc[0, "thesis_sl_sfp"] = round(parktime_all.mean(), 2)
-        
         thesis_r_sfp =  thisRow.loc[0, "thesis_r_sfp"]
         thesis_m_sfp = thisRow.loc[0, "thesis_m_sfp"]
         thesis_sl_sfp = thisRow.loc[0, "thesis_sl_sfp"]
-        
 
-        # Travel-Time Matrix 2018 travel times minus Travel-Time Matrix 
-        # searching for parking, using default value 0.42 mins
-        ttm_sfp = 0.42
-        thisRow.loc[0, "car_r_drivetime"] = car_r_t - ttm_sfp
-        thisRow.loc[0, "car_m_drivetime"] = car_m_t - ttm_sfp
-        thisRow.loc[0, "car_sl_drivetime"] = car_sl_t - ttm_sfp
-        car_r_drivetime = thisRow.loc[0, "car_r_drivetime"]
-        car_m_drivetime = thisRow.loc[0, "car_m_drivetime"]
-        car_sl_drivetime = thisRow.loc[0, "car_sl_drivetime"]
+        # Averaged walk to destination from parked car in destination postal 
+        # code using thesis survey data
+        thisRow.loc[0, "thesis_r_wtd"] = round(walktime1.mean(), 2)
+        thisRow.loc[0, "thesis_m_wtd"] = round(walktime2.mean(), 2)
+        thisRow.loc[0, "thesis_sl_wtd"] = round(walktime_all.mean(), 2)
+        thesis_r_wtd =  thisRow.loc[0, "thesis_r_wtd"]
+        thesis_m_wtd = thisRow.loc[0, "thesis_m_wtd"]
+        thesis_sl_wtd = thisRow.loc[0, "thesis_sl_wtd"]
         
-        # Of Travel-Time Matrix data, how many percent searching for parking 
-        # constituted of the total travel time?
-        thisRow.loc[0, "car_r_pct"] = round(ttm_sfp / car_r_t, 3)
-        thisRow.loc[0, "car_m_pct"] = round(ttm_sfp / car_m_t, 3)
-        thisRow.loc[0, "car_sl_pct"] = round(ttm_sfp / car_sl_t, 3)
-        car_r_pct = thisRow.loc[0, "car_r_pct"]
-        car_m_pct = thisRow.loc[0, "car_m_pct"]
-        car_sl_pct = thisRow.loc[0, "car_sl_pct"]
-        
-        # According to thesis SFP data, How many percent searching for parking 
-        # constituted of the total travel time (TTM data)?
-        thisRow.loc[0, "thesis_r_pct"] = round(thesis_r_sfp / car_r_t, 3)
-        thisRow.loc[0, "thesis_m_pct"] = round(thesis_m_sfp / car_m_t, 3)
-        thisRow.loc[0, "thesis_sl_pct"] = round(thesis_sl_sfp / car_sl_t, 3)
-        thesis_r_pct = thisRow.loc[0, "thesis_r_pct"]
-        thesis_m_pct = thisRow.loc[0, "thesis_m_pct"]
-        thesis_sl_pct = thisRow.loc[0, "thesis_sl_pct"]
-        
-        # Travel-Time Matrix 2018 travel times minus thesis survey data
-        # searching for parking, using values for rush hour, midday and general,
+        # Travel-Time Matrix 2018 entire travel time minus thesis survey
+        # searching for parking and walking from the parked car to the 
+        # destination, using values for rush hour, midday and general,
         # respectively
-        thisRow.loc[0, "thesis_r_drivetime"] = car_r_t - thesis_r_sfp
-        thisRow.loc[0, "thesis_m_drivetime"] = car_m_t - thesis_m_sfp
-        thisRow.loc[0, "thesis_sl_drivetime"] = car_sl_t - thesis_sl_sfp
+        thisRow.loc[0, "thesis_r_drivetime"] = ttm_r_t - thesis_r_sfp - thesis_r_wtd
+        thisRow.loc[0, "thesis_m_drivetime"] = ttm_m_t - thesis_m_sfp - thesis_m_wtd
+        thisRow.loc[0, "thesis_sl_drivetime"] = ttm_sl_t - thesis_sl_sfp - thesis_sl_wtd
         thesis_r_drivetime = thisRow.loc[0, "thesis_r_drivetime"]
         thesis_m_drivetime = thisRow.loc[0, "thesis_m_drivetime"]
         thesis_sl_drivetime = thisRow.loc[0, "thesis_sl_drivetime"]
         
-        # append all gathered results to the df result
+        # According to thesis SFP and WTD data, How much searching for parking 
+        # and walking from the parked car to the destination constituted of 
+        # the total travel time (using TTM data)?
+        thisRow.loc[0, "thesis_r_pct"] = round(
+                (thesis_r_sfp + thesis_r_wtd) / ttm_r_t, 3)
+        thisRow.loc[0, "thesis_m_pct"] = round(
+                (thesis_m_sfp + thesis_m_wtd) / ttm_m_t, 3)
+        thisRow.loc[0, "thesis_sl_pct"] = round(
+                (thesis_sl_sfp + thesis_sl_wtd) / ttm_sl_t, 3)
+        thesis_r_pct = thisRow.loc[0, "thesis_r_pct"]
+        thesis_m_pct = thisRow.loc[0, "thesis_m_pct"]
+        thesis_sl_pct = thisRow.loc[0, "thesis_sl_pct"]
+        
+        # append all gathered results to the DataFrame "result"
         result = result.append(thisRow, sort=False)
         
+        
+        # Print description of statistics to the console
         if printStats == True:
             print("\n=========================================")
             print("=== STATISTICS for {0} to {1} ==="
-                  .format(thisRow.loc[0, "from_id"], thisRow.loc[0, "to_id"]))
+                  .format(thisRow.loc[0, "from_id"], 
+                          thisRow.loc[0, "to_id"]))
             print("=========================================")
             
-            print("Origin is located in postal code area {0}. Destination in {1}"
-                  .format(thisRow.loc[0, "from_name"], thisRow.loc[0, "to_name"]))
-            print("\n--- Travel time matrix 2018 ----")
-            print("\nEntire travel time in rush hour traffic: {0} min"
-                  .format(car_r_t))
-            print("Entire travel time in midday traffic: {0} min"
-                  .format(car_m_t))
-            print("Entire travel time following speed limits without any additional impedances: {0} min"
-                  .format(car_sl_t))
+            print("Origin is {0} {1}.\nDestination is {2} {3}."
+                  .format(orig.zipcode[0], thisRow.loc[0, "from_name"], 
+                          dest.zipcode[0], thisRow.loc[0, "to_name"]))
             
-            print("\n--- Inferred facts from TTM 2018 ---")
+            print("\n==== Travel time matrix 2018 ====")
             
-            print("\nSearching for parking is 0.42 minutes in this context")
-            print("\nEntire travel time in rush hour traffic minus searching for parking: {0} min"
-                  .format(car_r_drivetime))
-            print("-- SFP represents {0} % of total travel time in rush hour"
-                  .format(str(round(car_r_pct * 100, 2))))
-            print("Entire travel time in midday traffic minus searching for parking: {0} min"
-                  .format(car_m_drivetime))
-            print("-- SFP represents {0} % of total travel time in midday traffic"
-                  .format(str(round(car_m_pct * 100, 2))))
-            print("Entire travel time in speed limits minus searching for parking: {0} min"
-                  .format(car_sl_drivetime))
-            print("-- SFP represents {0} % of total travel time in speed limits"
-                  .format(str(round(car_sl_pct * 100, 2))))
+            print("\nSearching for parking in destination zipcode: {0} min"
+                  .format(ttm_sfp))
+            print("Walking to the destination from one's parked car in destination zipcode: {0} min"
+                  .format(ttm_wtd))
+            print("Total length of the parking process: {0} min"
+                  .format(ttm_park_process))
             
-            print("\n --- Sampo Vesanen thesis ---")
+            print("\n--- Rush hour traffic ---")
+            print("Entire travel time: {0} min".format(ttm_r_t))
+            print("Entire travel time without the parking process: {0} min"
+                  .format(ttm_r_drivetime))
+            print("-- The parking process represents {0} % of the total travel time"
+                  .format(str(round(ttm_r_pct * 100, 2))))
             
-            if values_in_dest < 20:
-                print("Warning, low amount (< 20) of responses in destination ({0}): {1}"
-                      .format(thisRow.loc[0, "to_name"], values_in_dest))
-            print("\nParktime (Searching for parking) in rush hour traffic: {0} min"
+            print("\n--- Midday traffic ---")
+            print("Entire travel time: {0} min".format(ttm_m_t))
+            print("Entire travel time without the parking process: {0} min"
+                  .format(ttm_m_drivetime))
+            print("-- The parking process represents {0} % of the total travel time"
+                  .format(str(round(ttm_m_pct * 100, 2))))
+
+            print("\n--- Following speed limits without any additional impedances ---")
+            print("Entire travel time: {0} min".format(ttm_sl_t))
+            print("Entire travel time without the parking process: {0} min"
+                  .format(ttm_sl_drivetime))
+            print("-- The parking process represents {0} % of the total travel time"
+                  .format(str(round(ttm_sl_pct * 100, 2))))
+            
+            print("\n\n==== Sampo Vesanen thesis ====")
+            print("Amount of responses in destination ({0}): {1}"
+                  .format(thisRow.loc[0, "to_name"], values_in_dest))
+            
+            print("\n--- Rush hour traffic ---")
+            print("Searching for parking in destination zipcode (mean): {0} min"
                   .format(thesis_r_sfp))
-            print("Parktime (SFP) in midday traffic: {0} min"
-                  .format(thesis_m_sfp))
-            print("Parktime (SFP) generally: {0} min".format(thesis_sl_sfp))
+            print("Walking to the destination from one's parked car in destination zipcode (mean): {0} min"
+                  .format(thesis_r_wtd))
+            print("Total length of the parking process: {0} min"
+                  .format(str(round(thesis_r_sfp + thesis_r_wtd, 2))))
             
-            print("\nEntire travel time in rush hour traffic minus thesis data searching for parking: {0} min"
+            print("\nEntire travel time (TTM data): {0} min".format(ttm_r_t))
+            print("Entire travel time without the parking process: {0} min"
                   .format(thesis_r_drivetime))
-            print("-- SFP represents {0} % of total travel time in rush hour"
+            print("-- The parking process represents {0} % of total travel time"
                   .format(str(round(thesis_r_pct * 100, 2))))
-            print("Entire travel time in midday traffic minus thesis data searching for parking: {0} min"
+            
+            print("\n--- Midday traffic ---")
+            print("SFP (mean): {0} min".format(thesis_m_sfp))
+            print("WTD (mean): {0} min"
+                  .format(thesis_m_wtd))
+            print("Total length of the parking process: {0} min"
+                  .format(thesis_m_sfp + thesis_m_wtd))
+            
+            print("\nEntire travel time (TTM data): {0} min".format(ttm_m_t))
+            print("Entire travel time in without the parking process: {0} min"
                   .format(thesis_m_drivetime))
-            print("-- SFP represents {0} % of total travel time in midday traffic"
+            print("-- The parking process represents {0} % of total travel time"
                   .format(str(round(thesis_m_pct * 100, 2))))
-            print("Entire travel time following speed limits without any additional impedances minus thesis data searching for parking: {0} min"
+            
+            print("\n--- Generally ---")
+            
+            print("SFP (mean): {0} min".format(thesis_sl_sfp))
+            print("WTD (mean): {0} min"
+                  .format(thesis_sl_wtd))
+            print("Total length of the parking process: {0} min"
+                  .format(str(round(thesis_sl_sfp + thesis_sl_wtd, 2))))
+            
+            print("\nEntire travel time (TTM data): {0} min".format(ttm_sl_t))
+            print("Entire travel without the parking process: {0} min"
                   .format(thesis_sl_drivetime))
-            print("-- SFP represents {0} % of total travel time when following speed limits\n\n"
+            print("-- The parking process represents {0} % of total travel time\n\n"
                   .format(str(round(thesis_sl_pct * 100, 2))))
         
         # Plot origin and destination
         if plotIds == True:
-            # background layers for matplotlib. Activate these to get 
-            # individual maps for each origin and destination pairs.
-            #base = grid.plot(linewidth=0.8, 
-            #                 edgecolor="0.8", 
-            #                 color="white",
-            #                 figsize=(16, 12))
-            #forest.plot(ax=base,
-            #            linewidth=0.8,
-            #            edgecolor="none",
-            #            facecolor="green")
-            #postal.plot(ax=base,
-            #            linewidth=0.8,
-            #            edgecolor="black",
-            #            facecolor="none")
-
-    
+ 
             # For loop for plotting origin and destination on map. Prepare
             # annotation with these lists
             identifierlist = ["Origin: ", "Destination: "]
@@ -560,7 +654,7 @@ def travelTimeComparison(grid, forest, postal, records, listOfTuples, ttm_path,
                 # Annotate with a text box
                 # Show acknowledgement in annotationbbox if destination is not 
                 # reachable from origin (TTM18 nodata value -1 changed to np.nan)
-                if np.isnan(car_r_t):
+                if np.isnan(ttm_r_t):
                     ykr = ykr + "\nNodata, route not navigable"
                 anno = identifier + name + ykr
                 

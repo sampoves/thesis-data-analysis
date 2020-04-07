@@ -110,10 +110,15 @@ visitors = visitors.drop([3753])
 # (probably Pukinmäki-Savela). Remove these records.
 records = records.drop([1277, 1278, 1279])
 
+# We have now removed all confirmedly erroneous responses. Reset index for
+# both DataFrames.
+records = records.reset_index().drop(columns=["index"])
+visitors = visitors.reset_index().drop(columns=["index"])
+
 # Alert if records has IP codes which do not exist in visitors
 diff = list(set(records.ip) - set(visitors.ip))
 if diff != 0:
-    print("NB! The following IP codes exist only in records: {0}".format(
+    print("\nNB! The following IP codes exist only in records: {0}".format(
             diff))
     print("This discrepancy may distort analysis of visitors.")
 
@@ -154,13 +159,13 @@ mainland = max(postal.unary_union, key=lambda a: a.area)
 # Process islands unreachable by car
 for idx, geom in enumerate(postal.geometry):
     
-    # "in" utilises operator
+    # "in" utilises package "operator"
     if postal.loc[idx, "posti_alue"] in preserveTwoLargest:
         thisGeom = postal.loc[idx]
         geomList = [(idx, P.area) for idx, P in enumerate(thisGeom.geometry)]
         geomList = geomList[:2] # two largest
         geomList = [idx for idx, area in geomList] # preserve ids
-        # get two largest Polygons in MultiPolygon in current thisGeom
+        # Get two largest Polygons in MultiPolygon in "thisGeom"
         thisGeom = MultiPolygon(
                 [geom for idx, geom in enumerate(thisGeom.geometry) if idx in geomList])
         mainland = mainland.union(thisGeom)
@@ -239,7 +244,7 @@ for postalarea in postal.itertuples():
     
     # Make the current zipcode to a GeoDataFrame
     thisZip = gpd.overlay(precise_matches,
-                          gpd.GeoDataFrame(crs=crs, geometry=[postalarea.geometry]),
+                          gpd.GeoDataFrame(geometry=[postalarea.geometry], crs=crs),
                           how="intersection")
     thisZip["area1"] = thisZip.area
 
@@ -316,6 +321,8 @@ visitors_grp = visitors_grp.rename(columns={"id": "amount"})
 ### DETECTION OF ILLEGAL DATA ###
 #################################
 
+### 1) Detect duplicates
+
 # Erase contents of duplicates.txt before writing anything (wipe old data). 
 # Wrap the following for loop in a "with" loop. This enables us to write the 
 # duplicates report as a text file in the working directory for easy viewing.
@@ -354,35 +361,28 @@ print("\nA report on duplicate answers saved to disk in path {0}\n".format(
         os.path.join(wd, "duplicates.txt")))
 
 
-# Remove illegal answers. At this time any value equal or above 60 minutes is 
-# deemed illegal. Value invalid starts at 6 as at this point I have removed 3 
-# of my own records and 3 others which were reported to me as false. See above,
-# part "Process survey data"
-delList = []
-illegal = []
-invalid = 6
+### 2) Remove illegal answers 
 
-for idx, (park_value, walk_value, ip_value) in enumerate(
-        zip(records.parktime, records.walktime, records.ip)):
-    
-    if (park_value >= 60 or walk_value >= 60):
-        print("Illegal walktime and/or parktime detected:", idx, park_value, 
-              walk_value)
-        delList.append(idx)
-        illegal.append(ip_value)
-        invalid += 1
- 
-# Illegal contains all IPs which have values equal or above 60 as answers. 
-# DataFrame "illegal_df" shows all records made by these IP addresses
-illegal = list(set(illegal))
-illegal_df = records[records.ip.isin(illegal)]
+# Any value equal or above 60 minutes is deemed illegal in columns "parktime" 
+# and "walktime".
+illegal_df = pd.DataFrame(columns=records.columns)
 
-# Drop the records which have values equal or above 60 as answer. Drop the same
-# IP address codes from visitors as well.
-records = records.drop(records.index[delList])
-records = records.reset_index()
-visitors = visitors[~visitors.ip.isin(illegal)]
-visitors = visitors.reset_index()
+for row in records.itertuples():
+    if(row.parktime >= 60 or row.walktime >= 60):
+        illegal_df = illegal_df.append(records.iloc[row.Index])
+
+print("\nThe following illegal records were found:")
+print("\n", illegal_df[["parktime", "walktime"]])
+
+# Value "invalid "starts at 6 as at this point I have removed 3 of my own 
+# records and 3 others which were reported to me as false. See above, part 
+# "Process survey data".
+invalid = 6 + len(illegal_df)
+        
+# Use indices of "illegal_df" to drop rows from "records". Drop illegal IP 
+# address codes from "visitors".
+records = records.drop(illegal_df.index).reset_index()
+visitors = visitors[~visitors.ip.isin(illegal_df.ip)].reset_index()
 
 
 
@@ -390,9 +390,9 @@ visitors = visitors.reset_index()
 ### ADD DATA TO GEODATAFRAMES ###
 #################################
 
-# Reclassify ykr_vyoh. Reclassification is created as in Finnish Environment
+# Reclassify "ykr_vyoh". Reclassification is created as in Finnish Environment
 # Institute website (Only available in Finnish)
-#https://www.ymparisto.fi/fi-FI/Elinymparisto_ja_kaavoitus/Yhdyskuntarakenne/Tietoa_yhdyskuntarakenteesta/Yhdyskuntarakenteen_vyohykkeet
+# https://www.ymparisto.fi/fi-FI/Elinymparisto_ja_kaavoitus/Yhdyskuntarakenne/Tietoa_yhdyskuntarakenteesta/Yhdyskuntarakenteen_vyohykkeet
 ykr_vyoh["vyohselite"] = ykr_vyoh.vyohselite.replace(
         {"keskustan reunavyöhyke/intensiivinen joukkoliikenne": 
             "keskustan reunavyöhyke", 
@@ -439,16 +439,16 @@ statistics.calculateStats()
 
 
 
-#####################################################################
-### Set percentage of urban zones and forest in each zipcode area ###
-#####################################################################
+#################################################################
+### PERCENTAGE OF URBAN ZONES AND FOREST IN EACH ZIPCODE AREA ###
+#################################################################
 
-# The idea is to overlay yhdyskuntarakenteen vyöhykkeet on dataframe postal and 
-# see the percentage how much of each zone is included in the zipcode in 
+# The idea is to overlay "yhdyskuntarakenteen vyöhykkeet" on DataFrame "postal" 
+# and see the percentage how much of each zone is included in the zipcode in 
 # question. Together with checking out how much forest is there in research 
 # area we could find some interesting results in the statistical analysis.
 
-# YKR zones
+### 1) YKR zones
 
 # Dictionary key to help allocation of values
 dictKey = {"keskustan jalankulkuvyöhyke": "ykr_kesk_jalan", 
@@ -503,7 +503,7 @@ postal["ykr_novalue"] = postal.apply(
 postal["ykr_novalue"].loc[postal.ykr_novalue < 0] = 0
 
 
-# Urban Atlas 2012 forest
+### 2) Urban Atlas 2012 forest
 
 # Reproject the geometries by replacing the values with projected ones
 forest = forest.to_crs(epsg=3067)
@@ -627,11 +627,16 @@ for varname, fullname in subdiv_dict.items():
 ### UTILISE TRAVEL-TIME MATRIX 2018 ###
 #######################################
 
-# IF 0.42min IS THE USED PARKING TIME, WHAT IS THE USED WALKING TIME IN 
-# THE TRAVELTIME MATRIX?
+# - 0.42 min is the time it took to park a car in TTM18. 
+# - Walking time from car to main destination is 2.5 min (180 meters) in 
+#   Helsinki center in TTM18
+# - Walking time from car to main destination in other areas is 2.0 min
+#   (130 meters) in TTM18.
+# Walking times from Kurri, J. & Laakso, J.-M. Parking policy measures and 
+# their effects in the Helsinki metropolitan area (2002). 
 l = []
 i = 0
-while i < 50:
+while i < 10:
     # In "valuerange" make sure no grid cells outside research area are accepted
     valuerange = set(grid.YKR_ID.astype(str)) - set(list(map(str, notPresent)))
     vals = random.sample(valuerange, 2)
@@ -640,7 +645,7 @@ while i < 50:
 
 #l = [("5985086", "5866836"), ("5981923", "5980266")]
 traveltime = travelTimeComparison(grid, forest, postal, records, l, ttm_path, 
-                                  printStats=False, plotIds=False)
+                                  printStats=True, plotIds=False)
 
 # get means for all columns, see differences
 round(traveltime[["car_r_drivetime", "car_m_drivetime", "car_sl_drivetime",
@@ -666,7 +671,7 @@ parkingPlot(postal, "parktime_mean", 1) # plot parktime mean
 parkingPlot(postal, "ua_forest", 1) # plot parktime mean
 
 # Get mean-std-min-max-quantiles of municipalities
-descri_postal = postal.iloc[:, [4, 113, 114, 115, 116, 117]]
+descri_postal = postal.iloc[:, [4, 113, 114, 115, 116, 117]] #no walktime
 descri_postal.describe()
 descri_postal[postal.kunta == "091"].describe() #hki
 descri_postal[postal.kunta == "092"].describe() #esp
