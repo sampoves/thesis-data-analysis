@@ -255,6 +255,13 @@ def travelTimeComparison(grid, forest, postal, records, listOfTuples, ttm_path,
     each tuple inputted into it. This function calculates many descriptives 
     about these two datasets.
     
+    Use printStats=True to see descriptives. Please be aware that a report
+    for one origin-destination tuple is about 50 rows long.
+    
+    Use plotIds=True to map origin-destination tuples on a single map. Not
+    recommended for len(listOfTuples) > 10 as the map will become visually
+    uninformative and its calculation becomes resource intensive.
+    
     In this thesis we assume:
     - rush hour (ttm_r_t) = "Weekday, rush hour (07:00-09:00 and 15:00-17:00)", 
     - midday (ttm_m_t) = "Weekday, other than rush hour"
@@ -400,6 +407,9 @@ def travelTimeComparison(grid, forest, postal, records, listOfTuples, ttm_path,
                     linewidth=0.8,
                     edgecolor="black",
                     facecolor="none")
+
+        # Identify route number, for plotting
+        route_no = 1
 
     # Iterate through all ids inputted by user in the parameter "listOfTuples"
     for originId, destinationId in list(listOfTuples):
@@ -636,6 +646,7 @@ def travelTimeComparison(grid, forest, postal, records, listOfTuples, ttm_path,
  
             # For loop for plotting origin and destination on map. Prepare
             # annotation with these lists
+            route = "Route: " + str(route_no) + "\n"
             identifierlist = ["Origin: ", "Destination: "]
             namelist = [thisRow.from_name[0], thisRow.to_name[0]]
             ykrlist = ["\nYKR-ID: " + str(orig.YKR_ID.item()), 
@@ -656,7 +667,7 @@ def travelTimeComparison(grid, forest, postal, records, listOfTuples, ttm_path,
                 # reachable from origin (TTM18 nodata value -1 changed to np.nan)
                 if np.isnan(ttm_r_t):
                     ykr = ykr + "\nNodata, route not navigable"
-                anno = identifier + name + ykr
+                anno = route + identifier + name + ykr
                 
                 offsetbox = TextArea(anno, minimumdescent=False)
                 ab = AnnotationBbox(offsetbox, item.coords[0],
@@ -669,6 +680,7 @@ def travelTimeComparison(grid, forest, postal, records, listOfTuples, ttm_path,
 
                 base.add_artist(ab)
             
+            route_no += 1
             plt.tight_layout()
 
     result = result.reset_index()
