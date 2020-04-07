@@ -302,11 +302,11 @@ def travelTimeComparison(grid, forest, postal, records, listOfTuples, ttm_path,
         "ttm_sl_drivetime"      TTM: entire travel time following speed limits
                                 without any additional impedances minus
                                 SFP and WTD (minutes)
-        "ttm_r_pct"             TTM: how many percent is SFP and WTD of ttm_r_t
+        "ttm_r_pct"             TTM: how much is SFP and WTD of ttm_r_t
                                 (percent)
-        "ttm_m_pct"             TTM: how many percent is SFP and WTD of ttm_m_t  
+        "ttm_m_pct"             TTM: how much is SFP and WTD of ttm_m_t  
                                 (percent)
-        "ttm_sl_pct"            TTM: how many percent is SFP and WTD of ttm_sl_t
+        "ttm_sl_pct"            TTM: how much is SFP and WTD of ttm_sl_t
                                 (percent)
                                 
         "values_in_dest"        Thesis: amount of records in destination postal
@@ -336,16 +336,16 @@ def travelTimeComparison(grid, forest, postal, records, listOfTuples, ttm_path,
                                 limits without any additional impedances minus 
                                 thesis data general (all values averaged) SFP 
                                 and WTD (minutes)
-        "thesis_r_pct"          Thesis: how many percent is thesis SFP and 
-                                thesis WTD of the entire TTM travel time in 
-                                rush hour traffic (percent)
-        "thesis_m_pct"          Thesis: how many percent is thesis SFP and
-                                thesis WTD of the entire TTM travel time in 
-                                midday traffic (percent)
-        "thesis_sl_pct"         Thesis: how many percent is thesis SFP and
-                                thesis WTD of the entire TTM travel time 
-                                following speed limits without any additional 
-                                impedances (percent)
+        "thesis_r_pct"          Thesis: how much is thesis SFP and thesis WTD 
+                                of the entire TTM travel time in rush hour 
+                                traffic (percent)
+        "thesis_m_pct"          Thesis: how much is thesis SFP and thesis WTD 
+                                of the entire TTM travel time in midday traffic 
+                                (percent)
+        "thesis_sl_pct"         Thesis: how much is thesis SFP and thesis WTD 
+                                of the entire TTM travel time following speed 
+                                limits without any additional impedances 
+                                (percent)
     '''
     
     result = pd.DataFrame(
@@ -644,8 +644,8 @@ def travelTimeComparison(grid, forest, postal, records, listOfTuples, ttm_path,
         # Plot origin and destination
         if plotIds == True:
  
-            # For loop for plotting origin and destination on map. Prepare
-            # annotation with these lists
+            # For loop for plotting origin and destination on the map. Prepare
+            # annotation with these variables
             route = "Route: " + str(route_no) + "\n"
             identifierlist = ["Origin: ", "Destination: "]
             namelist = [thisRow.from_name[0], thisRow.to_name[0]]
@@ -653,7 +653,7 @@ def travelTimeComparison(grid, forest, postal, records, listOfTuples, ttm_path,
                        "\nYKR-ID: " + str(dest.YKR_ID.item())]
             
             # Random light color for annotation bbox background to identify 
-            # dataframe rows from each other
+            # DataFrame rows from each other
             rnd_col = random_color()
             
             for item, identifier, name, ykr in zip([orig, dest], identifierlist, 
@@ -677,7 +677,6 @@ def travelTimeComparison(grid, forest, postal, records, listOfTuples, ttm_path,
                                     bboxprops=dict(facecolor=rnd_col,
                                                    boxstyle="round"),
                                     arrowprops=dict(arrowstyle="->"))
-
                 base.add_artist(ab)
             
             route_no += 1
