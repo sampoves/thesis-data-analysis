@@ -17,11 +17,6 @@ interchangeably. For the most part an unique IP address can be considered to
 be a unique person, but this can't be verified as households and public venues
 share a wifi and therefore IP addresses. For simplicity this script assumes
 an unique IP address is an unique person.
-
-
-TODO, maybe
-    - user "oe4guro3dh", remove from visitors. Also, see what's going on with
-    the discrepancy. the three records really do not exist in visitors
 """
 
 import os
@@ -98,12 +93,11 @@ visitors["ts_first"] = pd.to_datetime(
 visitors["ts_latest"] = pd.to_datetime(
         visitors.ts_latest, format="%Y-%m-%d %H:%M:%S")
 
-# visitors, records: remove author's home visits and three records inputted by
-# the author. Additionally, I have visited the survey from the university, 
-# work, and with mobile phone. These visits are impossible to trace.
+# visitors, records: remove three responses inputted by the author and two home 
+# ip codes belonging to the author. Author's visits from shared IP codes can't 
+# be identified and are left unchanged.
 records = records.drop([0, 5, 6])
-visitors = visitors.iloc[1:] 
-visitors = visitors.drop([3753])
+visitors = visitors.drop([0, 3753])
 
 # I was contacted on 24.5.2019 22.41 with the message that a respondent had 
 # filled three responses erroneously: for Kallio, Käpylä and one other 
@@ -120,7 +114,9 @@ diff = list(set(records.ip) - set(visitors.ip))
 if diff != 0:
     print("\nNB! The following IP codes exist only in records: {0}".format(
             diff))
-    print("This discrepancy may distort analysis of visitors.")
+    print("These unique IP codes sent in total {0} records. This affects" 
+          " statistics only minimally but acknowledge this discrepancy" 
+          " anyway.".format(len(records[records.ip.isin(diff)])))
 
 
 

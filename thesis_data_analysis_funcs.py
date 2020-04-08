@@ -570,8 +570,8 @@ def travelTimeComparison(grid, forest, postal, records, listOfTuples, ttm_path,
             
             print("\nSearching for parking in destination zipcode: {0} min"
                   .format(ttm_sfp))
-            print("Walking to the destination from one's parked car in destination zipcode: {0} min"
-                  .format(ttm_wtd))
+            print("Walking to the destination from one's parked car in"
+                  " destination zipcode: {0} min".format(ttm_wtd))
             print("Total length of the parking process: {0} min"
                   .format(ttm_park_process))
             
@@ -579,22 +579,23 @@ def travelTimeComparison(grid, forest, postal, records, listOfTuples, ttm_path,
             print("Entire travel time: {0} min".format(ttm_r_t))
             print("Entire travel time without the parking process: {0} min"
                   .format(ttm_r_drivetime))
-            print("-- The parking process represents {0} % of the total travel time"
-                  .format(str(round(ttm_r_pct * 100, 2))))
+            print("-- The parking process represents {0} % of the total"
+                  " travel time".format(str(round(ttm_r_pct * 100, 2))))
             
             print("\n--- Midday traffic ---")
             print("Entire travel time: {0} min".format(ttm_m_t))
             print("Entire travel time without the parking process: {0} min"
                   .format(ttm_m_drivetime))
-            print("-- The parking process represents {0} % of the total travel time"
-                  .format(str(round(ttm_m_pct * 100, 2))))
+            print("-- The parking process represents {0} % of the total"
+                  " travel time".format(str(round(ttm_m_pct * 100, 2))))
 
-            print("\n--- Following speed limits without any additional impedances ---")
+            print("\n--- Following speed limits without any additional"
+                  " impedances ---")
             print("Entire travel time: {0} min".format(ttm_sl_t))
             print("Entire travel time without the parking process: {0} min"
                   .format(ttm_sl_drivetime))
-            print("-- The parking process represents {0} % of the total travel time"
-                  .format(str(round(ttm_sl_pct * 100, 2))))
+            print("-- The parking process represents {0} % of the total"
+                  " travel time".format(str(round(ttm_sl_pct * 100, 2))))
             
             print("\n\n==== Sampo Vesanen thesis ====")
             print("Amount of responses in destination ({0}): {1}"
@@ -603,8 +604,8 @@ def travelTimeComparison(grid, forest, postal, records, listOfTuples, ttm_path,
             print("\n--- Rush hour traffic ---")
             print("Searching for parking in destination zipcode (mean): {0} min"
                   .format(thesis_r_sfp))
-            print("Walking to the destination from one's parked car in destination zipcode (mean): {0} min"
-                  .format(thesis_r_wtd))
+            print("Walking to the destination from one's parked car in"
+                  " destination zipcode (mean): {0} min".format(thesis_r_wtd))
             print("Total length of the parking process: {0} min"
                   .format(str(round(thesis_r_sfp + thesis_r_wtd, 2))))
             
@@ -638,8 +639,8 @@ def travelTimeComparison(grid, forest, postal, records, listOfTuples, ttm_path,
             print("\nEntire travel time (TTM data): {0} min".format(ttm_sl_t))
             print("Entire travel without the parking process: {0} min"
                   .format(thesis_sl_drivetime))
-            print("-- The parking process represents {0} % of total travel time\n\n"
-                  .format(str(round(thesis_sl_pct * 100, 2))))
+            print("-- The parking process represents {0} % of total travel"
+                  " time\n\n".format(str(round(thesis_sl_pct * 100, 2))))
         
         # Plot origin and destination
         if plotIds == True:
