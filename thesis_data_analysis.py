@@ -4,7 +4,7 @@ Created on Fri May 10 00:07:36 2019
 
 @author: Sampo Vesanen
 
-Sampo Vesanen Thesis survey datacrunch
+Sampo Vesanen's MSc thesis survey results datacrunch
 "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 
 This script was created using Anaconda Python Distribution 2019.7. In addition
@@ -71,13 +71,13 @@ visitors = pd.read_csv(visitors_data, index_col=[0])
 
 # Shapefiles
 grid = gpd.read_file(grid_path, encoding="utf-8")
-resarea = gpd.read_file(resarea_path, encoding="utf-8")
 postal = gpd.read_file(postal_path, encoding="utf-8")
 
 # Import urban zones shapefile and select only relevant area for this study
+resarea = gpd.read_file(resarea_path, encoding="utf-8").buffer(500).unary_union
 ykr_vyoh = gpd.read_file(ykr_path, encoding="utf-8")
-ykr_vyoh = gpd.overlay(ykr_vyoh, 
-                       gpd.GeoDataFrame(geometry=resarea.buffer(500)), 
+ykr_vyoh = gpd.overlay(ykr_vyoh,
+                       gpd.GeoDataFrame(geometry=[resarea], crs=ykr_vyoh.crs), 
                        how="intersection")
 
 # From Urban Atlas 2012 Helsinki area preserve only forests
@@ -420,9 +420,11 @@ postal = postal.join(answ, on="posti_alue")
 # Calculate mean and median for parktime and walktime. Join by zipcode
 roundmean = lambda x: round(x.mean(), 2)
 calcs = records.groupby("zipcode").agg(
-        {"parktime": {"Mean": roundmean, "Median": "median"},
-         "walktime": {"Mean": roundmean, "Median": "median"}})
-calcs.columns = "parktime_mean", "parktime_median", "walktime_mean", "walktime_median"
+    parktime_mean=("parktime", roundmean),
+    parktime_median=("parktime", "median"),
+    walktime_mean=("walktime", roundmean),
+    walktime_median=("walktime", "median"))
+        
 postal = postal.join(calcs, on="posti_alue")
 
 # Prepare annotation of Polygon features
@@ -458,13 +460,13 @@ dictKey = {"keskustan jalankulkuvyöhyke": "ykr_kesk_jalan",
            "alakeskuksen jalankulkuvyöhyke": "ykr_alakesk_jalan", 
            "autovyöhyke": "ykr_autovyoh"}
 
-# geom_grouper prevents multiple instances of same zones in the dict
+# "geom_grouper" prevents multiple instances of the same zones in the dict
 geom_grouper = lambda x: x.unary_union
 
 for row in postal.itertuples():
     
     # Intersect current Polygon with urban zones shapefile
-    thisPol = gpd.GeoDataFrame(geometry=[row.geometry])
+    thisPol = gpd.GeoDataFrame(geometry=[row.geometry], crs=ykr_vyoh.crs)
     thisIntersect = gpd.overlay(thisPol, ykr_vyoh, how="intersection")
     
     # Groupby ensures each zone appears only once
@@ -493,14 +495,14 @@ for row in postal.itertuples():
             # append in. Finally append current value v
             postal.loc[postal.posti_alue == row.posti_alue, dictKey[k]] = v
   
-# Calculate ykr_novalue
+# Calculate column "ykr_novalue"
 postal["ykr_novalue"] = postal.apply(
         lambda row: 1 - (row.ykr_kesk_jalan + row.ykr_kesk_reuna +
         row.ykr_int_joukko + row.ykr_joukkoliik + 
         row.ykr_alakesk_jalan + row.ykr_autovyoh), axis=1)
 
 # Make sure rounding does not cause trouble in the calculation above
-postal["ykr_novalue"].loc[postal.ykr_novalue < 0] = 0
+postal.loc[postal["ykr_novalue"] < 0, "ykr_novalue"] = 0
 
 
 ### 2) Urban Atlas 2012 forest
@@ -636,7 +638,7 @@ for varname, fullname in subdiv_dict.items():
 # their effects in the Helsinki metropolitan area (2002). 
 l = []
 i = 0
-while i < 10:
+while i < 5:
     # In "valuerange" make sure no grid cells outside research area are accepted
     valuerange = set(grid.YKR_ID.astype(str)) - set(list(map(str, notPresent)))
     vals = random.sample(valuerange, 2)
@@ -645,7 +647,7 @@ while i < 10:
 
 #l = [("5985086", "5866836"), ("5981923", "5980266")]
 traveltime = travelTimeComparison(grid, forest, postal, records, l, ttm_path, 
-                                  printStats=True, plotIds=False)
+                                  printStats=False, plotIds=True)
 
 # get means for all columns, see differences
 round(traveltime[["car_r_drivetime", "car_m_drivetime", "car_sl_drivetime",
