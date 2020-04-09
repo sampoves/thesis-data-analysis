@@ -6,7 +6,7 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 14.3.2020
+# 9.4.2020
 
 # Initialise
 library(onewaytests)
@@ -14,6 +14,7 @@ library(car)
 library(plotrix)
 library(moments)
 library(rlang)
+library(classInt)
 
 
 
@@ -29,8 +30,12 @@ CreateJenksColumn <- function(fortified, postal, datacol, newcolname, classes_n 
   
   classes <- classInt::classIntervals(postal[, datacol], n = classes_n, 
                                       style = "jenks")
+  
+  # classes$brk has to be wrapped with unique(), otherwise we can't get more
+  # than six classes for parktime_median or walktime_median
   result <- fortified %>%
-    mutate(!!newcolname := cut(!!rlang::sym(datacol), classes$brks, 
+    mutate(!!newcolname := cut(!!rlang::sym(datacol), 
+                               unique(classes$brks), 
                                include.lowest = T))
   
   # Reverse column values to enable rising values from bottom to top in ggplot.
@@ -80,9 +85,10 @@ GetANOVA <- function(thisFormula, response, explanatory, inputdata,
   ### Std. Error
   # clumsily calculate mean, so that we can preserve column names in the next
   # phase
-  stder <- aggregate(thisFormula, data = inputdata,
-                     FUN = function(x) c(mean = mean(x),
-                                         "Std.Error" = std.error(x)))
+  stder <- aggregate(
+    thisFormula, 
+    data = inputdata,
+    FUN = function(x) c(mean = mean(x), "Std.Error" = plotrix::std.error(x)))
   
   # Remove column mean 
   stder <- subset(stder[[2]], select = -mean)
@@ -91,8 +97,8 @@ GetANOVA <- function(thisFormula, response, explanatory, inputdata,
   # Confidence intervals for mean
   confs <- aggregate(
     thisFormula, data = inputdata, 
-    FUN = function(x) c("CI for mean, Lower Bound" = mean(x) - 2 * std.error(x), 
-                        "CI for mean, Upper Bound" = mean(x) + 2 * std.error(x)))
+    FUN = function(x) c("CI for mean, Lower Bound" = mean(x) - 2 * plotrix::std.error(x), 
+                        "CI for mean, Upper Bound" = mean(x) + 2 * plotrix::std.error(x)))
   confs <- confs[[2]]
   desc <- cbind(desc, confs)
   
@@ -108,15 +114,15 @@ GetANOVA <- function(thisFormula, response, explanatory, inputdata,
   vect[2] <- sapply(2, function(x) median(desc[, x]))
   vect[3] <- sapply(3, function(x) mean(desc[, x]))
   vect[4] <- sd(response)
-  vect[5] <- std.error(response)
-  vect[6] <- mean(response) - 2 * std.error(response)
-  vect[7] <- mean(response) + 2 * std.error(response)
+  vect[5] <- plotrix::std.error(response)
+  vect[6] <- mean(response) - 2 * plotrix::std.error(response)
+  vect[7] <- mean(response) + 2 * plotrix::std.error(response)
   vect[8] <- min(response)
   vect[9] <- max(response)
   vect[10] <- quantile(response)[2]
   vect[11] <- quantile(response)[4]
-  vect[12] <- skewness(response)
-  vect[13] <- kurtosis(response)
+  vect[12] <- moments::skewness(response)
+  vect[13] <- moments::kurtosis(response)
   vect[13] <- sapply(14, function(x) sum(is.na(desc[, x])))
   
   # Add all values vector to desc, then name the new row and round all values in
@@ -126,7 +132,7 @@ GetANOVA <- function(thisFormula, response, explanatory, inputdata,
   desc <- round(desc, 3)
   
   #### Levene test ####
-  levene <- leveneTest(thisFormula, inputdata, center = mean) #car
+  levene <- car::leveneTest(thisFormula, inputdata, center = mean)
   leveneVal <- levene[[3]][1]
   
   #### One-way ANOVA ####
@@ -174,7 +180,7 @@ GetANOVA <- function(thisFormula, response, explanatory, inputdata,
   cat("\n\n-------------------------------------\n")
   cat("# Robust Tests of Equality of Means #")
   cat("\n-------------------------------------\n")
-  bf.test(thisFormula, data = inputdata[-columnsToRemove])
+  onewaytests::bf.test(thisFormula, data = inputdata[-columnsToRemove])
 }
 
 
@@ -201,9 +207,9 @@ SigTableToShiny <- function(sigTable, hasHeading) {
   # Take into account that the table may have an attribute heading. Ask if this 
   # is the case
   if (hasHeading == FALSE){
-    sigTablePosition = 2
+    sigTablePosition <- 2
   } else {
-    sigTablePosition = 3
+    sigTablePosition <- 3
   }
   
   # Get the location of the signif.star

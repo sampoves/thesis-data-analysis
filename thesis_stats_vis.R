@@ -4,7 +4,7 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 29.3.2020
+# 9.4.2020
 #
 # This is an interactive tool for analysing the results of my research survey.
 
@@ -20,16 +20,8 @@
 #https://datascienceplus.com/oneway-anova-explanation-and-example-in-r-part-1/
 #http://www.sthda.com/english/wiki/compare-multiple-sample-variances-in-r
 
-# Standard error
-#https://stackoverflow.com/a/41029914/9455395
-
-# Confidence intervals for mean
-#https://www.r-bloggers.com/compare-regression-results-to-a-specific-factor-level-in-r/
-
-# One-way ANOVA
+# About One-way ANOVA, Levene and BF
 #https://en.wikipedia.org/wiki/One-way_analysis_of_variance
-
-# About ANOVA, Levene and BF
 #https://www.statisticshowto.datasciencecentral.com/brown-forsythe-test/
 #https://www.statisticshowto.datasciencecentral.com/levene-test/
 #https://www.statisticshowto.datasciencecentral.com/homoscedasticity/
@@ -42,8 +34,8 @@ gc()
 
 #install.packages("onewaytests") # brown-forsythe
 #install.packages("car")
-#install.packages("plotrix") # std.error
-#install.packages("moments") # quantile
+#install.packages("plotrix")
+#install.packages("moments")
 #install.packages("shiny")
 #install.packages("shinythemes")
 #install.packages("ggplot2")
@@ -54,11 +46,11 @@ gc()
 #install.packages("rgdal")
 #install.packages("RColorBrewer")
 #install.packages("shinyjs")
-#install.packages("colormap")
 #install.packages("ggiraph")
 #install.packages("widgetframe")
 #install.packages("rgeos")
 #install.packages("classInt")
+#install.packages("rlang")
 
 # Libraries
 library(onewaytests)
@@ -71,25 +63,26 @@ library(ggplot2)
 library(tidyr)
 library(dplyr)
 library(dygraphs)
-library(xts) 
+library(xts)
 library(htmltools)
 library(rgdal)
 library(RColorBrewer)
 library(shinyjs)
-library(colormap)
 library(ggiraph)
 library(widgetframe)
 library(rgeos)
-library(classInt)
 
 
 
-#### Preparation --------------------------------------------------------------- 
-
-# Important directories
+# Working directory
 wd <- "C:/Sampon/Maantiede/Master of the Universe"
+
+# Python prepared data directories
 datapath <- file.path(wd, "records_for_r.csv")
 visitorpath <- file.path(wd, "leaflet_survey_results/visitors.csv")
+postal_path <- file.path(wd, "postal_for_r.csv")
+
+# Spatial data paths
 suuraluepath <- file.path(wd, "python/suuralueet/PKS_suuralue.kml")
 munsclippedpath <- file.path(wd, "python/paavo/hcr_muns_clipped.shp")
 munspath <- file.path(wd, "python/paavo/hcr_muns.shp")
@@ -97,11 +90,15 @@ munspath <- file.path(wd, "python/paavo/hcr_muns.shp")
 # Source functions and postal code variables
 source(file.path(wd, "python/thesis_stats_vis_funcs.R"))
 
+
+
+#### Preparation --------------------------------------------------------------- 
+
 # These variables are used to subset dataframe thesisdata inside ShinyApp
 continuous <- c("parktime", "walktime") 
 ordinal <- c("likert", "parkspot", "timeofday", "ua_forest", "ykr_zone", 
              "subdiv") 
-supportcols <- c("X", "id", "timestamp", "ip")
+supportcols <- c("id", "timestamp", "ip")
 
 
 # Read in csv data. Define column types
@@ -146,21 +143,20 @@ levels(thesisdata$ua_forest) <- list("Predominantly forest" = 1,
                                      "Some forest" = 4,
                                      "Scarce forest" = 5)
 
-# Remove column "index". Remove X, pinta_ala
-thesisdata <- subset(thesisdata, select = -c(index))
+# Remove column "X"
+thesisdata <- subset(thesisdata, select = -c(X))
 
 
 
 #### Context map for ShinyApp --------------------------------------------------
 
 # Prepare a context map for to visualise currently active areas in analysis
-# ShinyApp. Updating this map makes the app a bit more sluggish. Delete this
-# code if you get sufficiently annoyed with the sluggishness.
-suuralue <- readOGR(suuraluepath, use_iconv = TRUE, encoding = "UTF-8")
+# ShinyApp.
+suuralue <- rgdal::readOGR(suuraluepath, use_iconv = TRUE, encoding = "UTF-8")
 
 # This preserves suuralue dataframe data
-suuralue_f <- merge(fortify(suuralue), as.data.frame(suuralue), by.x = "id", 
-                    by.y = 0)
+suuralue_f <- merge(ggplot2::fortify(suuralue), as.data.frame(suuralue), 
+                    by.x = "id", by.y = 0)
 
 # Align area names with thesisdata$subdiv
 levels(suuralue_f$Name) <- c("Vantaa Aviapolis", "Helsinki Southern", 
@@ -179,10 +175,12 @@ levels(suuralue_f$Name) <- c("Vantaa Aviapolis", "Helsinki Southern",
 suuralue_f$Name <- factor(suuralue_f$Name, levels = sort(levels(suuralue_f$Name)))
 
 # Get municipality borders
-muns_clipped <- readOGR(munsclippedpath)
-muns_clipped <- spTransform(muns_clipped, 
-  CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"))
-muns_clipped_f <- merge(fortify(muns_clipped), as.data.frame(muns_clipped), 
+muns_clipped <- 
+  rgdal::readOGR(munsclippedpath) %>%
+  sp::spTransform(., sp::CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"))
+
+# Fortify SP DataFrame for ggplot
+muns_clipped_f <- merge(ggplot2::fortify(muns_clipped), as.data.frame(muns_clipped), 
                         by.x = "id", by.y = 0)
 
 # Annotate municipalities in ggplot:
@@ -203,9 +201,9 @@ centroids$label <- c("Espoo", "Helsinki", "Kauniainen", "Vantaa")
 # Set color gradients for municipalities. Kauniainen will be a single color set 
 # below. These color gradients may be confusing. Investigate better colouring
 # in the future
-c_esp <- brewer.pal(7, "YlOrRd")
-c_hel <- brewer.pal(8, "PuBu")
-c_van <- brewer.pal(7, "BuGn")
+c_esp <- RColorBrewer::brewer.pal(7, "YlOrRd")
+c_hel <- RColorBrewer::brewer.pal(8, "PuBu")
+c_van <- RColorBrewer::brewer.pal(7, "BuGn")
 
 # In the next phase, each color has to be repeated as many times as they show
 # up in suuralue_f. Find out how many.
@@ -228,9 +226,11 @@ suuralue_f$color <- c(rep(c_esp[1], amounts[1]), rep(c_esp[2], amounts[2]),
                       rep(c_van[7], amounts[23]))
 
 # Colors to factors and reorder subdivision names to facilitate ggplot
-suuralue_f <- suuralue_f %>% mutate(color = as.factor(color)) # to factor
+suuralue_f <- 
+  suuralue_f %>% 
+  dplyr::mutate(color = as.factor(color)) # to factor
 
-# name labels here so that all the reordering doesn't mix up stuff. Remove
+# Name labels here so that all the reordering doesn't mix up stuff. Remove
 # munnames from subdiv annotations
 centroids2$label <- gsub(".* ", "", unique(suuralue_f$Name)) 
 
@@ -250,14 +250,22 @@ centroids2[16, "label"] <- ""
 
 # Get postal code area data calculated in Python. Contains some interesting
 # variables for visualisation
-postal_path <- file.path(wd, "postal_for_r.csv")
 postal <- read.csv(file = postal_path, 
                    colClasses = c(posti_alue = "factor", kunta = "factor"),
                    header = TRUE, sep = ",")
 postal <- postal[, c(2, 3, 108:121)]
 
-# postal ua_forest * 100 for easier to view plotting
+# postal column "ua_forest" * 100 for easier to view plotting
 postal[, "ua_forest"] <- postal[, "ua_forest"] * 100
+
+
+postal2 <- read.csv(file = postal_path, 
+                    colClasses = c(posti_alue = "factor", kunta = "factor"),
+                    header = TRUE, sep = ",") %>%
+  dplyr::select(c(2, 3, 108:121)) %>%
+  dplyr::mutate(ua_forest = . * 100)
+
+
 
 # create column which reports the largest ykr zone in each postal code area
 largest_ykr <- colnames(postal[, 4:10])[apply(postal[, 4:10], 1, which.max)]
@@ -265,23 +273,24 @@ largest_ykr <- gsub("ykr_", "", largest_ykr)
 largest_ykr_no <- as.numeric(apply(postal[, 4:10], 1, max)) * 100
 postal <- cbind(postal, largest_ykr = paste(largest_ykr, largest_ykr_no))
 
-# postal geometries are in well-known text format. Some processing is needed to
+# "postal" geometries are in well-known text format. Some processing is needed to
 # utilise these polygons in R.
 crs <- sp::CRS("+init=epsg:3067")
 geometries <- lapply(postal[, "geometry"], "readWKT", p4s = crs) #rgeos::readWKT()
 sp_tmp_ID <- mapply(sp::spChFIDs, geometries, as.character(postal[, 1]))
 row.names(postal) <- postal[, 1]
-data <- SpatialPolygonsDataFrame(
-  SpatialPolygons(unlist(lapply(sp_tmp_ID, function(x) x@polygons)), 
-                  proj4string = crs), data = postal)
 
-data_f <- merge(ggplot2::fortify(data), as.data.frame(data), by.x = "id", 
-                by.y = 0)
+data <- sp::SpatialPolygonsDataFrame(
+  sp::SpatialPolygons(unlist(lapply(sp_tmp_ID, function(x) x@polygons)), 
+                      proj4string = crs), data = postal)
+data_f <- merge(
+  ggplot2::fortify(data), as.data.frame(data), by.x = "id", by.y = 0)
 
 # Get municipality borders from shapefile
-muns <- readOGR(munspath)
-muns <- spTransform(muns, crs)
-munsf <- merge(fortify(muns), as.data.frame(muns), by.x = "id", by.y = 0)
+muns <- 
+  rgdal::readOGR(munspath) %>%
+  sp::spTransform(., crs)
+munsf <- merge(ggplot2::fortify(muns), as.data.frame(muns), by.x = "id", by.y = 0)
 
 
 
@@ -332,14 +341,15 @@ server <- function(input, output, session){
     inputdata <- inputdata[!inputdata$subdiv %in% c(input$subdivGroup), ]
 
     # Basic descriptive statistics
-    desc <- describe(thisFormula, inputdata)
+    desc <- onewaytests::describe(thisFormula, inputdata)
     
     ### Std. Error
     # Clumsily calculate mean, so that we can preserve column names in the next
-    # phase
-    stder <- aggregate(thisFormula, data = inputdata,
-                       FUN = function(x) c(mean = mean(x),
-                                           "Std.Error" = std.error(x)))
+    # phase. Adapt code from: https://stackoverflow.com/a/41029914/9455395
+    stder <- aggregate(
+      thisFormula, 
+      data = inputdata,
+      FUN = function(x) c(mean = mean(x), "Std.Error" = plotrix::std.error(x)))
     
     # Remove column mean 
     stder <- subset(stder[[2]], select = -mean)
@@ -348,8 +358,8 @@ server <- function(input, output, session){
     # Confidence intervals for mean
     confs <- aggregate(
       thisFormula, data = inputdata, 
-      FUN = function(x) c("CI for mean, Lower Bound" = mean(x) - 2 * std.error(x), 
-                          "CI for mean, Upper Bound" = mean(x) + 2 * std.error(x)))
+      FUN = function(x) c("CI for mean, Lower Bound" = mean(x) - 2 * plotrix::std.error(x), 
+                          "CI for mean, Upper Bound" = mean(x) + 2 * plotrix::std.error(x)))
     confs <- confs[[2]]
     desc <- cbind(desc, confs)
     
@@ -365,15 +375,15 @@ server <- function(input, output, session){
     vect[2] <- sapply(2, function(x) median(desc[, x]))
     vect[3] <- sapply(3, function(x) mean(desc[, x]))
     vect[4] <- sd(response)
-    vect[5] <- std.error(response)
-    vect[6] <- mean(response) - 2 * std.error(response)
-    vect[7] <- mean(response) + 2 * std.error(response)
+    vect[5] <- plotrix::std.error(response)
+    vect[6] <- mean(response) - 2 * plotrix::std.error(response)
+    vect[7] <- mean(response) + 2 * plotrix::std.error(response)
     vect[8] <- min(response)
     vect[9] <- max(response)
     vect[10] <- quantile(response)[2]
     vect[11] <- quantile(response)[4]
-    vect[12] <- skewness(response)
-    vect[13] <- kurtosis(response)
+    vect[12] <- moments::skewness(response)
+    vect[13] <- moments::kurtosis(response)
     vect[13] <- sapply(14, function(x) sum(is.na(desc[, x])))
     
     # Add all values vector to desc, then name the new row and round all values in
@@ -416,7 +426,6 @@ server <- function(input, output, session){
       # Usually geom_density() sets the scale for y axis, but here we will
       # continue using count/frequency. This requires some work on our behalf.
       # Idea from here: https://stackoverflow.com/a/27612438/9455395
-      #geom_density(aes(y = binwidth * ..count..)) +
       geom_density(aes(y = ..density.. * (nrow(inputdata) * binwidth)), 
                    colour = alpha("black", 0.4),
                    adjust = binwidth) +
@@ -525,7 +534,7 @@ server <- function(input, output, session){
     inputdata <- thesisdata[!thesisdata[[colname]] %in% c(input$checkGroup), ]
     inputdata <- inputdata[!inputdata$subdiv %in% c(input$subdivGroup), ]
     
-    levene <- leveneTest(thisFormula, inputdata, center = mean) #car
+    levene <- car::leveneTest(thisFormula, inputdata, center = mean)
 
     res <- SigTableToShiny(levene, TRUE)
     res
@@ -572,8 +581,9 @@ server <- function(input, output, session){
     
     # bf.test() works so that the information we want is only printed to
     # console. Capture that output and place it in a variable
-    captured <- capture.output(bf.test(thisFormula, data = inputdata), 
-                               file = NULL, append = TRUE)
+    captured <- capture.output(onewaytests::bf.test(thisFormula, data = inputdata), 
+                               file = NULL, 
+                               append = TRUE)
     cat(captured, sep = "\n")
   })
   
