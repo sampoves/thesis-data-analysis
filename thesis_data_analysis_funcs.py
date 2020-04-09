@@ -113,48 +113,47 @@ class Stats:
         
     def printStats(self):
         '''
-        Print statistics. Does not need to be run by itself.
+        Print statistics
         '''
         print("\n\n-----------")
         print("---Stats---")
         print("-----------")
         print("Total answers: {0}".format(
-                self.answer_sum))
+            self.answer_sum))
         print("Areas with answers: {0}".format(
-                self.areasWithAnswers))
+            self.areasWithAnswers))
         print("Areas without answers: {0}".format(
-                167 - self.areasWithAnswers)) # 167 is the amount of zip codes
+            167 - self.areasWithAnswers)) # 167 is the amount of zip codes
         print("Answers per area, mean: {0}".format(
-                self.answer_mean))
+            self.answer_mean))
         print("Quantiles of answers per area:\n{0}".format(
-                self.quartiles.to_string()))
+            self.quartiles.to_string()))
         print("Unanswered areas: {0}".format(
-                self.areasWithout))
+            self.areasWithout))
         print("Areas with more than 100 answers: {0}".format(
-                self.areasMoreThanHundred))
+            self.areasMoreThanHundred))
         print("Areas with 10-99 answers: {0}".format(
-                self.areasMoreThanTen))
+            self.areasMoreThanTen))
         print("Areas with 1-9 answers: {0}".format(
-                self.areasMoreThanOne))
+            self.areasMoreThanOne))
         print("Total amount of visits: {0}".format(
-                self.totalVisits))
+            self.totalVisits))
         print("Amount of unique IP addresses (visitors): {0}".format(
-                self.uniqueVisitors))
+            self.uniqueVisitors))
         print("Amount of visitors returned once or more: {0}".format(
-                self.visitors_returned))
+            self.visitors_returned))
         print("How many times visited, mean: {0}".format(
-                self.visitorcount_mean))
+            self.visitorcount_mean))
         print("Amount of unique IP addresses of responses (records): {0}".format(
-                self.uniqueRecords))
+            self.uniqueRecords))
         print("Number of invalid records not taken into account: {0}".format(
-                self.invalid))
+            self.invalid))
         print("{0} % of visitors sent me records".format(
-                round(self.uniqueRecords / self.uniqueVisitors * 100, 2)))
-        
-        print("Mean amount of received records per user: {0}". format(
-                round(self.average_answers.id.mean(), 2)))
+            round(self.uniqueRecords / self.uniqueVisitors * 100, 2)))
+        print("Mean amount of received records per user: {0}".format(
+            round(self.average_answers.id.mean(), 2)))
         print("TOP 10 most answers per user: {0}".format(
-                self.topten))
+            self.topten))
         
 
 

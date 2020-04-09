@@ -33,7 +33,6 @@ import random
 # Working directories
 wd = r"C:\Sampon\Maantiede\Master of the Universe"
 script_wd = r"C:\Sampon\Maantiede\Master of the Universe/python"
-ttm_path = r"HelsinkiTravelTimeMatrix2018\{0}xxx\travel_times_to_ {1}.txt"
 
 # Survey data file paths
 records_data = r"leaflet_survey_results\records.csv"
@@ -45,6 +44,7 @@ resarea_path = r"python\paavo\pno_dissolve.shp"
 postal_path = r"python\paavo\2019\pno_tilasto_2019.shp"
 ykr_path = r"yhdyskuntarakenteenvyoh17\YKRVyohykkeet2017.shp"
 ua_forest_path = r"python\FI001L3_HELSINKI\ua2012_research_area.shp"
+ttm_path = r"HelsinkiTravelTimeMatrix2018\{0}xxx\travel_times_to_ {1}.txt"
 
 # Import functions and lists of zipcodes. Has to be done after inserting 
 # os.chdir()
@@ -377,8 +377,8 @@ invalid = 6 + len(illegal_df)
         
 # Use indices of "illegal_df" to drop rows from "records". Drop illegal IP 
 # address codes from "visitors".
-records = records.drop(illegal_df.index).reset_index()
-visitors = visitors[~visitors.ip.isin(illegal_df.ip)].reset_index()
+records = records.drop(illegal_df.index).reset_index(drop=True)
+visitors = visitors[~visitors.ip.isin(illegal_df.ip)].reset_index(drop=True)
 
 
 
@@ -634,7 +634,7 @@ for varname, fullname in subdiv_dict.items():
 # their effects in the Helsinki metropolitan area (2002). 
 l = []
 i = 0
-while i < 5:
+while i < 10:
     # In "valuerange" make sure no grid cells outside research area are accepted
     valuerange = set(grid.YKR_ID.astype(str)) - set(list(map(str, notPresent)))
     vals = random.sample(valuerange, 2)
@@ -685,9 +685,10 @@ descri_postal[postal.kunta == "049"].describe() #van
 # Data to csv for more processing in R.
 #records.to_csv("records_for_r.csv", encoding="Windows-1252")
 #postal.to_csv("postal_for_r.csv", encoding="Windows-1252")
+#visitors.to_csv("visitors_for_r.csv", encoding="Windows-1252")
 
-# For Shinyapps.io. There are huge problems with character encoding down the 
-# line if Ascii-UTF-8 conversion is not done here.
+# Data export for Shinyapps.io. There are huge problems with character encoding 
+# down the line if Ascii-UTF-8 conversion is not done here.
 #import unicodedata
 #records["subdiv"] = records.subdiv.apply(lambda val: unicodedata.normalize("NFKD", val).encode("ascii", "ignore").decode())
 #records["ykr_zone"] = records.ykr_zone.apply(lambda val: unicodedata.normalize("NFKD", val).encode("ascii", "ignore").decode())
