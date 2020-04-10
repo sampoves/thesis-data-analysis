@@ -1,8 +1,6 @@
 
-
 # Sampo Vesanen's Master's thesis statistical tests and visualisation
-#####################################################################
-#### Stats and visualisation functions and essential variables
+# Stats and visualisation functions and essential variables
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
@@ -28,8 +26,9 @@ CreateJenksColumn <- function(fortified, postal, datacol, newcolname, classes_n 
   # Adapted from:
   # https://medium.com/@traffordDataLab/lets-make-a-map-in-r-7bd1d9366098
   
-  classes <- classInt::classIntervals(postal[, datacol], n = classes_n, 
-                                      style = "jenks")
+  # Suppress n jenks warnings, problem probably handled
+  classes <- suppressWarnings(
+    classInt::classIntervals(postal[, datacol], n = classes_n, style = "jenks"))
   
   # classes$brk has to be wrapped with unique(), otherwise we can't get more
   # than six classes for parktime_median or walktime_median
