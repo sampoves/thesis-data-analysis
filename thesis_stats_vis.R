@@ -4,7 +4,7 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 9.4.2020
+# 10.4.2020
 #
 # This is an interactive tool for analysing the results of my research survey.
 
@@ -707,13 +707,6 @@ server <- function(input, output, session){
     minlon <- plyr::round_any(min(inputdata$lon), 100, f = floor)
     maxlon <- plyr::round_any(max(inputdata$lon), 1000, f = ceiling)
     
-    # classInt test
-    #malist <- c("235", "091", "092")
-    #pelle <- CreateJenksColumn(data_f[!data_f$kunta %in% malist, ], postal[!postal$kunta %in% malist, ], "parktime_median", "jenks_park_median", 9)
-    #pelle <- CreateJenksColumn(data_f[!data_f$kunta %in% malist, ], postal[!postal$kunta %in% malist, ], "ua_forest", "jenks_ua_forest", 4)
-    #unique(data_f$parktime_median)
-    #unique(pelle$jenks_park_median)
-    
     # Set properties for interactive map for each input$karttacol value
     if(input$karttacol == "jenks_ua_forest") {
       datacol <- "ua_forest"
@@ -854,6 +847,7 @@ ui <- shinyUI(fluidPage(
         max-width: 80vh;
         width: 250px;
         z-index: 50;
+        scroll-behavior: smooth;
       }
       .girafe_container_std {
         text-align: left;
@@ -949,6 +943,7 @@ ui <- shinyUI(fluidPage(
       HTML("</div>"),
       
       # Interactive map jenks breaks options
+      HTML("<p style='visibility: hidden' id='intmap-settings-link'></p>"),
       HTML("<div id='contents'>"),
       checkboxGroupInput(
         "kunta",
@@ -1032,6 +1027,7 @@ ui <- shinyUI(fluidPage(
   
       HTML("<div id='intmaplink'</div>"),
       h3("9 Survey results on research area map"),
+      HTML("<a style='font-size: 12px' href='#intmap-settings-link'>View the settings for this map</a>"),
       ggiraphOutput("interactive"),
       hr(),
       
