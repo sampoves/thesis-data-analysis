@@ -540,15 +540,16 @@ server <- function(input, output, session){
     inputdata <- inputdata[!inputdata$subdiv %in% c(input$subdivGroup), ]
     
     # Plot maximum y tick value. Use dplyr to group the desired max amount.
-    # In dplyr, use !!as.symbol(var) to notify that we are using variables
-    # to denote column names
+    # In dplyr, use !!as.symbol(var) to signify that we are using variables
+    # as column names
     maximum <- inputdata %>% 
-      group_by(!!as.symbol(explanatorycol), !!as.symbol(barplotval)) %>% 
-      summarise(amount = length(!!as.symbol(barplotval))) %>% 
-      top_n(n = 1)
-    maximum <- max(as.data.frame(maximum$amount))
-    
-    if (maximum <= 200){
+      dplyr::group_by(!!as.symbol(explanatorycol), !!as.symbol(barplotval)) %>% 
+      dplyr::summarise(amount = length(!!as.symbol(barplotval))) %>% 
+      dplyr::top_n(n = 1) %>%
+      dplyr::pull(amount) %>%
+      max()
+      
+    if (maximum <= 200) {
       tick_interval <- 50
     } else {
       tick_interval <- 200
