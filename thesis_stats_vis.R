@@ -1038,26 +1038,25 @@ ui <- shinyUI(fluidPage(
       hr(),
       
       h3("Data providers"),
-      HTML("<a https://hri.fi/data/dataset/paakaupunkiseudun-aluejakokartat>",
+      HTML("<a href='https://hri.fi/data/dataset/paakaupunkiseudun-aluejakokartat'>",
            "Municipality subdivisions</a>",
            "(C) Helsingin, Espoon, Vantaan ja Kauniaisten mittausorganisaatiot",
-           "2011. Aineisto on muokkaamaton. License",
-           "<a https://creativecommons.org/licenses/by/4.0/deed.en> CC BY 4.0</a>",
+           "2011. Aineisto on muokkaamaton. License <a href='https://creativecommons.org/licenses/by/4.0/deed.en'> CC BY 4.0</a>.",
            
-           "<br><a https://www.stat.fi/tup/paavo/index_en.html>",
+           "<br><a href='https://www.stat.fi/tup/paavo/index_en.html'>",
            "Postal code area boundaries</a> (C) Statistics Finland 2019.", 
-           "Retrieved 27.6.2019. License <a https://creativecommons.org/licenses/by/4.0/deed.en>",
-           "CC BY 4.0</a>",
+           "Retrieved 27.6.2019. License <a href='https://creativecommons.org/licenses/by/4.0/deed.en'>",
+           "CC BY 4.0</a>.",
            
-           "<br><a https://land.copernicus.eu/local/urban-atlas/urban-atlas-2012>",
+           "<br><a href='https://land.copernicus.eu/local/urban-atlas/urban-atlas-2012'>",
            "Urban Atlas 2012</a> (C) European Environment Agency 2016.", 
-           "Retrieved 27.6.2019. License <a https://land.copernicus.eu/local/urban-atlas/urban-atlas-2012?tab=metadata>",
-           "available at Copernicus.eu</a>",
+           "Retrieved 27.6.2019. License <a href='https://land.copernicus.eu/local/urban-atlas/urban-atlas-2012?tab=metadata'>",
+           "available at Copernicus.eu</a>.",
            
-           "<br><a http://metatieto.ymparisto.fi:8080/geoportal/catalog/search/resource/details.page?uuid={B374BBB2-1EDF-4CF6-B11B-04E0017E9A26}>",
+           "<br><a href='http://metatieto.ymparisto.fi:8080/geoportal/catalog/search/resource/details.page?uuid={B374BBB2-1EDF-4CF6-B11B-04E0017E9A26}'>",
            "Yhdyskuntarakenteen vyöhykkeet 2017</a> (C) Finnish Environment Institute 2019.", 
-           "Retrieved 27.6.2019. License <a https://creativecommons.org/licenses/by/4.0/deed.en>",
-           "CC BY 4.0</a>")
+           "Retrieved 27.6.2019. License <a href='https://creativecommons.org/licenses/by/4.0/deed.en'>",
+           "CC BY 4.0</a>.")
     )
   )
 ))
