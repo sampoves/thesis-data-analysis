@@ -4,7 +4,7 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 10.4.2020
+# 11.4.2020
 #
 # This is an interactive tool for analysing the results of my research survey.
 
@@ -101,62 +101,68 @@ ordinal <- c("likert", "parkspot", "timeofday", "ua_forest", "ykr_zone",
 supportcols <- c("id", "timestamp", "ip")
 
 
-# Read in csv data. Define column types
-thesisdata <- read.csv(file = datapath,
-                colClasses = c(timestamp = "POSIXct", zipcode = "character", 
-                               ip = "character", timeofday = "factor", 
-                               parkspot = "factor", likert = "factor", 
-                               ua_forest = "factor", ykr_zone = "factor", 
-                               subdiv = "factor"),
-                header = TRUE, sep = ",")
-
-# Name factor levels. Determine order of factor levels for plotting
-levels(thesisdata$parkspot) <- list("On the side of street" = 1,
-                                    "Parking lot" = 2,
-                                    "Parking garage" = 3,
-                                    "Private or reserved" = 4,
-                                    "Other" = 5)
-
-levels(thesisdata$likert) <- list("Extremely familiar" = 1,
-                                  "Moderately familiar" = 2,
-                                  "Somewhat familiar" = 3,
-                                  "Slightly familiar" = 4,
-                                  "Not at all familiar" = 5)
-
-levels(thesisdata$timeofday) <- list("Weekday, rush hour" = 1,
-                                     "Weekday, other than rush hour" = 2,
-                                     "Weekend" = 3,
-                                     "Can't specify, no usual time" = 4)
-
-# SYKE does not provide official translations for these zones
-levels(thesisdata$ykr_zone) <- list("keskustan jalankulkuvyöhyke" = 1,
-                                    "keskustan reunavyöhyke" = 2,
-                                    "alakeskuksen jalankulkuvyöhyke" = 3,
-                                    "intensiivinen joukkoliikennevyöhyke" = 4,
-                                    "joukkoliikennevyöhyke" = 5,
-                                    "autovyöhyke" = 6,
-                                    "novalue" = 7)
-
-levels(thesisdata$ua_forest) <- list("Predominantly forest" = 1,
-                                     "Mostly forest" = 2,
-                                     "Moderate forest" = 3,
-                                     "Some forest" = 4,
-                                     "Scarce forest" = 5)
-
-# Remove column "X"
-thesisdata <- subset(thesisdata, select = -c(X))
+# Read in csv data. Define column types. Name factor levels. Determine order of 
+# factor levels for plotting. Lastly, remove column "X"
+thesisdata <- 
+  read.csv(file = datapath,
+           colClasses = c(timestamp = "POSIXct", zipcode = "character", 
+                          ip = "character", timeofday = "factor", 
+                          parkspot = "factor", likert = "factor",
+                          ua_forest = "factor", ykr_zone = "factor", 
+                          subdiv = "factor"),
+           header = TRUE, 
+           sep = ",") %>%
+  
+  dplyr::mutate(parkspot = dplyr::recode(parkspot, 
+                                         `1` = "On the side of street",
+                                         `2` = "Parking lot",
+                                         `3` = "Parking garage",
+                                         `4` = "Private or reserved",
+                                         `5` = "Other"),
+                
+                likert = dplyr::recode(likert, 
+                                       `1` = "Extremely familiar",
+                                       `2` = "Moderately familiar",
+                                       `3` = "Somewhat familiar",
+                                       `4` = "Slightly familiar",
+                                       `5` = "Not at all familiar"),
+                
+                timeofday = dplyr::recode(timeofday, 
+                                          `1` = "Weekday, rush hour",
+                                          `2` = "Weekday, other than rush hour",
+                                          `3` = "Weekend",
+                                          `4` = "Can't specify, no usual time"),
+                
+                # SYKE does not provide official translations for these zones
+                ykr_zone = dplyr::recode(ykr_zone, 
+                                         `1` = "keskustan jalankulkuvyöhyke",
+                                         `2` = "keskustan reunavyöhyke",
+                                         `3` = "alakeskuksen jalankulkuvyöhyke",
+                                         `4` = "intensiivinen joukkoliikennevyöhyke",
+                                         `5` = "joukkoliikennevyöhyke",
+                                         `6` = "autovyöhyke",
+                                         `7` = "novalue"),
+                
+                ua_forest = dplyr::recode(ua_forest, 
+                                       `1` = "Predominantly forest",
+                                       `2` = "Mostly forest",
+                                       `3` = "Moderate forest",
+                                       `4` = "Some forest",
+                                       `5` = "Scarce forest")) %>%
+  dplyr::select(-X)
 
 
 
 #### Context map for ShinyApp --------------------------------------------------
 
 # Prepare a context map for to visualise currently active areas in analysis
-# ShinyApp.
-suuralue <- rgdal::readOGR(suuraluepath, use_iconv = TRUE, encoding = "UTF-8")
-
-# This preserves suuralue dataframe data
-suuralue_f <- merge(ggplot2::fortify(suuralue), as.data.frame(suuralue), 
-                    by.x = "id", by.y = 0)
+# ShinyApp. left_join() preserves suuralue dataframe data. See ?"%>%" and "Using 
+# the dot for secondary purposes" for more information about the curly brackets.
+suuralue_f <- 
+  rgdal::readOGR(suuraluepath, use_iconv = TRUE, encoding = "UTF-8") %>%
+  {dplyr::left_join(ggplot2::fortify(.), 
+                    as.data.frame(.) %>%
+                      dplyr::mutate(id = as.character(dplyr::row_number() - 1)))} 
 
 # Align area names with thesisdata$subdiv
 levels(suuralue_f$Name) <- c("Vantaa Aviapolis", "Helsinki Southern", 
@@ -174,14 +180,13 @@ levels(suuralue_f$Name) <- c("Vantaa Aviapolis", "Helsinki Southern",
 
 suuralue_f$Name <- factor(suuralue_f$Name, levels = sort(levels(suuralue_f$Name)))
 
-# Get municipality borders
-muns_clipped <- 
+# Get municipality borders. Fortify SP DataFrame for ggplot
+muns_clipped_f <- 
   rgdal::readOGR(munsclippedpath) %>%
-  sp::spTransform(., sp::CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"))
-
-# Fortify SP DataFrame for ggplot
-muns_clipped_f <- merge(ggplot2::fortify(muns_clipped), as.data.frame(muns_clipped), 
-                        by.x = "id", by.y = 0)
+  sp::spTransform(., sp::CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")) %>%
+  {dplyr::left_join(ggplot2::fortify(.), 
+                    as.data.frame(.) %>%
+                      dplyr::mutate(id = as.character(dplyr::row_number() - 1)))} 
 
 # Annotate municipalities in ggplot:
 # https://stackoverflow.com/a/28963405/9455395
@@ -275,15 +280,15 @@ row.names(postal) <- postal[, 1]
 data <- sp::SpatialPolygonsDataFrame(
   sp::SpatialPolygons(unlist(lapply(sp_tmp_ID, function(x) x@polygons)), 
                       proj4string = crs), data = postal)
-data_f <- merge(
-  ggplot2::fortify(data), as.data.frame(data), by.x = "id", by.y = 0)
+data_f <- merge(ggplot2::fortify(data), as.data.frame(data), by.x = "id", by.y = 0)
 
 # Get municipality borders from shapefile
-muns <- 
+munsf <- 
   rgdal::readOGR(munspath) %>%
-  sp::spTransform(., crs)
-
-munsf <- merge(ggplot2::fortify(muns), as.data.frame(muns), by.x = "id", by.y = 0)
+  sp::spTransform(., crs) %>%
+  {dplyr::left_join(ggplot2::fortify(.), 
+                    as.data.frame(.) %>%
+                      dplyr::mutate(id = as.character(dplyr::row_number() - 1)))} 
 
 
 
@@ -688,8 +693,8 @@ server <- function(input, output, session){
             legend.position = "bottom")
     
     ggiraph(code = print(g2), 
-            width_svg = 14, 
-            height_svg = 12, 
+            width_svg = 16, 
+            height_svg = 14, 
             options = list(opts_sizing(rescale = FALSE)))
   })
   
@@ -789,8 +794,8 @@ server <- function(input, output, session){
             legend.text = element_text(size = 14))
     
     ggiraph(code = print(g), 
-            width_svg = 14, 
-            height_svg = 12, 
+            width_svg = 16, 
+            height_svg = 14, 
             options = list(opts_sizing(rescale = FALSE)))
   })
 }
@@ -826,7 +831,7 @@ ui <- shinyUI(fluidPage(
         max-width: 1200px;
       }
       #boxplot, #barplot, #hist {
-        max-width: 1000px;
+        max-width: 1200px;
       }
       #resetSubdivs {
         width: 100%;
