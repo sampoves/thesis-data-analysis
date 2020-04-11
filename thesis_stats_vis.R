@@ -158,27 +158,31 @@ thesisdata <-
 # Prepare a context map for to visualise currently active areas in analysis
 # ShinyApp. left_join() preserves suuralue dataframe data. See ?"%>%" and "Using 
 # the dot for secondary purposes" for more information about the curly brackets.
-suuralue_f <- 
+# In short, it allows the use of dot as self for both fortify() and 
+# as.data.frame(). Then align area names with thesisdata$subdiv with mutate().
+# Finally, factor levels by their new names.
+suuralue_f2 <- 
   rgdal::readOGR(suuraluepath, use_iconv = TRUE, encoding = "UTF-8") %>%
   {dplyr::left_join(ggplot2::fortify(.), 
                     as.data.frame(.) %>%
-                      dplyr::mutate(id = as.character(dplyr::row_number() - 1)))} 
+                      dplyr::mutate(id = as.character(dplyr::row_number() - 1)))} %>%
+  
+  dplyr::mutate(Name = factor(Name, labels = 
+                                c("Vantaa Aviapolis", "Helsinki Southern", 
+                                  "Vantaa Hakunila", "Helsinki Eastern", 
+                                  "Helsinki Southeastern", "Kauniainen",
+                                  "Helsinki Central", "Vantaa Kivistö", 
+                                  "Helsinki Northeastern", "Vantaa Koivukylä", 
+                                  "Vantaa Korso", "Helsinki Western",
+                                  "Vantaa Myyrmäki", "Helsinki Northern", 
+                                  "Espoo Pohjois-Espoo", "Espoo Suur-Espoonlahti", 
+                                  "Espoo Suur-Kauklahti", "Espoo Suur-Leppävaara", 
+                                  "Espoo Suur-Matinkylä", "Espoo Suur-Tapiola", 
+                                  "Vantaa Tikkurila", "Espoo Vanha-Espoo",
+                                  "Helsinki Östersundom"))) %>%
+  
+  dplyr::mutate(Name = factor(Name, levels = sort(levels(Name))))
 
-# Align area names with thesisdata$subdiv
-levels(suuralue_f$Name) <- c("Vantaa Aviapolis", "Helsinki Southern", 
-                             "Vantaa Hakunila", "Helsinki Eastern", 
-                             "Helsinki Southeastern", "Kauniainen",
-                             "Helsinki Central", "Vantaa Kivistö", 
-                             "Helsinki Northeastern", "Vantaa Koivukylä", 
-                             "Vantaa Korso", "Helsinki Western",
-                             "Vantaa Myyrmäki", "Helsinki Northern", 
-                             "Espoo Pohjois-Espoo", "Espoo Suur-Espoonlahti", 
-                             "Espoo Suur-Kauklahti", "Espoo Suur-Leppävaara", 
-                             "Espoo Suur-Matinkylä", "Espoo Suur-Tapiola", 
-                             "Vantaa Tikkurila", "Espoo Vanha-Espoo",
-                             "Helsinki Östersundom")
-
-suuralue_f$Name <- factor(suuralue_f$Name, levels = sort(levels(suuralue_f$Name)))
 
 # Get municipality borders. Fortify SP DataFrame for ggplot
 muns_clipped_f <- 
