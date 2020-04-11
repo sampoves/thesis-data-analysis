@@ -161,7 +161,7 @@ thesisdata <-
 # In short, it allows the use of dot as self for both fortify() and 
 # as.data.frame(). Then align area names with thesisdata$subdiv with mutate().
 # Finally, factor levels by their new names.
-suuralue_f2 <- 
+suuralue_f <- 
   rgdal::readOGR(suuraluepath, use_iconv = TRUE, encoding = "UTF-8") %>%
   {dplyr::left_join(ggplot2::fortify(.), 
                     as.data.frame(.) %>%
