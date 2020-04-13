@@ -54,9 +54,8 @@ from thesis_data_zipcodes import *
 os.chdir(wd)
 
 
-#####################
-### 1 IMPORT DATA ###
-#####################
+
+### 1 IMPORT DATA -------------------------------------------------------------
 
 # Survey data. Lambda x to preserve leading zeros
 records = pd.read_csv(records_data, 
@@ -81,9 +80,9 @@ forest = forest[forest.ITEM2012 == "Forests"]
 
 
 
-#############################
-### 2 PROCESS SURVEY DATA ###
-#############################
+### 2 PREPROCESSING -----------------------------------------------------------
+
+### A) Survey data
 
 # Timestamps to datetime format
 records["timestamp"] = pd.to_datetime(
@@ -120,16 +119,13 @@ if diff != 0:
 
 
 
-########################
-### 3 PROCESS POSTAL ###
-########################
+### B) Paavo postal area code data
 
 # Process Helsinki Capital Region GeoDataFrame from PAAVO data
 muns = ["091", "049", "092", "235"]
 postal = postal[postal.kunta.isin(muns)]
 postal = postal.reset_index().drop(columns=["index", "euref_x", "euref_y"])
 postal = postal.rename(columns={"posti_alue": "zipcode"})
-
 
 # Remove islands unreachable by car. This process would have been easy to do 
 # in QGIS, for example, but here we have the same process realised in an
@@ -209,12 +205,10 @@ for idx, geom in enumerate(postal.geometry):
                 [pol for idx, pol in enumerate(geom) if pol.intersects(mainland.buffer(-10))])
         if thisGeom.is_empty == False:
             postal.at[idx, "geometry"] = thisGeom
-            
 
 
-##################################
-### 4 GIVE GRID CELLS ZIPCODES ###
-##################################
+
+### C) Insert zipcode data into DataFrame grid
 
 # My survey data and Travel Time Matrix 2018 operate in different spatial
 # units. TTM is available in YKR grid cells, while my data was gathered
@@ -294,13 +288,13 @@ grid = pd.concat(
 
 
 
-##############################
-### 5 RESPONDENT BEHAVIOUR ###
-##############################
+### 3 DETECTION OF ILLEGAL DATA -----------------------------------------------
+
+### A) Respondent behaviour
 
 # Create groupby aggregations of the records. One can use this DataFrame to
 # see how each respondent (or, specifically, one IP address) answered to the 
-# survey.
+# survey
 visitors_grp = records.groupby("ip").agg({
         "id": "count", 
         "timestamp": lambda x: x.tolist(),
@@ -315,11 +309,7 @@ visitors_grp = visitors_grp.rename(columns={"id": "amount"})
         
 
 
-###################################
-### 6 DETECTION OF ILLEGAL DATA ###
-###################################
-
-### A) Detect duplicates
+### B) Detect duplicate data
 
 # Erase contents of duplicates.txt before writing anything (wipe old data). 
 # Wrap the following for loop in a "with" loop. This enables us to write the 
@@ -359,7 +349,8 @@ print("\nA report on duplicate answers saved to disk in path "
       f"{os.path.join(wd, 'duplicates.txt')}\n")
 
 
-### B) Remove illegal answers 
+
+### C) Remove illegal answers 
 
 # Any value equal or above 60 minutes is deemed illegal in columns "parktime" 
 # and "walktime".
@@ -384,9 +375,9 @@ visitors = visitors[~visitors.ip.isin(illegal_df.ip)].reset_index(drop=True)
 
 
 
-######¤¤###########################
-### 7 ADD DATA TO GEODATAFRAMES ###
-########¤¤#########################
+### 4 ADD VARIOUS DATA INTO POSTAL --------------------------------------------
+
+### A) Prepare
 
 # Reclassify "ykr_vyoh". Reclassification is created as in Finnish Environment
 # Institute website (Only available in Finnish)
@@ -411,9 +402,17 @@ postal["ykr_autovyoh"] = 0
 postal["ykr_novalue"] = 0
 postal["ua_forest"] = 0
 
+
+
+### B) Add answer count
+
 # Calculate column "answer_count". Answer count for each zipcode area
 answ = records.zipcode.value_counts().rename("answer_count")
 postal = postal.join(answ, on="zipcode")
+
+
+
+### C) Add mean and median for parktime and walktime
 
 # Calculate mean and median for columns "parktime" and "walktime". Join by 
 # column "zipcode"
@@ -431,26 +430,12 @@ postal["coords"] = polygonCoordsToTuple(postal)
 
 
 
-######¤¤#############################
-### 8 PREPARE AND SHOW STATISTICS ###
-########¤¤###########################
-    
-statistics = Stats(records, postal, visitors, invalid)
-statistics.calculateStats()
+### D) Calculate percentage of YKR zones in each zip code area
 
-
-
-###################################################################
-### 9 PERCENTAGE OF URBAN ZONES AND FOREST IN EACH ZIPCODE AREA ###
-###################################################################
-
-# The idea is to overlay "yhdyskuntarakenteen vyöhykkeet" on DataFrame "postal" 
-# and see the percentage how much of each zone is included in the zipcode in 
-# question. Together with checking out how much forest is there in research 
-# area we could find some interesting results in the statistical analysis.
-
-
-### A) YKR zones
+# Overlay "yhdyskuntarakenteen vyöhykkeet" on DataFrame "postal"  and see the 
+# percentage how much of each zone is included in the zipcode in question. 
+# Together with checking out how much forest is there in research area we 
+# could find some interesting results in the statistical analysis.
 
 # Dictionary key to help allocation of values
 dictKey = {"keskustan jalankulkuvyöhyke": "ykr_kesk_jalan", 
@@ -506,7 +491,7 @@ postal.loc[postal["ykr_novalue"] < 0, "ykr_novalue"] = 0
 
 
 
-### B) Urban Atlas 2012 forest
+### E) Calculate percentage of Urban Atlas 2012 forest in each zipcode area
 
 # Reproject the geometries by replacing the values with projected ones
 forest = forest.to_crs(epsg=3067)
@@ -536,12 +521,10 @@ for row in postal.itertuples():
 
 
 
-##########################################################
-### 10 MERGE YKR ZONES, FOREST AND SUBDIV INTO RECORDS ###
-##########################################################
+### 5 MERGE YKR ZONES, FOREST AND SUBDIV INTO RECORDS -------------------------
 
 # Add generalised values of "ykr_vyoh" and "ua_forest" into records for further
-# statistical analysis
+# statistical analysis. Also add subdivision data.
 
 
 ### A) Urban Atlas 2012 Forest
@@ -629,9 +612,14 @@ for varname, fullname in subdiv_dict.items():
 
 
 
-#######################################
-### UTILISE TRAVEL-TIME MATRIX 2018 ###
-#######################################
+### SHOW STATISTICS ---------------------------------------------------------
+    
+statistics = Stats(records, postal, visitors, invalid)
+statistics.calculateStats()
+
+
+
+### UTILISE TRAVEL-TIME MATRIX 2018 -------------------------------------------
 
 # Test how TTM18 data and my thesis results compare.
 
@@ -653,7 +641,7 @@ while i < 10:
 
 #l2 = [("5985086", "5866836"), ("5981923", "5980266")]
 traveltime = travelTimeComparison(grid, forest, postal, records, l, ttm_path, 
-                                  printStats=True, plotIds=False)
+                                  printStats=False, plotIds=False)
 
 # get means for all columns, see differences
 print("Searching for parking, mean, minutes\n", 
@@ -673,9 +661,8 @@ print("Percentage of the parking process of the entire travel time, mean, %\n",
 
 
 
-############################
-### VISUALISE & DESCRIBE ###
-############################
+### VISUALISE & DESCRIBE ------------------------------------------------------
+
 # These visualisations are mostly obsolete. Most visual mapping is now done
 # in R.
 
@@ -698,9 +685,7 @@ descri_postal[postal.kunta == "049"].describe() #van
 
 
 
-#####################
-### EXPORT TO CSV ###
-#####################
+### EXPORT TO CSV -------------------------------------------------------------
 
 # Data to csv for more processing in R.
 #records.to_csv("records_for_r.csv", encoding="Windows-1252")
