@@ -112,11 +112,11 @@ visitors = visitors.reset_index().drop(columns=["index"])
 # Alert if records has IP codes which do not exist in visitors
 diff = list(set(records.ip) - set(visitors.ip))
 if diff != 0:
-    print("\nNB! The following IP codes exist only in records: {0}".format(
-            diff))
-    print("These unique IP codes sent in total {0} records. This affects" 
+    print(f"\nNB! The following IP codes exist only in records: {diff}")
+    print("These unique IP codes sent in total " 
+          f"{len(records[records.ip.isin(diff)])} records. This affects" 
           " statistics only minimally but acknowledge this discrepancy" 
-          " anyway.".format(len(records[records.ip.isin(diff)])))
+          " anyway.")
 
 
 
@@ -186,11 +186,11 @@ for idx, geom in enumerate(postal.geometry):
                 [geom for geom in match if geom.intersects(suvisaar)])
         mainland = mainland.union(preserve)
     
-    # Special case Kuusisaari-Lehtisaari, preserve 3 largest Polygons
+    # Special case Kuusisaari-Lehtisaari, preserve three largest Polygons
     if postal.loc[idx, "posti_alue"] == "00340":
         thisGeom = postal.loc[idx]
         geomList = [(idx, P.area) for idx, P in enumerate(thisGeom.geometry)]
-        geomList = geomList[:3] # three largest
+        geomList = geomList[:3] # select three largest
         geomList = [idx for idx, area in geomList] # preserve ids
         thisGeom = MultiPolygon(
                 [geom for idx, geom in enumerate(thisGeom.geometry) if idx in geomList])
@@ -245,10 +245,10 @@ for postalarea in postal.itertuples():
     thisZip["area1"] = thisZip.area
 
     # Iterate through all rows in current zipcode and see if each YKR_ID is
-    # in grid_areas or not
+    # in DataFrame "grid_areas" or not
     for row in thisZip.itertuples():
 
-        # this YKR_ID does not yet exist in grid_areas
+        # this YKR_ID does not yet exist in "grid_areas"
         if grid_areas[grid_areas.YKR_ID.isin([row.YKR_ID])].empty == True:
 
             grid_areas.loc[i, "YKR_ID"] = row.YKR_ID
@@ -257,7 +257,7 @@ for postalarea in postal.itertuples():
             grid_areas.loc[i, "total_area"] = row.area1
             i += 1
             
-        # The current YKR_ID was found in grid_areas 
+        # The current YKR_ID was found in "grid_areas"
         else:   
 
             # This is the location of the located pre-existing ykr_id
@@ -335,8 +335,8 @@ with open(os.path.join(wd, "duplicates.txt"), "a+") as f:
         theseRecords = records.loc[records.ip == visitor]
         
         if(theseRecords.zipcode.is_unique) == False:
-            f.write("\nDuplicates detected for ip code {0}\n".format(
-                    theseRecords.ip.unique()[0]))
+            f.write("\nDuplicates detected for ip code "
+                    f"'{theseRecords.ip.unique()[0]}'\n\n")
             dupl = theseRecords[theseRecords.zipcode.duplicated(keep=False)]
             dupl = dupl.groupby("zipcode").agg(
                     {"id": lambda x: x.tolist(),
@@ -351,10 +351,10 @@ with open(os.path.join(wd, "duplicates.txt"), "a+") as f:
         
             # Produce current rows in the text file
             for idx, row in dupl.drop(["ip"], axis=1).iterrows():
-                f.write("{}\n\n".format(row.to_string()))
+                f.write(f"{row.to_string()}\n\n")
                 
-print("\nA report on duplicate answers saved to disk in path {0}\n".format(
-        os.path.join(wd, "duplicates.txt")))
+print("\nA report on duplicate answers saved to disk in path "
+      f"{os.path.join(wd, 'duplicates.txt')}\n")
 
 
 ### 2) Remove illegal answers 
@@ -367,7 +367,7 @@ for row in records.itertuples():
     if(row.parktime >= 60 or row.walktime >= 60):
         illegal_df = illegal_df.append(records.iloc[row.Index])
 
-print("\nThe following illegal records were found:")
+print("\nThe following illegal records were found (value >= 60):")
 print("\n", illegal_df[["parktime", "walktime"]])
 
 # Value "invalid "starts at 6 as at this point I have removed 3 of my own 
@@ -413,7 +413,8 @@ postal["ua_forest"] = 0
 answ = records.zipcode.value_counts().rename("answer_count")
 postal = postal.join(answ, on="posti_alue")
 
-# Calculate mean and median for parktime and walktime. Join by zipcode
+# Calculate mean and median for columns "parktime" and "walktime". Join by 
+# column "posti_alue" (zipcode)
 roundmean = lambda x: round(x.mean(), 2)
 calcs = records.groupby("zipcode").agg(
     parktime_mean=("parktime", roundmean),
@@ -605,7 +606,8 @@ records["ykr_zone"] = records.ykr_zone.map(dictKey)
 # (for example Lippajärvi-Järvenperä and Sepänkylä-Kuurinniitty) and just 
 # south of Helsinki-Vantaa airport.
 
-# View further information about subdivisions in script thesis_data_zipcodes.py.
+# View further information about subdivisions in the script 
+# "thesis_data_zipcodes.py".
             
 # Create column for subdivision name in DataFrame "records"
 records["subdiv"] = 0
@@ -625,7 +627,9 @@ for varname, fullname in subdiv_dict.items():
 ### UTILISE TRAVEL-TIME MATRIX 2018 ###
 #######################################
 
-# - 0.42 min is the time it took to park a car in TTM18. 
+# Test how TTM18 data and my thesis results compare.
+
+# - Searching for parking lasts 0.42 min in TTM18. 
 # - Walking time from car to main destination is 2.5 min (180 meters) in 
 #   Helsinki center in TTM18
 # - Walking time from car to main destination in other areas is 2.0 min
@@ -641,19 +645,28 @@ while i < 10:
     l.append(tuple(vals))
     i += 1
 
-#l = [("5985086", "5866836"), ("5981923", "5980266")]
+#l2 = [("5985086", "5866836"), ("5981923", "5980266")]
 traveltime = travelTimeComparison(grid, forest, postal, records, l, ttm_path, 
-                                  printStats=False, plotIds=True)
+                                  printStats=True, plotIds=False)
 
 # get means for all columns, see differences
-round(traveltime[["car_r_drivetime", "car_m_drivetime", "car_sl_drivetime",
-                  "car_r_pct", "car_m_pct", "car_sl_pct",
-                  "thesis_r_drivetime","thesis_m_drivetime", 
-                  "thesis_sl_drivetime", "thesis_r_pct", "thesis_m_pct", 
-                  "thesis_sl_pct"]].mean(axis=0), 2)
+print("Searching for parking, mean, minutes\n", 
+      round(traveltime[["ttm_sfp", "thesis_r_sfp", "thesis_m_sfp", 
+                  "thesis_sl_sfp"]].mean(axis=0), 2).to_string(), "\n", sep="")
+print("Walking to destination, mean, minutes\n",
+      round(traveltime[["ttm_wtd", "thesis_r_wtd", "thesis_m_wtd", 
+                  "thesis_sl_wtd"]].mean(axis=0), 2).to_string(), "\n", sep="")
+print("Drivetime without parking process, mean, minutes\n",
+      round(traveltime[["ttm_r_drivetime", "ttm_m_drivetime", "ttm_sl_drivetime", 
+                  "thesis_r_drivetime", "thesis_m_drivetime", 
+                  "thesis_sl_drivetime"]].mean(axis=0), 2).to_string(), "\n", sep="")
+print("Percentage of the parking process of the entire travel time, mean, %\n",
+      round(traveltime[["ttm_r_pct", "ttm_m_pct", "ttm_sl_pct", 
+                  "thesis_r_pct","thesis_m_pct", "thesis_sl_pct"]]
+            .mean(axis=0), 2).to_string(), sep="")
 
 
-    
+
 ############################
 ### VISUALISE & DESCRIBE ###
 ############################
@@ -666,10 +679,11 @@ parkingPlot(postal, "answer_count", 0)
 parkingPlot(postal[postal.kunta == "091"], "answer_count", 0) #amount for Hki
 parkingPlot(postal, "walktime_mean", 1) # plot walktime mean
 parkingPlot(postal, "parktime_mean", 1) # plot parktime mean
-parkingPlot(postal, "ua_forest", 1) # plot parktime mean
+parkingPlot(postal, "parktime_median", 1) # plot parktime median
+parkingPlot(postal, "ua_forest", 1) # plot forest
 
 # Get mean-std-min-max-quantiles of municipalities
-descri_postal = postal.iloc[:, [4, 113, 114, 115, 116, 117]] #no walktime
+descri_postal = postal.iloc[:, [4, 113, 114, 115, 116, 117]] #does not contain walktime
 descri_postal.describe()
 descri_postal[postal.kunta == "091"].describe() #hki
 descri_postal[postal.kunta == "092"].describe() #esp

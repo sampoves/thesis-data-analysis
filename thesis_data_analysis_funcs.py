@@ -118,42 +118,29 @@ class Stats:
         print("\n\n-----------")
         print("---Stats---")
         print("-----------")
-        print("Total answers: {0}".format(
-            self.answer_sum))
-        print("Areas with answers: {0}".format(
-            self.areasWithAnswers))
-        print("Areas without answers: {0}".format(
-            167 - self.areasWithAnswers)) # 167 is the amount of zip codes
-        print("Answers per area, mean: {0}".format(
-            self.answer_mean))
-        print("Quantiles of answers per area:\n{0}".format(
-            self.quartiles.to_string()))
-        print("Unanswered areas: {0}".format(
-            self.areasWithout))
-        print("Areas with more than 100 answers: {0}".format(
-            self.areasMoreThanHundred))
-        print("Areas with 10-99 answers: {0}".format(
-            self.areasMoreThanTen))
-        print("Areas with 1-9 answers: {0}".format(
-            self.areasMoreThanOne))
-        print("Total amount of visits: {0}".format(
-            self.totalVisits))
-        print("Amount of unique IP addresses (visitors): {0}".format(
-            self.uniqueVisitors))
-        print("Amount of visitors returned once or more: {0}".format(
-            self.visitors_returned))
-        print("How many times visited, mean: {0}".format(
-            self.visitorcount_mean))
-        print("Amount of unique IP addresses of responses (records): {0}".format(
-            self.uniqueRecords))
-        print("Number of invalid records not taken into account: {0}".format(
-            self.invalid))
-        print("{0} % of visitors sent me records".format(
-            round(self.uniqueRecords / self.uniqueVisitors * 100, 2)))
-        print("Mean amount of received records per user: {0}".format(
-            round(self.average_answers.id.mean(), 2)))
-        print("TOP 10 most answers per user: {0}".format(
-            self.topten))
+        print(f"Total answers: {self.answer_sum}")
+        print(f"Areas with answers: {self.areasWithAnswers}")
+        print(f"Areas without answers: {167 - self.areasWithAnswers}") # 167 is the amount of zip codes
+        print(f"Answers per area, mean: {self.answer_mean}")
+        print(f"Quantiles of answers per area:\n{self.quartiles.to_string()}")
+        print(f"Unanswered areas: {self.areasWithout}")
+        print(f"Areas with more than 100 answers: {self.areasMoreThanHundred}")
+        print(f"Areas with 10-99 answers: {self.areasMoreThanTen}")
+        print(f"Areas with 1-9 answers: {self.areasMoreThanOne}")
+        print(f"Total amount of visits: {self.totalVisits}")
+        print(f"Amount of unique IP addresses (visitors): {self.uniqueVisitors}")
+        print("Amount of visitors returned once or more: "
+              f"{self.visitors_returned}")
+        print(f"How many times visited, mean: {self.visitorcount_mean}")
+        print("Amount of unique IP addresses of responses (records): "
+              f"{self.uniqueRecords}")
+        print("Number of invalid records not taken into account: "
+              f"{self.invalid}")
+        print(f"{round(self.uniqueRecords / self.uniqueVisitors * 100, 2)} % "
+              "of visitors sent me records")
+        print("Mean amount of received records per user: "
+              f"{round(self.average_answers.id.mean(), 2)}")
+        print(f"TOP 10 most answers per user: {self.topten}")
         
 
 
@@ -553,104 +540,104 @@ def travelTimeComparison(grid, forest, postal, records, listOfTuples, ttm_path,
         result = result.append(thisRow, sort=False)
         
         
-        # Print description of statistics to the console
+        # Print description of statistics to the console. Print an additional
+        # note if the route is non-navigable in TTM18.
         if printStats == True:
             print("\n=========================================")
-            print("=== STATISTICS for {0} to {1} ==="
-                  .format(thisRow.loc[0, "from_id"], 
-                          thisRow.loc[0, "to_id"]))
+            print(f"=== STATISTICS for {thisRow.loc[0, 'from_id']} "
+                  f"to {thisRow.loc[0, 'to_id']} ===")
             print("=========================================")
             
-            print("Origin is {0} {1}.\nDestination is {2} {3}."
-                  .format(orig.zipcode[0], thisRow.loc[0, "from_name"], 
-                          dest.zipcode[0], thisRow.loc[0, "to_name"]))
+            print(f"Origin is {orig.zipcode[0]} {thisRow.loc[0, 'from_name']}."
+                  f"\nDestination is {dest.zipcode[0]} {thisRow.loc[0, 'to_name']}.")
+            
+            if(math.isnan(ttm_r_t)):
+                print("\n*** NB! This route is non-navigable according to "
+                      "TTM18 ***")
             
             print("\n==== Travel time matrix 2018 ====")
             
-            print("\nSearching for parking in destination zipcode: {0} min"
-                  .format(ttm_sfp))
-            print("Walking to the destination from one's parked car in"
-                  " destination zipcode: {0} min".format(ttm_wtd))
-            print("Total length of the parking process: {0} min"
-                  .format(ttm_park_process))
+            print(f"\nSearching for parking in destination zipcode: {ttm_sfp} min")
+            print("Walking to the destination from one's parked car in "
+                  f"destination zipcode: {ttm_wtd} min")
+            print(f"Total length of the parking process: {ttm_park_process} min")
             
             print("\n--- Rush hour traffic ---")
-            print("Entire travel time: {0} min".format(ttm_r_t))
-            print("Entire travel time without the parking process: {0} min"
-                  .format(ttm_r_drivetime))
-            print("-- The parking process represents {0} % of the total"
-                  " travel time".format(str(round(ttm_r_pct * 100, 2))))
+            print(f"Entire travel time: {ttm_r_t} min")
+            print("Entire travel time without the parking process: "
+                  f"{ttm_r_drivetime} min")
+            print("-- The parking process represents "
+                  f"{niceround(ttm_r_pct * 100)} % of the total")
             
             print("\n--- Midday traffic ---")
-            print("Entire travel time: {0} min".format(ttm_m_t))
-            print("Entire travel time without the parking process: {0} min"
-                  .format(ttm_m_drivetime))
-            print("-- The parking process represents {0} % of the total"
-                  " travel time".format(str(round(ttm_m_pct * 100, 2))))
+            print(f"Entire travel time: {ttm_m_t} min")
+            print("Entire travel time without the parking process: "
+                  f"{ttm_m_drivetime} min")
+            print("-- The parking process represents "
+                  f"{niceround(ttm_m_pct * 100)} % of the total travel time")
 
             print("\n--- Following speed limits without any additional"
                   " impedances ---")
-            print("Entire travel time: {0} min".format(ttm_sl_t))
-            print("Entire travel time without the parking process: {0} min"
-                  .format(ttm_sl_drivetime))
-            print("-- The parking process represents {0} % of the total"
-                  " travel time".format(str(round(ttm_sl_pct * 100, 2))))
+            print(f"Entire travel time: {ttm_sl_t} min")
+            print("Entire travel time without the parking process: "
+                  f"{ttm_sl_drivetime} min")
+            print("-- The parking process represents "
+                  f"{niceround(ttm_sl_pct * 100)} % of the total travel time")
             
             print("\n\n==== Sampo Vesanen thesis ====")
-            print("Amount of responses in destination ({0}): {1}"
-                  .format(thisRow.loc[0, "to_name"], values_in_dest))
+            print("Amount of responses in destination "
+                  f"({thisRow.loc[0, 'to_name']}): {values_in_dest}")
             
             print("\n--- Rush hour traffic ---")
-            print("Searching for parking in destination zipcode (mean): {0} min"
-                  .format(thesis_r_sfp))
-            print("Walking to the destination from one's parked car in"
-                  " destination zipcode (mean): {0} min".format(thesis_r_wtd))
-            print("Total length of the parking process: {0} min"
-                  .format(str(round(thesis_r_sfp + thesis_r_wtd, 2))))
+            print("Searching for parking in destination zipcode (mean): "
+                  f"{thesis_r_sfp} min")
+            print("Walking to the destination from one's parked car in "
+                  f"destination zipcode (mean): {thesis_r_wtd} min")
+            print("Total length of the parking process: "
+                  f"{niceround(thesis_r_sfp + thesis_r_wtd)} min")
             
-            print("\nEntire travel time (TTM data): {0} min".format(ttm_r_t))
-            print("Entire travel time without the parking process: {0} min"
-                  .format(thesis_r_drivetime))
-            print("-- The parking process represents {0} % of total travel time"
-                  .format(str(round(thesis_r_pct * 100, 2))))
+            print(f"\nEntire travel time (TTM data): {ttm_r_t} min")
+            print("Entire travel time without the parking process: "
+                  f"{niceround(thesis_r_drivetime)} min")
+            print("-- The parking process represents "
+                  f"{niceround(thesis_r_pct * 100)} % of total travel time")
             
             print("\n--- Midday traffic ---")
-            print("SFP (mean): {0} min".format(thesis_m_sfp))
-            print("WTD (mean): {0} min"
-                  .format(thesis_m_wtd))
-            print("Total length of the parking process: {0} min"
-                  .format(thesis_m_sfp + thesis_m_wtd))
+            print(f"SFP (mean): {thesis_m_sfp} min")
+            print(f"WTD (mean): {thesis_m_wtd} min")
+            print("Total length of the parking process: "
+                  f"{niceround(thesis_m_sfp + thesis_m_wtd)} min")
             
-            print("\nEntire travel time (TTM data): {0} min".format(ttm_m_t))
-            print("Entire travel time in without the parking process: {0} min"
-                  .format(thesis_m_drivetime))
-            print("-- The parking process represents {0} % of total travel time"
-                  .format(str(round(thesis_m_pct * 100, 2))))
+            print(f"\nEntire travel time (TTM data): {ttm_m_t} min")
+            print("Entire travel time without the parking process: "
+                  f"{niceround(thesis_m_drivetime)} min")
+            print("-- The parking process represents "
+                  f"{niceround(thesis_m_pct * 100)} % of total travel time")
             
             print("\n--- Generally ---")
             
-            print("SFP (mean): {0} min".format(thesis_sl_sfp))
-            print("WTD (mean): {0} min"
-                  .format(thesis_sl_wtd))
-            print("Total length of the parking process: {0} min"
-                  .format(str(round(thesis_sl_sfp + thesis_sl_wtd, 2))))
+            print(f"SFP (mean): {thesis_sl_sfp} min")
+            print(f"WTD (mean): {thesis_sl_wtd} min")
+            print("Total length of the parking process: "
+                  f"{niceround(thesis_sl_sfp + thesis_sl_wtd)} min")
             
-            print("\nEntire travel time (TTM data): {0} min".format(ttm_sl_t))
-            print("Entire travel without the parking process: {0} min"
-                  .format(thesis_sl_drivetime))
-            print("-- The parking process represents {0} % of total travel"
-                  " time\n\n".format(str(round(thesis_sl_pct * 100, 2))))
+            print(f"\nEntire travel time (TTM data): {ttm_sl_t} min")
+            print("Entire travel without the parking process: "
+                  f"{niceround(thesis_sl_drivetime)} min")
+            print("-- The parking process represents "
+                  f"{niceround(thesis_sl_pct * 100)} % of total travel "
+                  "time\n\n")
         
         # Plot origin and destination
         if plotIds == True:
  
             # For loop for plotting origin and destination on the map. Prepare
             # annotation with these variables
-            route = "Route: " + str(route_no) + "\n"
+            route = f"Route: {str(route_no)}\n"
             identifierlist = ["Origin: ", "Destination: "]
             namelist = [thisRow.from_name[0], thisRow.to_name[0]]
-            ykrlist = ["\nYKR-ID: " + str(orig.YKR_ID.item()), 
-                       "\nYKR-ID: " + str(dest.YKR_ID.item())]
+            ykrlist = [f"\nYKR-ID: {str(orig.YKR_ID.item())}", 
+                       f"\nYKR-ID: {str(dest.YKR_ID.item())}"]
             
             # Random light color for annotation bbox background to identify 
             # DataFrame rows from each other
@@ -666,8 +653,8 @@ def travelTimeComparison(grid, forest, postal, records, listOfTuples, ttm_path,
                 # Show acknowledgement in annotationbbox if destination is not 
                 # reachable from origin (TTM18 nodata value -1 changed to np.nan)
                 if np.isnan(ttm_r_t):
-                    ykr = ykr + "\nNodata, route not navigable"
-                anno = route + identifier + name + ykr
+                    ykr = f"{ykr}\nNodata, route not navigable"
+                anno = f"{route} {identifier} {name} {ykr}"
                 
                 offsetbox = TextArea(anno, minimumdescent=False)
                 ab = AnnotationBbox(offsetbox, item.coords[0],
@@ -687,6 +674,18 @@ def travelTimeComparison(grid, forest, postal, records, listOfTuples, ttm_path,
     
     return result
 
+
+def niceround(val):
+    '''
+    Parameters
+    ----------
+    val : Any value.
+
+    Returns
+    -------
+     A value transformed to string and rounded to one decimal.
+    '''
+    return str(round(val, 2))
 
 
 def polygonCoordsToTuple(gdf):
@@ -867,7 +866,7 @@ def parkingPlot(df, column, zeroAllowed):
                 linewidth=0.8,
                 figsize=(24, 12), 
                 edgecolor="0.8", 
-                scheme='fisher_jenks',
+                scheme="fisher_jenks",
                 legend=True)
     else:
         # zero allowed but null is forbidden
@@ -878,7 +877,7 @@ def parkingPlot(df, column, zeroAllowed):
                 linewidth=0.8,
                 figsize=(24, 12), 
                 edgecolor="0.8", 
-                scheme='fisher_jenks',
+                scheme="fisher_jenks",
                 legend=True)
     
     # annotate
@@ -894,6 +893,6 @@ def annotationFunction(df, rowname):
     the annotations.
     '''
     for idx, row in df.iterrows():
-        annotation = "{0}, {1}".format(row.nimi, str(row[rowname]))
+        annotation = f"{row.nimi}, {str(row[rowname])}"
         plt.annotate(s=annotation, xy=row.coords,
                      horizontalalignment="center")
