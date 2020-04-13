@@ -375,7 +375,7 @@ def travelTimeComparison(grid, forest, postal, records, listOfTuples, ttm_path,
                                      how="intersection").reset_index()
     walk_center = full_walk_center[inters_walk_center.area / 
                                    full_walk_center.area > 0.5]
-    walk_center = list(walk_center.posti_alue)
+    walk_center = list(walk_center.zipcode)
     
     
     if plotIds == True:

@@ -54,9 +54,9 @@ from thesis_data_zipcodes import *
 os.chdir(wd)
 
 
-###################
-### IMPORT DATA ###
-###################
+#####################
+### 1 IMPORT DATA ###
+#####################
 
 # Survey data. Lambda x to preserve leading zeros
 records = pd.read_csv(records_data, 
@@ -81,9 +81,9 @@ forest = forest[forest.ITEM2012 == "Forests"]
 
 
 
-###########################
-### PROCESS SURVEY DATA ###
-###########################
+#############################
+### 2 PROCESS SURVEY DATA ###
+#############################
 
 # Timestamps to datetime format
 records["timestamp"] = pd.to_datetime(
@@ -120,14 +120,16 @@ if diff != 0:
 
 
 
-######################
-### PROCESS POSTAL ###
-######################
+########################
+### 3 PROCESS POSTAL ###
+########################
 
 # Process Helsinki Capital Region GeoDataFrame from PAAVO data
 muns = ["091", "049", "092", "235"]
 postal = postal[postal.kunta.isin(muns)]
 postal = postal.reset_index().drop(columns=["index", "euref_x", "euref_y"])
+postal = postal.rename(columns={"posti_alue": "zipcode"})
+
 
 # Remove islands unreachable by car. This process would have been easy to do 
 # in QGIS, for example, but here we have the same process realised in an
@@ -156,7 +158,7 @@ mainland = max(postal.unary_union, key=lambda a: a.area)
 for idx, geom in enumerate(postal.geometry):
     
     # "in" utilises package "operator"
-    if postal.loc[idx, "posti_alue"] in preserveTwoLargest:
+    if postal.loc[idx, "zipcode"] in preserveTwoLargest:
         thisGeom = postal.loc[idx]
         geomList = [(idx, P.area) for idx, P in enumerate(thisGeom.geometry)]
         geomList = geomList[:2] # two largest
@@ -167,7 +169,7 @@ for idx, geom in enumerate(postal.geometry):
         mainland = mainland.union(thisGeom)
     
     # Islands
-    if postal.loc[idx, "posti_alue"] in preserveLargest:
+    if postal.loc[idx, "zipcode"] in preserveLargest:
         if geom.geom_type == "MultiPolygon":
             largest = max(geom, key=lambda a: a.area)
         else:
@@ -175,19 +177,19 @@ for idx, geom in enumerate(postal.geometry):
         mainland = mainland.union(largest)
     
     # Special case Tapiola, preserve entire MultiPolygon
-    if postal.loc[idx, "posti_alue"] == "02100":
+    if postal.loc[idx, "zipcode"] == "02100":
         thisGeom = postal.loc[idx, "geometry"]
         mainland = mainland.union(thisGeom)
         
     # Special case Suvisaaristo
-    if postal.loc[idx, "posti_alue"] == "02380":
+    if postal.loc[idx, "zipcode"] == "02380":
         match = postal.loc[idx, "geometry"]
         preserve = MultiPolygon(
                 [geom for geom in match if geom.intersects(suvisaar)])
         mainland = mainland.union(preserve)
     
     # Special case Kuusisaari-Lehtisaari, preserve three largest Polygons
-    if postal.loc[idx, "posti_alue"] == "00340":
+    if postal.loc[idx, "zipcode"] == "00340":
         thisGeom = postal.loc[idx]
         geomList = [(idx, P.area) for idx, P in enumerate(thisGeom.geometry)]
         geomList = geomList[:3] # select three largest
@@ -210,9 +212,9 @@ for idx, geom in enumerate(postal.geometry):
             
 
 
-################################
-### GIVE GRID CELLS ZIPCODES ###
-################################
+##################################
+### 4 GIVE GRID CELLS ZIPCODES ###
+##################################
 
 # My survey data and Travel Time Matrix 2018 operate in different spatial
 # units. TTM is available in YKR grid cells, while my data was gathered
@@ -252,7 +254,7 @@ for postalarea in postal.itertuples():
         if grid_areas[grid_areas.YKR_ID.isin([row.YKR_ID])].empty == True:
 
             grid_areas.loc[i, "YKR_ID"] = row.YKR_ID
-            grid_areas.loc[i, "zipcode"] = postalarea.posti_alue
+            grid_areas.loc[i, "zipcode"] = postalarea.zipcode
             grid_areas.loc[i, "largest_area"] = row.area1
             grid_areas.loc[i, "total_area"] = row.area1
             i += 1
@@ -268,7 +270,7 @@ for postalarea in postal.itertuples():
             # is larger than before and add to total_area
             if row.area1 > grid_areas.loc[found_idx, "largest_area"]:
                 grid_areas.loc[found_idx, "largest_area"] = row.area1
-                grid_areas.loc[found_idx, "zipcode"] = postalarea.posti_alue
+                grid_areas.loc[found_idx, "zipcode"] = postalarea.zipcode
                 
             grid_areas.loc[found_idx, "total_area"] += row.area1
 
@@ -292,9 +294,9 @@ grid = pd.concat(
 
 
 
-############################
-### RESPONDENT BEHAVIOUR ###
-############################
+##############################
+### 5 RESPONDENT BEHAVIOUR ###
+##############################
 
 # Create groupby aggregations of the records. One can use this DataFrame to
 # see how each respondent (or, specifically, one IP address) answered to the 
@@ -313,11 +315,11 @@ visitors_grp = visitors_grp.rename(columns={"id": "amount"})
         
 
 
-#################################
-### DETECTION OF ILLEGAL DATA ###
-#################################
+###################################
+### 6 DETECTION OF ILLEGAL DATA ###
+###################################
 
-### 1) Detect duplicates
+### A) Detect duplicates
 
 # Erase contents of duplicates.txt before writing anything (wipe old data). 
 # Wrap the following for loop in a "with" loop. This enables us to write the 
@@ -357,7 +359,7 @@ print("\nA report on duplicate answers saved to disk in path "
       f"{os.path.join(wd, 'duplicates.txt')}\n")
 
 
-### 2) Remove illegal answers 
+### B) Remove illegal answers 
 
 # Any value equal or above 60 minutes is deemed illegal in columns "parktime" 
 # and "walktime".
@@ -382,9 +384,9 @@ visitors = visitors[~visitors.ip.isin(illegal_df.ip)].reset_index(drop=True)
 
 
 
-#################################
-### ADD DATA TO GEODATAFRAMES ###
-#################################
+######¤¤###########################
+### 7 ADD DATA TO GEODATAFRAMES ###
+########¤¤#########################
 
 # Reclassify "ykr_vyoh". Reclassification is created as in Finnish Environment
 # Institute website (Only available in Finnish)
@@ -411,10 +413,10 @@ postal["ua_forest"] = 0
 
 # Calculate column "answer_count". Answer count for each zipcode area
 answ = records.zipcode.value_counts().rename("answer_count")
-postal = postal.join(answ, on="posti_alue")
+postal = postal.join(answ, on="zipcode")
 
 # Calculate mean and median for columns "parktime" and "walktime". Join by 
-# column "posti_alue" (zipcode)
+# column "zipcode"
 roundmean = lambda x: round(x.mean(), 2)
 calcs = records.groupby("zipcode").agg(
     parktime_mean=("parktime", roundmean),
@@ -422,32 +424,33 @@ calcs = records.groupby("zipcode").agg(
     walktime_mean=("walktime", roundmean),
     walktime_median=("walktime", "median"))
         
-postal = postal.join(calcs, on="posti_alue")
+postal = postal.join(calcs, on="zipcode")
 
 # Prepare annotation of Polygon features
 postal["coords"] = polygonCoordsToTuple(postal)
 
 
 
-###################################
-### PREPARE AND SHOW STATISTICS ###
-###################################
+######¤¤#############################
+### 8 PREPARE AND SHOW STATISTICS ###
+########¤¤###########################
     
 statistics = Stats(records, postal, visitors, invalid)
 statistics.calculateStats()
 
 
 
-#################################################################
-### PERCENTAGE OF URBAN ZONES AND FOREST IN EACH ZIPCODE AREA ###
-#################################################################
+###################################################################
+### 9 PERCENTAGE OF URBAN ZONES AND FOREST IN EACH ZIPCODE AREA ###
+###################################################################
 
 # The idea is to overlay "yhdyskuntarakenteen vyöhykkeet" on DataFrame "postal" 
 # and see the percentage how much of each zone is included in the zipcode in 
 # question. Together with checking out how much forest is there in research 
 # area we could find some interesting results in the statistical analysis.
 
-### 1) YKR zones
+
+### A) YKR zones
 
 # Dictionary key to help allocation of values
 dictKey = {"keskustan jalankulkuvyöhyke": "ykr_kesk_jalan", 
@@ -490,7 +493,7 @@ for row in postal.itertuples():
             # Add data to postal. In .loc square brackets select correct row of 
             # placement then use dictKey dictionary to tell which column to 
             # append in. Finally append current value v
-            postal.loc[postal.posti_alue == row.posti_alue, dictKey[k]] = v
+            postal.loc[postal.zipcode == row.zipcode, dictKey[k]] = v
   
 # Calculate column "ykr_novalue"
 postal["ykr_novalue"] = postal.apply(
@@ -502,7 +505,8 @@ postal["ykr_novalue"] = postal.apply(
 postal.loc[postal["ykr_novalue"] < 0, "ykr_novalue"] = 0
 
 
-### 2) Urban Atlas 2012 forest
+
+### B) Urban Atlas 2012 forest
 
 # Reproject the geometries by replacing the values with projected ones
 forest = forest.to_crs(epsg=3067)
@@ -527,24 +531,23 @@ for row in postal.itertuples():
             forestpercent = thisIntersect.unary_union.area / thisPol.area
             
             # append forest data to column "ua_forest"
-            postal.loc[postal.posti_alue == row.posti_alue, "ua_forest"] = round(
+            postal.loc[postal.zipcode == row.zipcode, "ua_forest"] = round(
                     forestpercent[0], 3)
 
 
 
-#########################################
-# MERGE YKR ZONES AND FOREST TO RECORDS #
-#########################################
+##########################################################
+### 10 MERGE YKR ZONES, FOREST AND SUBDIV INTO RECORDS ###
+##########################################################
 
-# See generalised value of ykr_vyoh and forest in records for further
+# Add generalised values of "ykr_vyoh" and "ua_forest" into records for further
 # statistical analysis
 
-# Bring data
-# zipcode and posti_alue different names. Clumsily rename and name back
-# posti_alue to zipcode to prevent breaking of code
-postal = postal.rename(columns={"posti_alue": "zipcode"})
-records = pd.merge(records, postal[["zipcode","ua_forest"]], on="zipcode")
-postal = postal.rename(columns={"zipcode": "posti_alue"})
+
+### A) Urban Atlas 2012 Forest
+
+# Merge ua_forest data from "postal"
+records = pd.merge(records, postal[["zipcode", "ua_forest"]], on="zipcode")
     
 # Calculate jenks breaks for ua_forest. Use breaks to reclassify values
 # in records. We will use code created by GitHub user Drewda. This is now
@@ -572,15 +575,18 @@ records["ua_forest"] = np.where(
                                                 "Predominantly forest",
                                                 "novalue"))))))))).tolist()
 
+
+
+### B) YKR zones
+
 # Use largest percentage for a class in each zipcode
 ykrColumns = ["ykr_alakesk_jalan", "ykr_autovyoh", "ykr_int_joukko", 
         "ykr_joukkoliik", "ykr_kesk_jalan", "ykr_kesk_reuna", "ykr_novalue"]
 
-# Create dataframe with postal codes and reclassified ykr zones. idxmax will
+# Create DataFrame with postal codes and reclassified ykr zones. idxmax will
 # fetch us the names of the columns where largest value of each row resides
-largestYkr = postal[["posti_alue"]].join([postal[ykrColumns].idxmax(axis=1)])
-largestYkr = largestYkr.rename(columns={"posti_alue": "zipcode",
-                                        0: "ykr_zone"})
+largestYkr = postal[["zipcode"]].join([postal[ykrColumns].idxmax(axis=1)])
+largestYkr = largestYkr.rename(columns={0: "ykr_zone"})
     
 # Merge will spread values of column ykr_zone over all occurrences of specific
 # zipcodes
@@ -594,9 +600,7 @@ records["ykr_zone"] = records.ykr_zone.map(dictKey)
 
 
 
-################################
-### Divisions by postal code ###
-################################
+### C) Municipality subdivisions
 
 # Some postal code areas contain localities which are in conflict with the
 # subdivisions. For example, zipcode Lippajärvi-Järvenperä 02940 contains
@@ -619,7 +623,9 @@ for varname, fullname in subdiv_dict.items():
 
 
 
+
 #### This point marks the Python complete data of my thesis. ####
+
 
 
 

@@ -291,38 +291,38 @@ subdiv_dict = {"hkiSouth": "Helsinki Southern",
 # running the main script.
 
 # View Helsinki subdivisions on map
-#postal[postal.posti_alue.isin(hkiSouth)].plot()
-#postal[postal.posti_alue.isin(hkiWest)].plot()
-#postal[postal.posti_alue.isin(hkiCentral)].plot()
-#postal[postal.posti_alue.isin(hkiNorth)].plot()
-#postal[postal.posti_alue.isin(hkiNortheast)].plot()
-#postal[postal.posti_alue.isin(hkiSoutheast)].plot()
-#postal[postal.posti_alue.isin(hkiEast)].plot()
-#postal[postal.posti_alue.isin(hkiOster)].plot()
-#postal[postal.posti_alue.isin(hkiSouth + hkiWest + hkiCentral + hkiNorth +
-#                              hkiNortheast + hkiSoutheast + hkiEast +
-#                              hkiOster)].plot()
+#postal[postal.zipcode.isin(hkiSouth)].plot()
+#postal[postal.zipcode.isin(hkiWest)].plot()
+#postal[postal.zipcode.isin(hkiCentral)].plot()
+#postal[postal.zipcode.isin(hkiNorth)].plot()
+#postal[postal.zipcode.isin(hkiNortheast)].plot()
+#postal[postal.zipcode.isin(hkiSoutheast)].plot()
+#postal[postal.zipcode.isin(hkiEast)].plot()
+#postal[postal.zipcode.isin(hkiOster)].plot()
+#postal[postal.zipcode.isin(hkiSouth + hkiWest + hkiCentral + hkiNorth +
+#                           hkiNortheast + hkiSoutheast + hkiEast +
+#                           hkiOster)].plot()
 
 # View Espoo subdivisions on map
-#postal[postal.posti_alue.isin(espLeppavaara)].plot()
-#postal[postal.posti_alue.isin(espTapiola)].plot()
-#postal[postal.posti_alue.isin(espMatinkyla)].plot()
-#postal[postal.posti_alue.isin(espEspoonlahti)].plot()
-#postal[postal.posti_alue.isin(espKauklahti)].plot()
-#postal[postal.posti_alue.isin(espVanhaespoo)].plot()
-#postal[postal.posti_alue.isin(espPohjoisespoo)].plot()
-#postal[postal.posti_alue.isin(espLeppavaara + espTapiola + espMatinkyla +
-#                              espEspoonlahti + espKauklahti + espVanhaespoo +
-#                              espPohjoisespoo)].plot()
+#postal[postal.zipcode.isin(espLeppavaara)].plot()
+#postal[postal.zipcode.isin(espTapiola)].plot()
+#postal[postal.zipcode.isin(espMatinkyla)].plot()
+#postal[postal.zipcode.isin(espEspoonlahti)].plot()
+#postal[postal.zipcode.isin(espKauklahti)].plot()
+#postal[postal.zipcode.isin(espVanhaespoo)].plot()
+#postal[postal.zipcode.isin(espPohjoisespoo)].plot()
+#postal[postal.zipcode.isin(espLeppavaara + espTapiola + espMatinkyla +
+#                           espEspoonlahti + espKauklahti + espVanhaespoo +
+#                           espPohjoisespoo)].plot()
 
 # View Vantaa subdivisions on map
-#postal[postal.posti_alue.isin(vanMyyrmaki)].plot()
-#postal[postal.posti_alue.isin(vanKivisto)].plot()
-#postal[postal.posti_alue.isin(vanAviapolis)].plot()
-#postal[postal.posti_alue.isin(vanTikkurila)].plot()
-#postal[postal.posti_alue.isin(vanKoivukyla)].plot()
-#postal[postal.posti_alue.isin(vanKorso)].plot()
-#postal[postal.posti_alue.isin(vanHakunila)].plot()
-#postal[postal.posti_alue.isin(vanMyyrmaki + vanKivisto + vanAviapolis +
-#                              vanTikkurila + vanKoivukyla + vanKorso +
-#                              vanHakunila)].plot()
+#postal[postal.zipcode.isin(vanMyyrmaki)].plot()
+#postal[postal.zipcode.isin(vanKivisto)].plot()
+#postal[postal.zipcode.isin(vanAviapolis)].plot()
+#postal[postal.zipcode.isin(vanTikkurila)].plot()
+#postal[postal.zipcode.isin(vanKoivukyla)].plot()
+#postal[postal.zipcode.isin(vanKorso)].plot()
+#postal[postal.zipcode.isin(vanHakunila)].plot()
+#postal[postal.zipcode.isin(vanMyyrmaki + vanKivisto + vanAviapolis +
+#                           vanTikkurila + vanKoivukyla + vanKorso +
+#                           vanHakunila)].plot()
