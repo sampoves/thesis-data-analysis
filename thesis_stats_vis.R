@@ -262,7 +262,7 @@ centroids2[16, "label"] <- ""
 # "ua_forest" with 100 for easier to view plotting
 postal <- 
   read.csv(file = postal_path,
-           colClasses = c(posti_alue = "factor", kunta = "factor"),
+           colClasses = c(zipcode = "factor", kunta = "factor"),
            header = TRUE, 
            sep = ",") %>%
   dplyr::select(c(2, 3, 6, 108:121)) %>%
