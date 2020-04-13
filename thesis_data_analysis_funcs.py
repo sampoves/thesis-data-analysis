@@ -267,8 +267,10 @@ def travelTimeComparison(grid, forest, postal, records, listOfTuples, ttm_path,
     Resulting columns in the result DataFrame are as follows:
         "from_id"               YKR ID of origin
         "from_name"             Postal area name of origin
+        "from_zip"              Postal area code of origin
         "to_id"                 YKR ID of destination
         "to_name"               Postal area name of destination
+        "to_zip"                Postal area code of destination
         
         "ttm_r_t"               TTM: entire travel time in rush hour traffic
                                 in a private car (minutes)
@@ -335,13 +337,13 @@ def travelTimeComparison(grid, forest, postal, records, listOfTuples, ttm_path,
     '''
     
     result = pd.DataFrame(
-            columns=["from_id", "from_name", "to_id", "to_name", "ttm_r_t", 
-                     "ttm_m_t", "ttm_sl_t", "ttm_sfp", "ttm_wtd", 
-                     "ttm_r_drivetime", "ttm_m_drivetime", "ttm_sl_drivetime", 
-                     "ttm_r_pct", "ttm_m_pct", "ttm_sl_pct", "values_in_dest", 
-                     "thesis_r_sfp", "thesis_m_sfp", "thesis_sl_sfp",
-                     "thesis_r_wtd", "thesis_m_wtd", "thesis_sl_wtd",
-                     "thesis_r_drivetime", "thesis_m_drivetime", 
+            columns=["from_id", "from_name", "from_zip", "to_id", "to_name", 
+                     "to_zip", "ttm_r_t", "ttm_m_t", "ttm_sl_t", "ttm_sfp", 
+                     "ttm_wtd", "ttm_r_drivetime", "ttm_m_drivetime", 
+                     "ttm_sl_drivetime", "ttm_r_pct", "ttm_m_pct", "ttm_sl_pct", 
+                     "values_in_dest", "thesis_r_sfp", "thesis_m_sfp", 
+                     "thesis_sl_sfp", "thesis_r_wtd", "thesis_m_wtd", 
+                     "thesis_sl_wtd", "thesis_r_drivetime", "thesis_m_drivetime", 
                      "thesis_sl_drivetime", "thesis_r_pct", "thesis_m_pct", 
                      "thesis_sl_pct"])
     template = result.copy()
@@ -428,6 +430,8 @@ def travelTimeComparison(grid, forest, postal, records, listOfTuples, ttm_path,
                 postal.intersects(orig.geometry[0]), "nimi"].values[0]
         thisRow.loc[0, "to_name"] = postal.loc[
                 postal.intersects(dest.geometry[0]), "nimi"].values[0]
+        thisRow.loc[0, "from_zip"] = orig.zipcode[0]
+        thisRow.loc[0, "to_zip"] = dest.zipcode[0]
         
         # Convert dest and orig geometry to Point for later use in plotting.
         # If this is done earlier, the naming of the zipcode above can fail.
