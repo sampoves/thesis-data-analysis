@@ -630,11 +630,14 @@ statistics.calculateStats()
 #   (130 meters) in TTM18.
 # Walking times from Kurri, J. & Laakso, J.-M. Parking policy measures and 
 # their effects in the Helsinki metropolitan area (2002). 
+
+# In "valuerange" make sure no grid cells outside research area are accepted
+valuerange = set(grid.YKR_ID.astype(str)) - set(list(map(str, notPresent)))
 l = []
 i = 0
-while i < 10:
-    # In "valuerange" make sure no grid cells outside research area are accepted
-    valuerange = set(grid.YKR_ID.astype(str)) - set(list(map(str, notPresent)))
+
+# Generate tuples of origin and destination points
+while i < 1000:
     vals = random.sample(valuerange, 2)
     l.append(tuple(vals))
     i += 1
