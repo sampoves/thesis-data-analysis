@@ -4,7 +4,7 @@ Created on Sun May 12 22:54:34 2019
 
 @author: Sampo Vesanen
 
-Functions for thesis data crunch. Find essential functions on top.
+Functions for thesis data processing. Find essential functions at the top.
 """
 
 # Import functions
@@ -14,11 +14,23 @@ import numpy as np
 import pandas as pd 
 import matplotlib.pyplot as plt
 from descartes import PolygonPatch
-from shapely.geometry import Point, MultiPoint, Polygon
+from shapely.geometry import Point, MultiPoint, Polygon, MultiPolygon
 from shapely.ops import cascaded_union
 from matplotlib.offsetbox import (TextArea, DrawingArea, OffsetImage,
                                   AnnotationBbox)
 import random
+from heapq import nlargest
+
+
+def preserve_nlargest(inputgeom, n):
+    '''
+    Insert a MultiPolygon in a GeoSeries object, get n largest Polygons out.
+    Utilises nlargest from heapq.
+    '''
+    result = nlargest(n, inputgeom.geometry, key=lambda a: a.area)
+    result = MultiPolygon(result)
+    
+    return result 
 
 
 

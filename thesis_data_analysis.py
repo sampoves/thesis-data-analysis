@@ -4,7 +4,7 @@ Created on Fri May 10 00:07:36 2019
 
 @author: Sampo Vesanen
 
-Sampo Vesanen's MSc thesis survey results datacrunch
+Sampo Vesanen's MSc thesis survey results data processing
 "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 
 This script was created using Anaconda Python Distribution 2019.7. In addition
@@ -153,15 +153,9 @@ mainland = max(postal.unary_union, key=lambda a: a.area)
 # Process islands unreachable by car
 for idx, geom in enumerate(postal.geometry):
     
-    # "in" utilises package "operator"
+    # Preserve two largest Polygons. "in" utilises package "operator".
     if postal.loc[idx, "zipcode"] in preserveTwoLargest:
-        thisGeom = postal.loc[idx]
-        geomList = [(idx, P.area) for idx, P in enumerate(thisGeom.geometry)]
-        geomList = geomList[:2] # two largest
-        geomList = [idx for idx, area in geomList] # preserve ids
-        # Get two largest Polygons in MultiPolygon in "thisGeom"
-        thisGeom = MultiPolygon(
-                [geom for idx, geom in enumerate(thisGeom.geometry) if idx in geomList])
+        thisGeom = preserve_nlargest(postal.loc[idx], 2)
         mainland = mainland.union(thisGeom)
     
     # Islands
@@ -176,7 +170,7 @@ for idx, geom in enumerate(postal.geometry):
     if postal.loc[idx, "zipcode"] == "02100":
         thisGeom = postal.loc[idx, "geometry"]
         mainland = mainland.union(thisGeom)
-        
+    
     # Special case Suvisaaristo
     if postal.loc[idx, "zipcode"] == "02380":
         match = postal.loc[idx, "geometry"]
@@ -186,13 +180,14 @@ for idx, geom in enumerate(postal.geometry):
     
     # Special case Kuusisaari-Lehtisaari, preserve three largest Polygons
     if postal.loc[idx, "zipcode"] == "00340":
-        thisGeom = postal.loc[idx]
-        geomList = [(idx, P.area) for idx, P in enumerate(thisGeom.geometry)]
-        geomList = geomList[:3] # select three largest
-        geomList = [idx for idx, area in geomList] # preserve ids
-        thisGeom = MultiPolygon(
-                [geom for idx, geom in enumerate(thisGeom.geometry) if idx in geomList])
+        thisGeom = preserve_nlargest(postal.loc[idx], 3)
         mainland = mainland.union(thisGeom)
+    
+    # Special case Suomenlinna, preserve four largest Polygons (remove Lonna)
+    if postal.loc[idx, "zipcode"] == "00190":
+        thisGeom = preserve_nlargest(postal.loc[idx], 4)
+        mainland = mainland.union(thisGeom)
+
 
 # Replace postal geometries with geometries without islands
 # NB! postal.at[idx, "geometry"] = thisGeom seems to raise ValueError in
