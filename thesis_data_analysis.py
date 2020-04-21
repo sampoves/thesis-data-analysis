@@ -127,15 +127,20 @@ postal = postal[postal.kunta.isin(muns)]
 postal = postal.reset_index().drop(columns=["index", "euref_x", "euref_y"])
 postal = postal.rename(columns={"posti_alue": "zipcode"})
 
-# Remove islands unreachable by car. This process would have been easy to do 
-# in QGIS, for example, but here we have the same process realised in an
-# overcomplicated way.
+# Remove islands unreachable by car from the mainland. This includes islands 
+# connected to the mainland, but which are closed from the majority of the 
+# public or are privately owned. These exceptions include 
+# - Staffan in 02360 Soukka
+# - Mustasaari in 00340 Kuusisaari-Lehtisaari
+# - Seurasaari and Pukkisaaret in 00250 Taka-Töölö
+# - Various islands reachable with ferry
 
-# Preserve two largest Polygons from these postal code areas
-preserveTwoLargest = ["00830", "00570", "00340", "00200", "00890"]
+# I decided to preserve Suomenlinna and Korkeasaari in the data.
 
 # Preserve largest includes island postal code areas
 preserveLargest = ["00210", "00860", "00840", "00850", "00870", "00590"]
+preserveTwoLargest = ["00830", "00340", "00200", "00890"]
+preserveAll = ["00330", "00570", "02100"]
 
 # Suvisaaristo needs special attention. Define a Polygon to help detect 
 # areas in Suvisaaristo reachable by car
@@ -166,24 +171,33 @@ for idx, geom in enumerate(postal.geometry):
             largest = geom
         mainland = mainland.union(largest)
     
-    # Special case Tapiola, preserve entire MultiPolygon
-    if postal.loc[idx, "zipcode"] == "02100":
+    # Case Munkkiniemi, Tapiola and Kulosaari, preserve entire 
+    # MultiPolygon
+    if postal.loc[idx, "zipcode"] in preserveAll:
         thisGeom = postal.loc[idx, "geometry"]
         mainland = mainland.union(thisGeom)
     
-    # Special case Suvisaaristo
+    # Case Suvisaaristo
     if postal.loc[idx, "zipcode"] == "02380":
         match = postal.loc[idx, "geometry"]
         preserve = MultiPolygon(
                 [geom for geom in match if geom.intersects(suvisaar)])
         mainland = mainland.union(preserve)
-    
-    # Special case Kuusisaari-Lehtisaari, preserve three largest Polygons
+        
+    # Case Taka-Töölö, preserve Rajasaari (3rd largest feature)
+    if postal.loc[idx, "zipcode"] == "00250":
+        thisGeom = postal.loc[idx, "geometry"]
+        thisGeom = sorted(thisGeom, key=lambda a: a.area, reverse=True)
+        thisGeom = MultiPolygon([thisGeom[0], thisGeom[2]])
+        mainland = mainland.union(thisGeom)
+        
+    # Case Kuusisaari-Lehtisaari, preserve three largest Polygons. Remove
+    # Mustasaari and Leppäluoto
     if postal.loc[idx, "zipcode"] == "00340":
         thisGeom = preserve_nlargest(postal.loc[idx], 3)
         mainland = mainland.union(thisGeom)
     
-    # Special case Suomenlinna, preserve four largest Polygons (remove Lonna)
+    # Case Suomenlinna, preserve four largest Polygons (remove Lonna)
     if postal.loc[idx, "zipcode"] == "00190":
         thisGeom = preserve_nlargest(postal.loc[idx], 4)
         mainland = mainland.union(thisGeom)
