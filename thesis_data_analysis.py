@@ -93,8 +93,8 @@ visitors["ts_latest"] = pd.to_datetime(
         visitors.ts_latest, format="%Y-%m-%d %H:%M:%S")
 
 # visitors, records: remove three responses inputted by the author and two home 
-# ip codes belonging to the author. Author's visits from shared IP codes can't 
-# be identified and are left unchanged.
+# IP codes belonging to the author. Author's visits from shared IP codes can't 
+# be identified in the data.
 records = records.drop([0, 5, 6])
 visitors = visitors.drop([0, 3753])
 
@@ -377,10 +377,8 @@ print("\n", illegal_df[["parktime", "walktime"]])
 # "Process survey data".
 invalid = 6 + len(illegal_df)
 
-# Use indices of "illegal_df" to drop rows from "records". Drop illegal IP 
-# address codes from "visitors".
+# Use indices of "illegal_df" to drop rows from "records"
 records = records.drop(illegal_df.index).reset_index(drop=True)
-visitors = visitors[~visitors.ip.isin(illegal_df.ip)].reset_index(drop=True)
 
 
 
