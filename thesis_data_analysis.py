@@ -344,7 +344,7 @@ with open(os.path.join(wd, "duplicates.txt"), "a+") as f:
                      "timestamp": lambda x: x.tolist(), 
                      "ip": "first",
                      "zipcode": "first", 
-                     "likert": lambda x: identicaltest(x), # defined in funcs.py
+                     "likert": lambda x: identicaltest(x),
                      "parkspot": lambda x: identicaltest(x),
                      "parktime": lambda x: identicaltest(x), 
                      "walktime": lambda x: identicaltest(x), 
@@ -353,7 +353,7 @@ with open(os.path.join(wd, "duplicates.txt"), "a+") as f:
             # Produce current rows in the text file
             for idx, row in dupl.drop(["ip"], axis=1).iterrows():
                 f.write(f"{row.to_string()}\n\n")
-                
+
 print("\nA report on duplicate answers saved to disk in path "
       f"{os.path.join(wd, 'duplicates.txt')}\n")
 
@@ -376,7 +376,7 @@ print("\n", illegal_df[["parktime", "walktime"]])
 # records and 3 others which were reported to me as false. See above, part 
 # "Process survey data".
 invalid = 6 + len(illegal_df)
-        
+
 # Use indices of "illegal_df" to drop rows from "records". Drop illegal IP 
 # address codes from "visitors".
 records = records.drop(illegal_df.index).reset_index(drop=True)

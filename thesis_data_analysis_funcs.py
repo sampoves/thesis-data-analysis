@@ -158,11 +158,12 @@ class Stats:
 
 def identicaltest(x):
     '''
-    This anonymous function is to be used with groupby objects. It will
-    determine from Pandas Series whether the values in that series are
-    identical or unidentical. Return string answer or list.
+    This function is to be used with groupby objects. It will determine from 
+    pandas Series whether the values in that series are
+    identical or unidentical. Return string answer "identical (unique x)" or 
+    list.
     '''
-    return "identical" if len(set(x)) == 1 else x.tolist()
+    return f"identical ({''.join(str(e) for e in set(x))})" if len(set(x)) == 1 else x.tolist()
 
 
 
