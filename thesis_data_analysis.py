@@ -7,7 +7,7 @@ Created on Fri May 10 00:07:36 2019
 Sampo Vesanen's MSc thesis survey results data processing
 "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 
-This script was created using Anaconda Python Distribution 2019.7. In addition
+This script was created using Anaconda Python Distribution 2020.02. In addition
 to all packages delivered with Anaconda, GeoPandas 0.5.0 with its dependencies 
 was installed for this work. Unfortunately I can't guarantee the smooth execution 
 of this code on newer package versions.
@@ -220,11 +220,11 @@ for idx, geom in enumerate(postal.geometry):
 ### C) Insert zipcode data into DataFrame grid
 
 # My survey data and Travel Time Matrix 2018 operate in different spatial
-# units. TTM is available in YKR grid cells, while my data was gathered
-# with PAAVO zipcode delineations as the base unit. In order to compare TTM and 
-# my findings I need to add postal area code data to the GeoDataFrame grid. 
-# This enables me to assign each postal code area with mean data about parktime 
-# and walktime.
+# units. TTM utilises MetropAccess-YKR-grid with each cell 250 x 250 meters, 
+# while my data was gathered with PAAVO zipcode delineations as the base unit. 
+# In order to compare TTM and my findings I need to add postal area code data 
+# to the GeoDataFrame "grid". This enables me to assign each postal code area 
+# with mean data about "parktime" and "walktime".
             
 # The for loop below assigns zipcode to a cell when more than 50 percent of the
 # current cell area is in that zipcode. Helsinki Capital Region is of different
@@ -268,7 +268,7 @@ for postalarea in postal.itertuples():
             # This is the location of the located pre-existing ykr_id
             found_idx = grid_areas.index[grid_areas.YKR_ID == row.YKR_ID][0]
             
-            # In this case the ykr id has been iterated over in some previous
+            # In this case the ykr_id has been iterated over in some previous
             # iteration of a postal area. Only add to largest_area if area value
             # is larger than before and add to total_area
             if row.area1 > grid_areas.loc[found_idx, "largest_area"]:
@@ -278,8 +278,8 @@ for postalarea in postal.itertuples():
             grid_areas.loc[found_idx, "total_area"] += row.area1
 
 
-# Find out which grid ykr ids do not occur in GeoDataFrame grid_areas. These 
-# cells are outside of PAAVO postal code area boundaries
+# Find out which ykr_ids in DataFrame "grid" do not occur in GeoDataFrame 
+# "grid_areas". These cells are outside of PAAVO postal code area boundaries
 notPresent = list(np.setdiff1d(list(grid.YKR_ID), list(grid_areas.YKR_ID)))
 
 # Add these cells in GeoDataFrame grid_areas as zipcode 99999
@@ -289,7 +289,7 @@ for cell_id in notPresent:
          "zipcode": "99999"}, 
         ignore_index=True)
 
-# Incorporate "grid_areas" to the original GeoDataFrame grid
+# Incorporate "grid_areas" to the original GeoDataFrame "grid"
 grid = pd.concat(
         [grid.set_index("YKR_ID"), grid_areas.set_index("YKR_ID")], 
         axis=1, 
@@ -386,7 +386,7 @@ records = records.drop(illegal_df.index).reset_index(drop=True)
 
 ### A) Prepare
 
-# Reclassify "ykr_vyoh". Reclassification is created as in Finnish Environment
+# Reclassify "ykr_vyoh". This reclassification follows Finnish Environment 
 # Institute website (Only available in Finnish)
 # https://www.ymparisto.fi/fi-FI/Elinymparisto_ja_kaavoitus/Yhdyskuntarakenne/Tietoa_yhdyskuntarakenteesta/Yhdyskuntarakenteen_vyohykkeet
 ykr_vyoh["vyohselite"] = ykr_vyoh.vyohselite.replace(
@@ -578,8 +578,8 @@ ykrColumns = ["ykr_alakesk_jalan", "ykr_autovyoh", "ykr_int_joukko",
 largestYkr = postal[["zipcode"]].join([postal[ykrColumns].idxmax(axis=1)])
 largestYkr = largestYkr.rename(columns={0: "ykr_zone"})
     
-# Merge will spread values of column ykr_zone over all occurrences of specific
-# zipcodes
+# Merge will spread values of column "ykr_zone" over all occurrences of 
+# specific zipcodes
 records = pd.merge(records, largestYkr, on="zipcode")
 
 # Reverse dictKey, add entry for "ykr_novalue". Then rename ykr zone records 
