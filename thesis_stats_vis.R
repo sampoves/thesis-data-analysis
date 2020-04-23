@@ -4,7 +4,7 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 11.4.2020
+# 13.4.2020
 #
 # This is an interactive tool for analysing the results of my research survey.
 
@@ -184,7 +184,9 @@ suuralue_f <-
   dplyr::mutate(Name = factor(Name, levels = sort(levels(Name))))
 
 
-# Get municipality borders. Fortify SP DataFrame for ggplot
+# Get municipality borders. Fortify SP DataFrame for ggplot. Shapefile data is 
+# from Regional population density 2012, Statistics Finland.
+# http://urn.fi/urn:nbn:fi:csc-kata00001000000000000226. 
 muns_clipped_f <- 
   rgdal::readOGR(munsclippedpath) %>%
   sp::spTransform(., sp::CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")) %>%
@@ -1046,6 +1048,11 @@ ui <- shinyUI(fluidPage(
            "Municipality subdivisions</a>",
            "(C) Helsingin, Espoon, Vantaan ja Kauniaisten mittausorganisaatiot",
            "2011. Aineisto on muokkaamaton. License <a href='https://creativecommons.org/licenses/by/4.0/deed.en'> CC BY 4.0</a>.",
+           
+           "<br><a href='http://urn.fi/urn:nbn:fi:csc-kata00001000000000000226'>",
+           "Regional population density 2012</a> (C) Statistics Finland 2019.", 
+           "Retrieved 13.3.2020. License <a href='http://www.nic.funet.fi/index/geodata/tilastokeskus/Tilastokeskus_terms_of_use_2018.pdf'>",
+           "Other (Open)</a>.",
            
            "<br><a href='https://www.stat.fi/tup/paavo/index_en.html'>",
            "Postal code area boundaries</a> (C) Statistics Finland 2019.", 
