@@ -4,10 +4,11 @@ Created on Mon Feb 17 22:38:53 2020
 
 @author: Sampo Vesanen
 
-Sampo Vesanen Thesis survey datacrunch
+Sampo Vesanen Thesis survey data processing
 "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 
-Hide tedious lists of zipcodes in this Python script.
+To unclutter the main script, I hid these tedious lists of postal code areas 
+in this Python script.
 """
 
 ################################
@@ -16,104 +17,105 @@ Hide tedious lists of zipcodes in this Python script.
 
 # Helsinki subdivisions -------------------------------------------------------
 # https://www.avoindata.fi/data/fi/dataset/helsinki-alueittain/resource/9e197c6a-1882-4ad9-a50b-9dc7c49cb75a
+# https://www.avoindata.fi/data/fi/dataset/paakaupunkiseudun-aluejakokartat
 
 # Southern subdivision
-hkiSouth = ["00250", # Taka-Töölö
-            "00260", # Keski-Töölö
-            "00100", # Helsinki keskusta - Etu-Töölö
-            "00180", # Kamppi-Ruoholahti
-            "00200", # Lauttasaari
-            "00210", # Vattuniemi
-            "00220", # Jätkäsaari
+hkiSouth = ["00100", # Helsinki keskusta - Etu-Töölö
             "00120", # Punavuori
             "00130", # Kaartinkaupunki
             "00140", # Kaivopuisto-Ullanlinna
-            "00160", # Katajanokka
             "00150", # Eira-Hernesaari
+            "00160", # Katajanokka
+            "00170", # Kruununhaka
+            "00180", # Kamppi-Ruoholahti
             "00190", # Suomenlinna
-            "00170"] # Kruununhaka
+            "00200", # Lauttasaari
+            "00210", # Vattuniemi
+            "00220", # Jätkäsaari
+            "00250", # Taka-Töölö
+            "00260"] # Keski-Töölö
 
 # Western subdivision
-hkiWest = ["00290", # Meilahden sairaala-alue
-           "00270", # Pohjois-Meilahti
+hkiWest = ["00270", # Pohjois-Meilahti
            "00280", # Ruskeasuo
-           "00330", # Munkkiniemi
-           "00350", # Munkkivuori-Niemenmäki
+           "00290", # Meilahden sairaala-alue
+           "00300", # Pikku Huopalahti
            "00310", # Kivihaka
            "00320", # Etelä-Haaga
+           "00330", # Munkkiniemi
            "00340", # Kuusisaari-Lehtisaari
-           "00400", # Pohjois-Haaga
-           "00380", # Pitäjänmäen teollisuusalue
+           "00350", # Munkkivuori-Niemenmäki
            "00360", # Pajamäki
            "00370", # Reimarla
-           "00440", # Lassila
+           "00380", # Pitäjänmäen teollisuusalue
            "00390", # Konala
+           "00400", # Pohjois-Haaga
            "00410", # Malminkartano 
            "00420", # Kannelmäki
            "00430", # Maununneva
-           "00300"] # Pikku Huopalahti
-
+           "00440"] # Lassila
+           
 # Central (Keskinen) subdivision
 hkiCentral = ["00230", # Ilmala 
-             "00240", # Länsi-Pasila 
-             "00610", # Käpylä 
-             "00600", # Koskela 
-             "00560", # Toukola-Vanhakaupunki 
-             "00550", # Vallila 
-             "00520", # Itä-Pasila
-             "00510", # Etu-Vallila-Alppila
-             "00500", # Sörnäinen
-             "00530", # Kallio
-             "00540", # Kalasatama
-             "00580"] # Verkkosaari
+              "00240", # Länsi-Pasila 
+              "00500", # Sörnäinen
+              "00510", # Etu-Vallila-Alppila
+              "00520", # Itä-Pasila
+              "00530", # Kallio
+              "00540", # Kalasatama
+              "00550", # Vallila
+              "00560", # Toukola-Vanhakaupunki 
+              "00580", # Verkkosaari
+              "00600", # Koskela 
+              "00610"] # Käpylä 
 
-# Norther subdivision
-hkiNorth = ["00690", # Tuomarinkylä-Torpparinmäki 
-            "00670", # Paloheinä
-            "00660", # Länsi-Pakila
-            "00680", # Itä-Pakila
+# Northern subdivision
+hkiNorth = ["00620", # Metsälä-Etelä-Oulunkylä
             "00630", # Maunula-Suursuo
-            "00620", # Metsälä-Etelä-Oulunkylä
+            "00640", # Oulunkylä-Patola
             "00650", # Veräjämäki
-            "00640"] # Oulunkylä-Patola
+            "00660", # Länsi-Pakila
+            "00670", # Paloheinä
+            "00680", # Itä-Pakila
+            "00690"] # Tuomarinkylä-Torpparinmäki 
 
 # Northeastern subdivision
-hkiNortheast = ["00740", # Siltamäki
+hkiNortheast = ["00700", # Malmi
+                "00710", # Pihlajamäki
+                "00720", # Pukinmäki-Savela
+                "00730", # Tapanila
+                "00740", # Siltamäki
                 "00750", # Puistola
                 "00760", # Suurmetsä
-                "00780", # Tapaninvainio
-                "00730", # Tapanila
                 "00770", # Jakomäki-Alppikylä
-                "00720", # Pukinmäki-Savela
-                "00710", # Pihlajamäki
-                "00790", # Viikki
-                "00700"] # Malmi
+                "00780", # Tapaninvainio
+                "00790"] # Viikki
 
 # Southeastern subdivision
-hkiSoutheast = ["00800", # Länsi-Herttoniemi 
-                "00880", # Roihupellon teollisuusalue
-                "00820", # Roihuvuori
-                "00810", # Herttoniemi
-                "00830", # Tammisalo                
-                "00570", # Kulosaari
+hkiSoutheast = ["00570", # Kulosaari
                 "00590", # Kaitalahti
-                "00870", # Etelä-Laajasalo
+                "00800", # Länsi-Herttoniemi 
+                "00810", # Herttoniemi
+                "00820", # Roihuvuori
+                "00830", # Tammisalo          
+                "00840", # Laajasalo
                 "00850", # Jollas
                 "00860", # Santahamina                
-                "00840"] # Laajasalo
+                "00870", # Etelä-Laajasalo
+                "00880"] # Roihupellon teollisuusalue
 
 # Eastern subdivision
-hkiEast = ["00940", # Kontula
-           "00970", # Mellunmäki
+hkiEast = ["00900", # Puotinharju 
+           "00910", # Puotila    
            "00920", # Myllypuro
+           "00930", # Itäkeskus-Marjaniemi
+           "00940", # Kontula
            "00950", # Vartioharju 
            "00960", # Pohjois-Vuosaari 
+           "00970", # Mellunmäki
            "00980", # Etelä-Vuosaari
-           "00990", # Aurinkolahti 
-           "00900", # Puotinharju 
-           "00910", # Puotila            
-           "00930"] # Itäkeskus-Marjaniemi
-
+           "00990"] # Aurinkolahti 
+    
 # Östersundom subdivision
 hkiOster = ["00890"] # Östersundom
 
@@ -126,48 +128,48 @@ hkiOster = ["00890"] # Östersundom
 #Suur-Leppävaara subdivision
 # Kanta-Leppävaara, Kilo-Karakallio, Laaksolahti, Viherlaakso-Lippajärvi,
 # Sepänkylä
-espLeppavaara = ["02620", # Karakallio
+espLeppavaara = ["02600", # Etelä-Leppävaara 
                  "02610", # Kilo
-                 "02600", # Etelä-Leppävaara 
+                 "02620", # Karakallio
+                 "02630", # Nihtisilta
                  "02650", # Pohjois-Leppävaara 
                  "02660", # Lintuvaara
+                 "02680", # Uusmäki
                  "02710", # Viherlaakso
                  "02720", # Lähderanta
-                 "02730", # Jupperi
-                 "02630", # Nihtisilta
-                 "02680"] # Uusmäki
-
+                 "02730"] # Jupperi
+                 
 #Suur-Tapiola subdivision
 # Kanta-Tapiola, Otaniemi, Haukilahti-Westend, Mankkaa, Laajalahti
-espTapiola = ["02170", # Haukilahti
-              "02140", # Laajalahti
-              "02180", # Mankkaa
-              "02200", # Niittykumpu
-              "02150", # Otaniemi
-              "02100", # Tapiola
-              "02130", # Pohjois-Tapiola
+espTapiola = ["02100", # Tapiola
               "02110", # Otsolahti
               "02120", # Länsikorkee-Suvikumpu
-              "02160"] # Westend
+              "02130", # Pohjois-Tapiola
+              "02140", # Laajalahti
+              "02150", # Otaniemi
+              "02160", # Westend
+              "02170", # Haukilahti
+              "02180", # Mankkaa
+              "02200"] # Niittykumpu
 
 #Suur-Matinkylä subdivision
 # Matinkylä, Olari, Henttaa-Suurpelto
-espMatinkyla = ["02250", # Henttaa
+espMatinkyla = ["02210", # Olari
+                "02230", # Matinkylä
                 "02240", # Friisilä
-                "02210", # Olari
-                "02290", # Puolarmetsän sairaala, own placement
-                "02230"] # Matinkylä
-
+                "02250", # Henttaa
+                "02290"] # Puolarmetsän sairaala, own placement
+                
 #Suur-Espoonlahti subdivision
 # Kanta-Espoonlahti, Saunalahti, Nöykkiö-Latokaski, Kaitaa, Suvisaaristo
-espEspoonlahti = ["02320", # Espoonlahti
-                  "02360", # Soukka
+espEspoonlahti = ["02260", # Kaitaa
+                  "02270", # Finnoo-Eestinmalmi
+                  "02280", # Malminmäki-Eestinlaakso
                   "02300", # Nöykkiönpuro
+                  "02320", # Espoonlahti
                   "02330", # Saunalahti-Kattilalaakso
                   "02340", # Latokaski
-                  "02270", # Finnoo-Eestinmalmi
-                  "02260", # Kaitaa
-                  "02280", # Malminmäki-Eestinlaakso
+                  "02360", # Soukka
                   "02380"] # Suvisaaristo
 
 #Suur-Kauklahti subdivision
@@ -176,19 +178,19 @@ espKauklahti = ["02780"] # Kauklahti and all others
 
 #Vanha-Espoo subdivision
 # Kanta-Espoo, Muurala-Gumböle, Bemböle, Nuuksio-Nupuri
-espVanhaespoo = ["02770", # Espoon keskus
+espVanhaespoo = ["02740", # Bemböle-Pakankylä
+                 "02750", # Sepänkylä-Kuurinniitty, own placement
+                 "02760", # Tuomarila-Suvela
+                 "02770", # Espoon keskus
                  "02810", # Gumböle-Karhusuo
                  "02820", # Nupuri-Nuuksio
-                 "02760", # Tuomarila-Suvela
-                 "02940", # Lippajärvi-Järvenperä, own placement
-                 "02740", # Bemböle-Pakankylä
-                 "02750", # Sepänkylä-Kuurinniitty, own placement
-                 "02860"] # Siikajärvi
-
+                 "02860", # Siikajärvi
+                 "02940"] # Lippajärvi-Järvenperä, own placement
+                 
 #Pohjois-Espoo subdivision
 # Vanhakartano-Röylä, Kalajärvi-Lakisto
-espPohjoisespoo = ["02970", # Kalajärvi
-                   "02920", # Niipperi
+espPohjoisespoo = ["02920", # Niipperi
+                   "02970", # Kalajärvi               
                    "02980"] # Lakisto
 
 
@@ -197,7 +199,7 @@ kauniainen = ["02700"]
 
 
 # Vantaa subdivisions ---------------------------------------------------------
-# https://www.vantaa.fi/instancedata/prime_product_julkaisu/vantaa/embeds/vantaawwwstructure/124282_Vantaa_alueittain_2015.pdf
+# https://www.vantaa.fi/instancedata/prime_product_julkaisu/vantaa/embeds/vantaawwwstructure/146372_Vantaan_kaupunginosien_ja_suuralueiden_rajat_1.1.2019.pdf
 # Myyrmäki subdivision
 # Linnainen, Hämevaara, Hämeenkylä, Vapaala, Varisto, Myyrmäki, Kaivoksela,
 # Martinlaakso, Vantaanlaakso, Askisto, Petikko
@@ -224,10 +226,10 @@ vanKivisto = ["01700", # Kivistö
 
 # Aviapoliksen
 # Ylästö, Viinikkala, Tammisto, Pakkala, Veromies, Lentokenttä
-vanAviapolis = ["01520", # Tammisto
+vanAviapolis = ["01510", # Kirkonkylä-Veromäki, my own placement
+                "01520", # Tammisto
                 "01530", # Veromiehenkylä
                 "01690", # Ylästö
-                "01510", # Kirkonkylä-Veromäki, my own placement
                 "01740"] # Tuupakan teollisuusalue
 
 # Tikkurila subdivision
@@ -240,10 +242,10 @@ vanTikkurila = ["01300", # Tikkurila
 
 # Koivukylä subdivision
 # Koivukylä, Ilola, Asola, Rekola, Havukoski, Päiväkumpu
-vanKoivukyla = ["01360", # Koivukylä-Havukoski
-                "01400", # Rekola
-                "01340", # Leinelä, my own placement
+vanKoivukyla = ["01340", # Leinelä, my own placement
+                "01360", # Koivukylä-Havukoski
                 "01390", # Ruskeasanta-Ilola, my own placement
+                "01400", # Rekola
                 "01420"] # Päiväkumpu
 
 # Korso subdivision
