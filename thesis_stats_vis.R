@@ -537,8 +537,9 @@ server <- function(input, output, session){
   #### Boxplot -----------------------------------------------------------------
   output$boxplot <- renderPlot({
     
-    thisFormula <- as.formula(paste(input$resp, '~', input$expl))
     expl_col <- input$expl
+    resp_col <- input$resp
+    thisFormula <- as.formula(paste(resp_col, '~', expl_col))
     
     # Listen to user choices
     inputdata <- currentdata()
@@ -548,17 +549,17 @@ server <- function(input, output, session){
     legendnames <- levels(unique(inputdata[[expl_col]]))
     
     # ggplot2 plotting. Rotate labels if enough classes
+    p <- ggplot(inputdata, aes_string(x = expl_col, y = resp_col)) + 
+      geom_boxplot() + 
+      ylab(paste(resp_col, "(min)"))
+    
     if(length(legendnames) > 5) {
-      
-      p <- ggplot(inputdata, aes_string(x = input$expl, y = input$resp)) + 
-        geom_boxplot() + 
+      p <- p +
         theme(axis.text.x = element_text(size = 12, angle = 45, hjust = 1),
               axis.text = element_text(size = 12),
               axis.title = element_text(size = 14))
     } else {
-      
-      p <- ggplot(inputdata, aes_string(x = input$expl, y = input$resp)) + 
-        geom_boxplot() +
+      p <- p +
         theme(axis.text = element_text(size = 12),
               axis.title = element_text(size = 14))
     }
@@ -668,8 +669,8 @@ server <- function(input, output, session){
     thisFormula <- as.formula(paste(resp_col, "~", expl_col))
     
     inputdata <- currentdata()
-    inputdata <- inputdata[!inputdata[[expl_col]] %in% c(input$checkGroup), 
-                            !names(inputdata) %in% supportcols]
+    inputdata <- inputdata[!inputdata[[expl_col]] %in% c(input$checkGroup),
+                           !names(inputdata) %in% supportcols]
     inputdata <- inputdata[!inputdata$subdiv %in% c(input$subdivGroup), ]
     
     # bf.test() works so that the information we want is only printed to
@@ -888,6 +889,15 @@ ui <- shinyUI(fluidPage(
         padding: 4px;
         margin-bottom: 15px;
       }
+      #linkheading_b {
+        margin-bottom: -2px;
+        margin-top: 6px;
+        font-weight: bold;
+      }
+      #linkheading_t {
+        margin-bottom: -2px;
+        font-weight: bold;
+      }
       form.well {
         display: 100%;
         position: fixed;
@@ -913,16 +923,19 @@ ui <- shinyUI(fluidPage(
   titlePanel("Sampo Vesanen MSc thesis research survey results ShinyApp"),
   sidebarLayout(
     sidebarPanel(
+      # &nbsp; is a non-breaking space. Will not be cut off at any situation
       HTML("<div id='contents'>"),
-      HTML("<a href='#descrilink'>1 Descriptives</a> &mdash;"),
-      HTML("<a href='#histlink'>2 Histogram</a> &mdash;"),
-      HTML("<a href='#barplotlink'>3 Barplot</a> &mdash;"),
-      HTML("<a href='#boxplotlink'>4 Boxplot</a> &mdash;"),
-      HTML("<a href='#levenelink'>5 Levene</a> &mdash;"),
-      HTML("<a href='#anovalink'>6 ANOVA</a> &mdash;"),
-      HTML("<a href='#brownlink'>7 Brown-Forsythe</a> &mdash;"),
-      HTML("<a href='#maplink'>8 Context map</a> &mdash;"),
-      HTML("<a href='#intmaplink'>9 Interactive map</a>"),
+      HTML("<p id='linkheading_t'>Analysis</p>"),
+      HTML("<a href='#descrilink'>1&nbsp;Descriptives</a> &mdash;"),
+      HTML("<a href='#histlink'>2&nbsp;Histogram</a> &mdash;"),
+      HTML("<a href='#barplotlink'>3&nbsp;Barplot</a> &mdash;"),
+      HTML("<a href='#boxplotlink'>4&nbsp;Boxplot</a> &mdash;"),
+      HTML("<a href='#levenelink'>5&nbsp;Levene</a> &mdash;"),
+      HTML("<a href='#anovalink'>6&nbsp;ANOVA</a> &mdash;"),
+      HTML("<a href='#brownlink'>7&nbsp;Brown-Forsythe</a><br>"),
+      HTML("<p id='linkheading_b'>Visualisation</p>"),
+      HTML("<a href='#maplink'>8&nbsp;Context map</a> &mdash;"),
+      HTML("<a href='#intmaplink'>9&nbsp;Interactive map</a>"),
       HTML("</div>"),
       
       # Set allowed maximum for parktime and walktime. Default is 60 for both.
@@ -935,6 +948,7 @@ ui <- shinyUI(fluidPage(
         max = max(thesisdata$parktime),
         value = 59,
         step = 1),
+      
       sliderInput(
         "walktime_max",
         HTML("Set maximum allowed value for walktime (min),
