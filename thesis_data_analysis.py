@@ -374,13 +374,23 @@ for row in records.itertuples():
 print("\nThe following illegal records were found (value >= 60):")
 print("\n", illegal_df[["parktime", "walktime"]])
 
+
+# At this point, one may choose to not delete illegal answers by commenting
+# the next line of code. This is to save DataFrame records, with illegal 
+# answers and all, for analysis in R. In records Shiny app users can control 
+# the threshold for illegal answers by themselves, with 59 minutes as default 
+# setting. That will produce the same data as would be done here.
+
+# Consequently, do not add the length of "illegal_df" to "invalid". Also, do 
+# not delete illegal values from DataFrame.
+
 # Value "invalid "starts at 6 as at this point I have removed 3 of my own 
 # records and 3 others which were reported to me as false. See above, part 
 # "Process survey data".
-invalid = 6 + len(illegal_df)
+invalid = 6 #+ len(illegal_df)
 
 # Use indices of "illegal_df" to drop rows from "records"
-records = records.drop(illegal_df.index).reset_index(drop=True)
+#records = records.drop(illegal_df.index).reset_index(drop=True)
 
 
 
@@ -541,7 +551,7 @@ for row in postal.itertuples():
 
 # Merge ua_forest data from "postal"
 records = pd.merge(records, postal[["zipcode", "ua_forest"]], on="zipcode")
-    
+
 # Calculate jenks breaks for ua_forest. Use breaks to reclassify values
 # in records. We will use code created by GitHub user Drewda. This is now
 # commented because calculation time takes about 20 seconds
