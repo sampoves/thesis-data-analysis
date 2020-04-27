@@ -314,8 +314,10 @@ visitors_grp = records.groupby("ip").agg({
         "walktime": lambda x: x.tolist(),
         "timeofday": lambda x: x.tolist()})
 visitors_grp = visitors_grp.rename(columns={"id": "amount"})
-#visitors_grp.to_excel("visitors_grouped.xlsx")
-        
+
+# Export respondent behaviour to xlsx
+visitors_grp.to_excel("visitors_grouped.xlsx")
+
 
 
 ### B) Detect duplicate data
@@ -323,7 +325,7 @@ visitors_grp = visitors_grp.rename(columns={"id": "amount"})
 # Erase contents of duplicates.txt before writing anything (wipe old data). 
 # Wrap the following for loop in a "with" loop. This enables us to write the 
 # duplicates report as a text file in the working directory for easy viewing.
-# Edit Pandas max_colwidth to show even the lengthiest rows. Pandas default is 
+# Edit pandas max_colwidth to show even the lengthiest rows. pandas default is 
 # 50.
 pd.options.display.max_colwidth = 100
 open("duplicates.txt", "w").close()
@@ -531,7 +533,8 @@ for row in postal.itertuples():
 ### 5 MERGE YKR ZONES, FOREST AND SUBDIV INTO RECORDS -------------------------
 
 # Add generalised values of "ykr_vyoh" and "ua_forest" into records for further
-# statistical analysis. Also add subdivision data.
+# statistical analysis (this helps ggplot2, the plotting library in R). Also 
+# add subdivision data.
 
 
 ### A) Urban Atlas 2012 Forest

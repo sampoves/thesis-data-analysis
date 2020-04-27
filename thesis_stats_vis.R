@@ -4,7 +4,7 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 13.4.2020
+# 27.4.2020
 #
 # This is an interactive tool for analysing the results of my research survey.
 
@@ -32,7 +32,7 @@
 rm(list = ls())
 gc()
 
-#install.packages("onewaytests") # brown-forsythe
+#install.packages("onewaytests")
 #install.packages("car")
 #install.packages("plotrix")
 #install.packages("moments")
@@ -95,9 +95,9 @@ source(file.path(wd, "python/thesis_stats_vis_funcs.R"))
 #### Preparation --------------------------------------------------------------- 
 
 # These variables are used to subset dataframe thesisdata inside ShinyApp
-continuous <- c("parktime", "walktime") 
+continuous <- c("parktime", "walktime")
 ordinal <- c("likert", "parkspot", "timeofday", "ua_forest", "ykr_zone", 
-             "subdiv") 
+             "subdiv")
 supportcols <- c("id", "timestamp", "ip")
 
 
@@ -133,7 +133,8 @@ thesisdata <-
                                           `3` = "Weekend",
                                           `4` = "Can't specify, no usual time"),
                 
-                # SYKE does not provide official translations for these zones
+                # SYKE does not provide official translations for 
+                # "Yhdyskuntarakenteen vyöhykkeet".
                 ykr_zone = dplyr::recode(ykr_zone, 
                                          `1` = "keskustan jalankulkuvyöhyke",
                                          `2` = "keskustan reunavyöhyke",
@@ -185,7 +186,7 @@ suuralue_f <-
 
 
 # Get municipality borders. Fortify SP DataFrame for ggplot. Shapefile data is 
-# from Regional population density 2012, Statistics Finland.
+# Regional population density 2012, Statistics Finland.
 # http://urn.fi/urn:nbn:fi:csc-kata00001000000000000226. 
 muns_clipped_f <- 
   rgdal::readOGR(munsclippedpath) %>%
@@ -194,7 +195,7 @@ muns_clipped_f <-
                     as.data.frame(.) %>%
                       dplyr::mutate(id = as.character(dplyr::row_number() - 1)))} 
 
-# Annotate municipalities in ggplot:
+# Annotate municipalities in ggplot. Adapted from:
 # https://stackoverflow.com/a/28963405/9455395
 centroids <- setNames(
   do.call("rbind.data.frame", by(muns_clipped_f, muns_clipped_f$nimi, function(x) 
@@ -307,13 +308,25 @@ server <- function(input, output, session){
   
   #### Listener functions ------------------------------------------------------
   
-  # Listen to clear subdivs button. Resetting uses library shinyjs
+  # Listen to clear subdivs button. Resetting uses library shinyjs -------------
   observeEvent(input$resetSubdivs, {
     reset("subdivGroup")
   })
   
+  
+  # Detect user setting for maximum parktime and walktime ----------------------
+  
+  # currentdata() is the currently active rows of the original thesisdata 
+  # DataFrame. Use currentdata() in the rest of the application to not interfere
+  # with the original dataset.
+  currentdata <- reactive(
+    thesisdata %>%
+      dplyr::filter(parktime <= input$parktime_max,
+                    walktime <= input$walktime_max))
+  
+  
   observe({
-    # Detect changes in selectInput to modify available check boxes
+    # Detect changes in selectInput to modify available check boxes ------------
     x <- input$expl
 
     updateCheckboxGroupInput(
@@ -323,7 +336,10 @@ server <- function(input, output, session){
       choiceNames = levels(thesisdata[, x]),
       choiceValues = levels(thesisdata[, x]),)
     
-    # Determine availability of barplot
+    
+    # Determine availability of barplot ----------------------------------------
+    
+    # aka availability of "Distribution of ordinal variables"
     available <- c("likert", "parkspot", "timeofday", "ua_forest", "ykr_zone", 
                    "subdiv")
     updateSelectInput(
@@ -332,7 +348,8 @@ server <- function(input, output, session){
       label = NULL,
       choices = available[!available == x])
     
-    # Don't allow selection of all checkboxes in Jenks
+    
+    # Do not allow selection of all checkboxes in Jenks ------------------------
     if(length(input$kunta) == 3) {
       threevalues <<- input$kunta
     }
@@ -344,7 +361,8 @@ server <- function(input, output, session){
         selected = threevalues)
     }
     
-    # A clumsy implementation to listen for too large jenks breaks.
+    
+    # A clumsy implementation to listen for too large jenks breaks -------------
     inputpostal <- postal[!postal$kunta %in% c(input$kunta), ]
 
     if(input$karttacol == "jenks_ua_forest") {
@@ -385,13 +403,20 @@ server <- function(input, output, session){
     
     # Vital variables
     thisFormula <- as.formula(paste(input$resp, '~', input$expl))
-    responsecol <- input$resp
-    response <- thesisdata[[responsecol]]
-    colname <- input$expl
+    resp_col <- input$resp
+    expl_col <- input$expl
     
+    # In each output, define reactive variable as "inpudata". According to
+    # this Stack Overflow answer, it prevents errors down the line
+    # https://stackoverflow.com/a/53989498/9455395
+    # And as a reminder, currentdata() is called to keep track of maximum
+    # parktime and walktime values
+    inputdata <- currentdata()
+    response <- inputdata[[resp_col]]
+
     # Take subdiv checkbox group into account
-    inputdata <- thesisdata[!thesisdata[[colname]] %in% c(input$checkGroup), 
-                            !names(thesisdata) %in% supportcols]
+    inputdata <- inputdata[!inputdata[[expl_col]] %in% c(input$checkGroup), 
+                            !names(inputdata) %in% supportcols]
     inputdata <- inputdata[!inputdata$subdiv %in% c(input$subdivGroup), ]
 
     # Basic descriptive statistics
@@ -456,22 +481,23 @@ server <- function(input, output, session){
   #### Histogram for parktime or walktime --------------------------------------
   output$hist <- renderPlot({
     
-    responsecol <- input$resp
-    explanatorycol <- input$expl
+    resp_col <- input$resp
+    expl_col <- input$expl
     binwidth <- input$bin
     
-    inputdata <- thesisdata[!thesisdata[[explanatorycol]] %in% c(input$checkGroup), ]
+    inputdata <- currentdata()
+    inputdata <- inputdata[!inputdata[[expl_col]] %in% c(input$checkGroup), ]
     inputdata <- inputdata[!inputdata$subdiv %in% c(input$subdivGroup), ]
     
-    p <- ggplot(inputdata, aes(x = !!sym(responsecol))) + 
+    p <- ggplot(inputdata, aes(x = !!sym(resp_col))) + 
       geom_histogram(color = "black", fill = "grey", binwidth = binwidth) +
       
       # Vertical lines for mean and median, respectively
-      geom_vline(aes(xintercept = mean(!!sym(responsecol)),
+      geom_vline(aes(xintercept = mean(!!sym(resp_col)),
                      color = "mean"),
                  linetype = "longdash", 
                  size = 1) +
-      geom_vline(aes(xintercept = median(!!sym(responsecol)),
+      geom_vline(aes(xintercept = median(!!sym(resp_col)),
                      color = "median"),
                  linetype = "longdash", 
                  size = 1) +
@@ -480,18 +506,24 @@ server <- function(input, output, session){
       # Usually geom_density() sets the scale for y axis, but here we will
       # continue using count/frequency. This requires some work on our behalf.
       # Idea from here: https://stackoverflow.com/a/27612438/9455395
-      geom_density(aes(y = ..density.. * (nrow(inputdata) * binwidth)), 
-                   colour = alpha("black", 0.4),
+      geom_density(aes(y = ..density.. * (nrow(inputdata) * binwidth),
+                       color = "kernel density\nestimate"),
+                   show.legend = FALSE,
                    adjust = binwidth) +
       
       theme(legend.title = element_text(size = 15),
             legend.text = element_text(size = 14),
+            legend.spacing.y = unit(0.2, "cm"),
             axis.text = element_text(size = 12),
             axis.title = element_text(size = 14)) +
-    
-      # build legend
-      scale_color_manual(name = paste("Vertical lines\nfor", responsecol), 
-                         values = c(median = "blue", mean = "red")) +
+      
+      # build legend, override colors to get visible color for density
+      scale_color_manual(name = paste("Legend for\n", resp_col), 
+                         values = c(median = "blue", 
+                                    mean = "red", 
+                                    "kernel density\nestimate" = alpha("black", 0.4))) +
+      guides(color = guide_legend(
+        override.aes = list(color = c("darkgrey", "red", "blue")))) +
       
       # Conditional histogram bar labeling. No label for zero
       stat_bin(binwidth = binwidth, 
@@ -506,13 +538,14 @@ server <- function(input, output, session){
   output$boxplot <- renderPlot({
     
     thisFormula <- as.formula(paste(input$resp, '~', input$expl))
-    explanatorycol <- input$expl
+    expl_col <- input$expl
     
     # Listen to user choices
-    inputdata <- thesisdata[!thesisdata[[explanatorycol]] %in% c(input$checkGroup), ]
+    inputdata <- currentdata()
+    inputdata <- inputdata[!inputdata[[expl_col]] %in% c(input$checkGroup), ]
     inputdata <- inputdata[!inputdata$subdiv %in% c(input$subdivGroup), ]
     
-    legendnames <- levels(unique(inputdata[[explanatorycol]]))
+    legendnames <- levels(unique(inputdata[[expl_col]]))
     
     # ggplot2 plotting. Rotate labels if enough classes
     if(length(legendnames) > 5) {
@@ -537,19 +570,20 @@ server <- function(input, output, session){
   output$barplot <- renderPlot({
     
     # See distribution of ordinal variables through a grouped bar plot
-    explanatorycol <- input$expl
+    expl_col <- input$expl
     barplotval <- input$barplot
     yax <- paste("sum of", barplotval)
 
     # Listen to user choices
-    inputdata <- thesisdata[!thesisdata[[explanatorycol]] %in% c(input$checkGroup), ]
+    inputdata <- currentdata()
+    inputdata <- inputdata[!inputdata[[expl_col]] %in% c(input$checkGroup), ]
     inputdata <- inputdata[!inputdata$subdiv %in% c(input$subdivGroup), ]
     
     # Plot maximum y tick value. Use dplyr to group the desired max amount.
     # In dplyr, use !!as.symbol(var) to signify that we are using variables
     # as column names
     maximum <- inputdata %>% 
-      dplyr::group_by(!!as.symbol(explanatorycol), !!as.symbol(barplotval)) %>% 
+      dplyr::group_by(!!as.symbol(expl_col), !!as.symbol(barplotval)) %>% 
       dplyr::summarise(amount = length(!!as.symbol(barplotval))) %>% 
       dplyr::top_n(n = 1) %>%
       dplyr::pull(amount) %>%
@@ -562,13 +596,13 @@ server <- function(input, output, session){
     }
     
     plo <- 
-      ggplot(inputdata, aes(x = get(explanatorycol), 
+      ggplot(inputdata, aes(x = get(expl_col), 
                             y = factor(get(barplotval)), 
                             fill = get(barplotval))) +
       geom_bar(aes(y = stat(count)), position = "dodge") + 
       scale_y_continuous(breaks = seq(0, maximum, by = tick_interval),
                          expand = expansion(mult = c(0, .1))) +
-      xlab(explanatorycol) +
+      xlab(expl_col) +
       ylab(yax) +
       scale_fill_discrete(name = barplotval) +
       theme(legend.position = "bottom",
@@ -583,10 +617,11 @@ server <- function(input, output, session){
   #### Levene test -------------------------------------------------------------
   output$levene <- renderTable({
     
-    colname <- input$expl
-    thisFormula <- as.formula(paste(input$resp, "~", input$expl))
+    expl_col <- input$expl
+    thisFormula <- as.formula(paste(input$resp, "~", expl_col))
     
-    inputdata <- thesisdata[!thesisdata[[colname]] %in% c(input$checkGroup), ]
+    inputdata <- currentdata()
+    inputdata <- inputdata[!inputdata[[expl_col]] %in% c(input$checkGroup), ]
     inputdata <- inputdata[!inputdata$subdiv %in% c(input$subdivGroup), ]
     
     levene <- car::leveneTest(thisFormula, inputdata, center = mean)
@@ -604,10 +639,11 @@ server <- function(input, output, session){
   #### One-way ANOVA -----------------------------------------------------------
   output$anova <- renderTable({
     
-    colname <- input$expl
-    thisFormula <- as.formula(paste(input$resp, "~", input$expl))
+    expl_col <- input$expl
+    thisFormula <- as.formula(paste(input$resp, "~", expl_col))
     
-    inputdata <- thesisdata[!thesisdata[[colname]] %in% c(input$checkGroup), ]
+    inputdata <- currentdata()
+    inputdata <- inputdata[!inputdata[[expl_col]] %in% c(input$checkGroup), ]
     inputdata <- inputdata[!inputdata$subdiv %in% c(input$subdivGroup), ]
     
     #### One-way ANOVA
@@ -627,11 +663,13 @@ server <- function(input, output, session){
   ### Brown-Forsythe test ------------------------------------------------------
   output$brownf <- renderPrint({
     
-    colname <- input$expl
-    thisFormula <- as.formula(paste(input$resp, "~", input$expl))
+    resp_col <- input$resp
+    expl_col <- input$expl
+    thisFormula <- as.formula(paste(resp_col, "~", expl_col))
     
-    inputdata <- thesisdata[!thesisdata[[colname]] %in% c(input$checkGroup), 
-                            !names(thesisdata) %in% supportcols]
+    inputdata <- currentdata()
+    inputdata <- inputdata[!inputdata[[expl_col]] %in% c(input$checkGroup), 
+                            !names(inputdata) %in% supportcols]
     inputdata <- inputdata[!inputdata$subdiv %in% c(input$subdivGroup), ]
     
     # bf.test() works so that the information we want is only printed to
@@ -646,7 +684,7 @@ server <- function(input, output, session){
   output$map <- renderggiraph({
     
     # Count active subdivs
-    active_subdivs <- 23 - length(input$subdivGroup)
+    active_subdivs <- length(unique(thesisdata$subdiv)) - length(input$subdivGroup)
     
     g2 <- ggplot() +
       # Background grey subdivs appear when inactive subdivs present
@@ -887,6 +925,26 @@ ui <- shinyUI(fluidPage(
       HTML("<a href='#intmaplink'>9 Interactive map</a>"),
       HTML("</div>"),
       
+      # Set allowed maximum for parktime and walktime. Default is 60 for both.
+      HTML("<div id='contents'>"),
+      sliderInput(
+        "parktime_max",
+        HTML("Set maximum allowed value for parktime (min),
+             <p style='font-size: 9px'>default 59</p>"), 
+        min = min(thesisdata$parktime),
+        max = max(thesisdata$parktime),
+        value = 59,
+        step = 1),
+      sliderInput(
+        "walktime_max",
+        HTML("Set maximum allowed value for walktime (min),
+             <p style='font-size: 9px'>default 59</p>"), 
+        min = min(thesisdata$walktime),
+        max = max(thesisdata$walktime),
+        value = 59,
+        step = 1),
+      HTML("</div>"),
+      
       # Select walktime or parktime
       HTML("<div id='contents'>"),
       selectInput(
@@ -987,7 +1045,6 @@ ui <- shinyUI(fluidPage(
     mainPanel(
       HTML("<div id='descrilink'</div>"),
       h3("1 Descriptive statistics"),
-      #p("If N is distributed somewhat equally, Levene test is not required."),
       tableOutput("descri"),
       hr(),
       
@@ -1028,7 +1085,10 @@ ui <- shinyUI(fluidPage(
       hr(),
       
       HTML("<div id='brownlink'</div>"),
-      h3("7 Brown-Forsythe"),
+      h3("7 Brown-Forsythe test"),
+      p("Please note that Brown-Forsythe test fails when selected response", 
+        "variable maximum value is set to 0. The test requires a p.value that's", 
+        "not NaN."),
       verbatimTextOutput("brownf"),
       hr(),
       
@@ -1039,7 +1099,8 @@ ui <- shinyUI(fluidPage(
   
       HTML("<div id='intmaplink'</div>"),
       h3("9 Survey results on research area map"),
-      HTML("<a style='font-size: 12px' href='#intmap-settings-link'>View the settings for this map</a>"),
+      HTML("<a style='font-size: 12px' href='#intmap-settings-link'>",
+           "View the settings for this map</a>"),
       ggiraphOutput("interactive"),
       hr(),
       
@@ -1049,15 +1110,15 @@ ui <- shinyUI(fluidPage(
            "(C) Helsingin, Espoon, Vantaan ja Kauniaisten mittausorganisaatiot",
            "2011. Aineisto on muokkaamaton. License <a href='https://creativecommons.org/licenses/by/4.0/deed.en'> CC BY 4.0</a>.",
            
-           "<br><a href='http://urn.fi/urn:nbn:fi:csc-kata00001000000000000226'>",
-           "Regional population density 2012</a> (C) Statistics Finland 2019.", 
-           "Retrieved 13.3.2020. License <a href='http://www.nic.funet.fi/index/geodata/tilastokeskus/Tilastokeskus_terms_of_use_2018.pdf'>",
-           "Other (Open)</a>.",
-           
            "<br><a href='https://www.stat.fi/tup/paavo/index_en.html'>",
            "Postal code area boundaries</a> (C) Statistics Finland 2019.", 
            "Retrieved 27.6.2019. License <a href='https://creativecommons.org/licenses/by/4.0/deed.en'>",
            "CC BY 4.0</a>.",
+           
+           "<br><a href='http://urn.fi/urn:nbn:fi:csc-kata00001000000000000226'>",
+           "Regional population density 2012</a> (C) Statistics Finland 2019.", 
+           "Retrieved 13.3.2020. License <a href='http://www.nic.funet.fi/index/geodata/tilastokeskus/Tilastokeskus_terms_of_use_2018.pdf'>",
+           "Other (Open)</a>.",
            
            "<br><a href='https://land.copernicus.eu/local/urban-atlas/urban-atlas-2012'>",
            "Urban Atlas 2012</a> (C) European Environment Agency 2016.", 
