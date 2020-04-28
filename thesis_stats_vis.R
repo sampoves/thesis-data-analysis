@@ -4,7 +4,7 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 27.4.2020
+# 28.4.2020
 #
 # This is an interactive tool for analysing the results of my research survey.
 
@@ -492,15 +492,29 @@ server <- function(input, output, session){
     p <- ggplot(inputdata, aes(x = !!sym(resp_col))) + 
       geom_histogram(color = "black", fill = "grey", binwidth = binwidth) +
       
-      # Vertical lines for mean and median, respectively
+      # Vertical lines for mean and median, respectively. Also display exact
+      # values with geom_text().
       geom_vline(aes(xintercept = mean(!!sym(resp_col)),
                      color = "mean"),
                  linetype = "longdash", 
                  size = 1) +
+      geom_text(aes(x = mean(!!sym(resp_col)), 
+                    label = round(mean(!!sym(resp_col)), 2), 
+                    y = 0,
+                    hjust = -0.3,
+                    vjust = 1.2), 
+                colour = "red") +
+      
       geom_vline(aes(xintercept = median(!!sym(resp_col)),
                      color = "median"),
                  linetype = "longdash", 
                  size = 1) +
+      geom_text(aes(x = median(!!sym(resp_col)), 
+                    label = median(!!sym(resp_col)), 
+                    y = 0,
+                    hjust = 2,
+                    vjust = 1.2), 
+                colour = "blue") +
       
       # This is kernel density estimate, a smoothed version of the histogram.
       # Usually geom_density() sets the scale for y axis, but here we will
@@ -1191,15 +1205,16 @@ visitordata <- read.csv(file = visitorpath,
 visitordata$ts_first <- visitordata$ts_first + 3 * 60 * 60
 visitordata$ts_latest <- visitordata$ts_latest + 3 * 60 * 60
 
-# First sort by timestamp, then rename X or id. This fixes responses with 
-# multiple zipcodes. These records have the exact same timestamps and that proved 
-# tricky for dygraph to understand
+# First sort by column "timestamp", then give column "id" sequential values. 
+# This fixes responses with multiple zipcodes. These records have the exact same 
+# timestamps and that proved tricky for dygraph to understand. Also, xts objects
+# seem to need a column to that as sequential values, in our case, column "id".
 thesisdata_for_xts <- thesisdata[order(thesisdata$timestamp, decreasing = FALSE), ]
-thesisdata_for_xts$X <- seq(1:length(thesisdata_for_xts$X))
+thesisdata_for_xts$id <- seq(1:length(thesisdata_for_xts$id))
 
 # Create xts objects necessary to use dygraph
-visitor_xts <- xts(x = visitordata$X, order.by = visitordata$ts_first)
-records_xts <- xts(x = thesisdata_for_xts$X, 
+visitor_xts <- xts(x = visitordata$id, order.by = visitordata$ts_first)
+records_xts <- xts(x = thesisdata_for_xts$id, 
                    order.by = thesisdata_for_xts$timestamp)
 
 
@@ -1297,7 +1312,6 @@ shinyApp(visitor_ui, visitor_server)
 
 
 
-
 #### Obsolete material ####
 
 # All of the functionality below is superseded by the analysis ShinyApp 
@@ -1309,22 +1323,22 @@ shinyApp(visitor_ui, visitor_server)
 # information fed to it. 
 
 # Get walktime by timeofday
-GetANOVA(walktime ~ timeofday, thesisdata$walktime, thesisdata$timeofday,
-         thesisdata, c(1, 2, 3, 4, 5))
+#GetANOVA(walktime ~ timeofday, thesisdata$walktime, thesisdata$timeofday,
+#         thesisdata, c(1, 2, 3, 4, 5))
 
 # Get walktime by timeofday, remove "Can't specify"
-GetANOVA(walktime ~ timeofday, thesisdata$walktime, thesisdata$timeofday,
-         thesisdata[-which(as.integer(thesisdata$timeofday) == 4), ],
-         c(1, 2, 3, 4, 5))
+#GetANOVA(walktime ~ timeofday, thesisdata$walktime, thesisdata$timeofday,
+#         thesisdata[-which(as.integer(thesisdata$timeofday) == 4), ],
+#         c(1, 2, 3, 4, 5))
 
 # parktime by parkspot
-GetANOVA(parktime ~ parkspot, thesisdata$parktime, thesisdata$parkspot,
-         thesisdata, c(1, 2, 3, 4, 5))
+#GetANOVA(parktime ~ parkspot, thesisdata$parktime, thesisdata$parkspot,
+#         thesisdata, c(1, 2, 3, 4, 5))
 
 # parktime by subdivision
-GetANOVA(parktime ~ subdiv, thesisdata$parktime, thesisdata$subdiv,
-         thesisdata, c(1, 2, 3, 4, 5))
+#GetANOVA(parktime ~ subdiv, thesisdata$parktime, thesisdata$subdiv,
+#         thesisdata, c(1, 2, 3, 4, 5))
 
 # walktime by ykr zone
-GetANOVA(walktime ~ ykr_zone, thesisdata$walktime, thesisdata$ykr_zone,
-         thesisdata, c(1, 2, 3, 4, 5))
+#GetANOVA(walktime ~ ykr_zone, thesisdata$walktime, thesisdata$ykr_zone,
+#         thesisdata, c(1, 2, 3, 4, 5))
