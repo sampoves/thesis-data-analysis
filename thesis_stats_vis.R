@@ -517,13 +517,15 @@ server <- function(input, output, session){
             axis.text = element_text(size = 12),
             axis.title = element_text(size = 14)) +
       
-      # build legend, override colors to get visible color for density
+      # Build legend, override colors to get visible color for density. Also,
+      # override linetype to get a solid line for density.
       scale_color_manual(name = paste("Legend for\n", resp_col), 
                          values = c(median = "blue", 
                                     mean = "red", 
                                     "kernel density\nestimate" = alpha("black", 0.4))) +
       guides(color = guide_legend(
-        override.aes = list(color = c("darkgrey", "red", "blue")))) +
+        override.aes = list(color = c("darkgrey", "red", "blue"),
+                            linetype = c("solid", "longdash", "longdash")))) +
       
       # Conditional histogram bar labeling. No label for zero
       stat_bin(binwidth = binwidth, 
@@ -926,7 +928,7 @@ ui <- shinyUI(fluidPage(
       # &nbsp; is a non-breaking space. Will not be cut off at any situation
       HTML("<div id='contents'>"),
       HTML("<p id='linkheading_t'>Analysis</p>"),
-      HTML("<a href='#descrilink'>1&nbsp;Descriptives</a> &mdash;"),
+      HTML("<a href='#descrilink'>1&nbsp;Descriptive statistics</a> &mdash;"),
       HTML("<a href='#histlink'>2&nbsp;Histogram</a> &mdash;"),
       HTML("<a href='#barplotlink'>3&nbsp;Barplot</a> &mdash;"),
       HTML("<a href='#boxplotlink'>4&nbsp;Boxplot</a> &mdash;"),
@@ -1051,6 +1053,8 @@ ui <- shinyUI(fluidPage(
         value = 5),
       
       HTML("</div>"),
+      HTML("<p style='font-size: 11px; color: grey; margin-top: -10px;'>",
+           "Analysis app version 28.4.2020</p>"),
       
       width = 3
     ),
