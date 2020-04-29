@@ -133,23 +133,20 @@ thesisdata <-
                                           `3` = "Weekend",
                                           `4` = "Can't specify, no usual time"),
                 
-                # SYKE does not provide official translations for 
-                # "Yhdyskuntarakenteen vyöhykkeet".
-                ykr_zone = dplyr::recode(ykr_zone, 
-                                         `1` = "keskustan jalankulkuvyöhyke",
-                                         `2` = "keskustan reunavyöhyke",
-                                         `3` = "alakeskuksen jalankulkuvyöhyke",
-                                         `4` = "intensiivinen joukkoliikennevyöhyke",
-                                         `5` = "joukkoliikennevyöhyke",
-                                         `6` = "autovyöhyke",
-                                         `7` = "novalue"),
+                ua_forest = forcats::fct_relevel(ua_forest, 
+                                                 c("Predominantly forest", 
+                                                   "Mostly forest", "Moderate forest",
+                                                   "Some forest", "Scarce forest")),
                 
-                ua_forest = dplyr::recode(ua_forest, 
-                                       `1` = "Predominantly forest",
-                                       `2` = "Mostly forest",
-                                       `3` = "Moderate forest",
-                                       `4` = "Some forest",
-                                       `5` = "Scarce forest")) %>%
+                # SYKE does not provide official translations for 
+                # "Yhdyskuntarakenteen vyohykkeet".
+                ykr_zone = forcats::fct_relevel(ykr_zone, 
+                                                c("keskustan jalankulkuvyohyke", 
+                                                  "keskustan reunavyohyke", 
+                                                  "alakeskuksen jalankulkuvyohyke", 
+                                                  "intensiivinen joukkoliikennevyohyke", 
+                                                  "joukkoliikennevyohyke",
+                                                  "autovyohyke", "novalue"))) %>%
   dplyr::select(-X)
 
 
