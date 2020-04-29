@@ -30,6 +30,12 @@ CreateJenksColumn <- function(fortified, postal, datacol, newcolname, classes_n 
   classes <- suppressWarnings(
     classInt::classIntervals(postal[, datacol], n = classes_n, style = "jenks"))
   
+  # When sample size is reduced drastically, median columns tended to receive
+  # class intervals starting in the negative. Not possible in data, so fix it.
+  if(classes$brks[1] < 0) {
+    classes$brks[1] <- 0
+  }
+  
   # classes$brk has to be wrapped with unique(), otherwise we can't get more
   # than six classes for parktime_median or walktime_median
   result <- fortified %>%
@@ -205,7 +211,7 @@ SigTableToShiny <- function(sigTable, hasHeading) {
   
   # Take into account that the table may have an attribute heading. Ask if this 
   # is the case
-  if (hasHeading == FALSE){
+  if (hasHeading == FALSE) {
     sigTablePosition <- 2
   } else {
     sigTablePosition <- 3
@@ -224,7 +230,7 @@ SigTableToShiny <- function(sigTable, hasHeading) {
   # Detect if signif_star is something else than factor. If so, the function
   # has picked up a value from probability column and the current analysis is 
   # not significant. Change value to " ".
-  if(!is.factor(signif_star)){
+  if(!is.factor(signif_star)) {
     signif_star <- " "
   }
   
@@ -237,7 +243,7 @@ SigTableToShiny <- function(sigTable, hasHeading) {
   res <- cbind.data.frame(res, signif_star)
   
   # Name rows. Try to detect differences in Levene and ANOVA summary tables.
-  if(is.null(rownames(sigTable[[1]]))){
+  if(is.null(rownames(sigTable[[1]]))) {
     # Levene
     rownames(res) <- rownames(sigTable)
   } else {

@@ -4,7 +4,7 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 28.4.2020
+# 29.4.2020
 #
 # This is an interactive tool for analysing the results of my research survey.
 
@@ -260,6 +260,8 @@ centroids2[16, "label"] <- ""
 # Created with the help of:
 # https://bhaskarvk.github.io/user2017.geodataviz/notebooks/03-Interactive-Maps.nb.html
 
+zips <- unique(thesisdata$zipcode)
+
 # Get postal code area data calculated in Python. It contains some interesting
 # variables for visualisation. Select essential columns and multiply column 
 # "ua_forest" with 100 for easier to view plotting
@@ -313,6 +315,10 @@ server <- function(input, output, session){
     reset("subdivGroup")
   })
   
+  observeEvent(input$resetParkWalk, {
+    reset("parktime_max")
+    reset("walktime_max")
+  })
   
   # Detect user setting for maximum parktime and walktime ----------------------
   
@@ -323,6 +329,60 @@ server <- function(input, output, session){
     thesisdata %>%
       dplyr::filter(parktime <= input$parktime_max,
                     walktime <= input$walktime_max))
+  
+  # tidyr::complete() helps find missing zipcodes and give them n=0
+  currentpostal <- reactive({
+    
+    currentdata <- currentdata()
+    
+    result <- postal %>%
+      mutate(answer_count = currentdata %>% 
+               group_by(zipcode) %>% 
+               tally() %>% 
+               tidyr::complete(zipcode = zips, fill = list(n = NA)) %>%
+               pull(n),
+             parktime_mean = currentdata %>%
+               group_by(zipcode) %>%
+               summarise(mean(parktime)) %>%
+               tidyr::complete(zipcode = zips, fill = list(n = NA)) %>%
+               pull(),
+             parktime_median = currentdata %>%
+               group_by(zipcode) %>%
+               summarise(median(parktime)) %>%
+               tidyr::complete(zipcode = zips, fill = list(n = NA)) %>%
+               pull(),
+             walktime_mean = currentdata %>%
+               group_by(zipcode) %>%
+               summarise(mean(walktime)) %>%
+               tidyr::complete(zipcode = zips, fill = list(n = NA)) %>%
+               pull(),
+             walktime_median = currentdata %>%
+               group_by(zipcode) %>%
+               summarise(median(walktime)) %>%
+               tidyr::complete(zipcode = zips, fill = list(n = NA)) %>%
+               pull())
+    
+    result$parktime_mean <- sapply(result[, "parktime_mean"], round, 2)
+    result$walktime_mean <- sapply(result[, "walktime_mean"], round, 2)
+    result
+  })
+  
+  current_data_f <- reactive({
+
+    postal <- currentpostal()
+
+    # "postal" geometries are in well-known text format. Some processing is needed to
+    # utilise these polygons in R.
+    geometries <- lapply(postal[, "geometry"], "readWKT", p4s = crs) #rgeos::readWKT()
+    sp_tmp_ID <- mapply(sp::spChFIDs, geometries, as.character(postal[, 1]))
+    row.names(postal) <- postal[, 1]
+
+    data <- sp::SpatialPolygonsDataFrame(
+      sp::SpatialPolygons(unlist(lapply(sp_tmp_ID, function(x) x@polygons)),
+                          proj4string = crs), data = postal)
+    data_f <- merge(ggplot2::fortify(data), as.data.frame(data), by.x = "id", by.y = 0)
+    data_f
+  })
   
   
   observe({
@@ -762,11 +822,15 @@ server <- function(input, output, session){
   
   ### Interactive map ----------------------------------------------------------
   output$interactive <- renderggiraph({
-    
-    # only select municipalities selected by user. Do the same for "postal",
+
+    # Use reactive data_f and postal
+    # Only select municipalities selected by user. Do the same for "postal",
     # we fetch jenks breaks from there.
-    inputdata <- data_f[!data_f$kunta %in% c(input$kunta), ]
-    inputpostal <- postal[!postal$kunta %in% c(input$kunta), ]
+    inputdata <- current_data_f()
+    inputdata <- inputdata[!inputdata$kunta %in% c(input$kunta), ]
+    
+    inputpostal <- currentpostal()
+    inputpostal <- inputpostal[!inputpostal$kunta %in% c(input$kunta), ]
     
     # Set interactive map extent by what's active on inputdata
     minlat <- plyr::round_any(min(inputdata$lat), 100, f = floor)
@@ -841,7 +905,8 @@ server <- function(input, output, session){
       scale_fill_brewer(palette = brewerpal,
                         direction = -1,
                         name = legendname,
-                        labels = labels) +
+                        labels = labels,
+                        na.value = "#ebebeb") +
       
       # Municipality borders
       geom_polygon(data = munsf,
@@ -895,9 +960,10 @@ ui <- shinyUI(fluidPage(
       #boxplot, #barplot, #hist {
         max-width: 1200px;
       }
-      #resetSubdivs {
+      #resetSubdivs, #resetParkWalk {
         width: 100%;
-        padding: 8px 0px 8px 0px;
+        padding: 6px 0px 8px 0px;
+        white-space: normal;
       }
       #contents {
         border: 5px solid #2e3338;
@@ -968,8 +1034,7 @@ ui <- shinyUI(fluidPage(
       sliderInput(
         "parktime_max",
         HTML("<p style='font-size: 9px'>(These selections affect sections", 
-             "1&mdash;7)</p>Set maximum allowed value for parktime (min)
-             <p style='font-size: 9px'>default 59</p>"), 
+             "1&mdash;7)</p>Set maximum allowed value for parktime (min)"),
         min = min(thesisdata$parktime),
         max = max(thesisdata$parktime),
         value = 59,
@@ -977,12 +1042,16 @@ ui <- shinyUI(fluidPage(
       
       sliderInput(
         "walktime_max",
-        HTML("Set maximum allowed value for walktime (min)
-             <p style='font-size: 9px'>default 59</p>"), 
+        HTML("Set maximum allowed value for walktime (min)"), 
         min = min(thesisdata$walktime),
         max = max(thesisdata$walktime),
         value = 59,
         step = 1),
+      
+      actionButton(
+        "resetParkWalk", 
+        HTML("Revert values to default (59&nbsp;min)")),
+      
       HTML("</div>"),
       
       # Select walktime or parktime
@@ -1059,7 +1128,7 @@ ui <- shinyUI(fluidPage(
       checkboxGroupInput(
         "kunta",
         HTML("Select extent for the interactive map", 
-             "<a id='smallstyle' href='#intmaplink'>(9 Interactive map)</a>"),
+             "<a style='font-size: 9px' href='#intmaplink'>(9 Interactive map)</a>"),
         choiceNames = c("Helsinki", "Vantaa", "Espoo", "Kauniainen"),
         choiceValues = c("091", "092", "049", "235")),
       
@@ -1079,7 +1148,7 @@ ui <- shinyUI(fluidPage(
       
       HTML("</div>"),
       HTML("<p style='font-size: 11px; color: grey; margin-top: -10px;'>",
-           "Analysis app version 28.4.2020</p>"),
+           "Analysis app version 29.4.2020</p>"),
       
       width = 3
     ),
@@ -1121,7 +1190,7 @@ ui <- shinyUI(fluidPage(
       hr(),
       
       HTML("<div id='levenelink'</div>"),
-      h3("5 Test of Homogeneity of Variances"),
+      h3("5 Test of Homogeneity of Variances (Levene's test)"),
       p("Levene value needs to be at least 0.05 for ANOVA test to be meaningful. If under 0.05, employ Brown-Forsythe test."),
       tableOutput("levene"),
       p("Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1", 
