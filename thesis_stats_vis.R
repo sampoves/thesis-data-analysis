@@ -320,8 +320,14 @@ server <- function(input, output, session){
     reset("walktime_max")
   })
   
-  # Detect user setting for maximum parktime and walktime ----------------------
   
+  #### Reactive data -----------------------------------------------------------
+  
+  # currentdata(), currentpostal() and current_data_f() are reactive objects
+  # made to keep track of changes the Shiny application. Most of the app uses
+  # only currentdata(), but the interactive map utilises all of them. 
+  
+  # Detect user setting for maximum parktime and walktime.
   # currentdata() is the currently active rows of the original thesisdata 
   # DataFrame. Use currentdata() in the rest of the application to not interfere
   # with the original dataset.
@@ -330,11 +336,20 @@ server <- function(input, output, session){
       dplyr::filter(parktime <= input$parktime_max,
                     walktime <= input$walktime_max))
   
-  # tidyr::complete() helps find missing zipcodes and give them n=0
+
+  # currentpostal() calculates, when needed, answer counts, means, and medians
+  # for the values currently active in currentdata(). This is needed to make
+  # the interactive map tooltip values responsive to changes. In this phase,
+  # we calculate all the required data, the mapping part is in current_data_f()
   currentpostal <- reactive({
     
     currentdata <- currentdata()
     
+    # this makes currentdata compliant with changes to checkGroup and subdivGroup
+    currentdata <- currentdata[!currentdata[[input$expl]] %in% c(input$checkGroup), ]
+    currentdata <- currentdata[!currentdata$subdiv %in% c(input$subdivGroup), ]
+    
+    # tidyr::complete() helps find missing zipcodes and give them n=0
     result <- postal %>%
       mutate(answer_count = currentdata %>% 
                group_by(zipcode) %>% 
@@ -367,12 +382,14 @@ server <- function(input, output, session){
     result
   })
   
+  
+  # current_data_f() produces the currently needed interactive map out of the
+  # data contained in currentpostal(). This is a copy of the code above, seen
+  # in "Interactive map fro ShinyApp". Please See code comments in the original.
   current_data_f <- reactive({
 
     postal <- currentpostal()
 
-    # "postal" geometries are in well-known text format. Some processing is needed to
-    # utilise these polygons in R.
     geometries <- lapply(postal[, "geometry"], "readWKT", p4s = crs) #rgeos::readWKT()
     sp_tmp_ID <- mapply(sp::spChFIDs, geometries, as.character(postal[, 1]))
     row.names(postal) <- postal[, 1]
@@ -1034,7 +1051,7 @@ ui <- shinyUI(fluidPage(
       sliderInput(
         "parktime_max",
         HTML("<p style='font-size: 9px'>(These selections affect sections", 
-             "1&mdash;7)</p>Set maximum allowed value for parktime (min)"),
+             "1&mdash;7, 9)</p>Set maximum allowed value for parktime (min)"),
         min = min(thesisdata$parktime),
         max = max(thesisdata$parktime),
         value = 59,
@@ -1059,10 +1076,10 @@ ui <- shinyUI(fluidPage(
       selectInput(
         "resp", 
         HTML("<p style='font-size: 9px'>(These selections affect sections", 
-             "1&mdash;7)</p>Response (continuous)"),
+             "1&mdash;7, 9)</p>Response (continuous)"),
         names(thesisdata[continuous])),
       
-      # All others
+      # likert, parkspot, timeofday, ua_forest, ykr_zone, subdiv
       selectInput(
         "expl",
         "Explanatory (ordinal)", 
@@ -1070,7 +1087,7 @@ ui <- shinyUI(fluidPage(
       
       # These are changed with the observer function
       checkboxGroupInput(
-        "checkGroup", 
+        "checkGroup",
         "Select inactive groups in current explanatory variable",
         choiceNames = c("Item A", "Item B", "Item C"),
         choiceValues = c("a", "b", "c")),
@@ -1111,7 +1128,7 @@ ui <- shinyUI(fluidPage(
       checkboxGroupInput(
         "subdivGroup",
         HTML("Select inactive subdivisions <p style='font-size: 9px'>",
-          "(Affects sections 1&mdash;8. Please be aware that these selections", 
+          "(Affects sections 1&mdash;9. Please be aware that these selections", 
           "override Explanatory (ordinal) variable 'subdiv')</p>"),
         choiceNames = sort(as.character(unique(thesisdata$subdiv))),
         choiceValues = sort(as.character(unique(thesisdata$subdiv)))),
@@ -1127,21 +1144,21 @@ ui <- shinyUI(fluidPage(
       HTML("<div id='contents'>"),
       checkboxGroupInput(
         "kunta",
-        HTML("Select extent for the interactive map", 
-             "<a style='font-size: 9px' href='#intmaplink'>(9 Interactive map)</a>"),
+        HTML("Select extent for the interactive map <a",
+             "style='font-size: 9px' href='#intmaplink'>",
+             "(9 Interactive map)</a>"),
         choiceNames = c("Helsinki", "Vantaa", "Espoo", "Kauniainen"),
         choiceValues = c("091", "092", "049", "235")),
       
       selectInput(
         "karttacol",
-        HTML("Select Jenks breaks parameter for the interactive map",
-             "<p style='font-size: 9px'>(9 Interactive map)</p>"),
+        HTML("Select Jenks breaks parameter for the interactive map"),
         c("jenks_answer_count", "jenks_park_mean", "jenks_park_median", 
           "jenks_walk_mean", "jenks_walk_median", "jenks_ua_forest")),
       
       sliderInput(
         "jenks_n",
-        "Select amount of Jenks classes",
+        "Select the amount of classes",
         min = 2, 
         max = 8, 
         value = 5),
