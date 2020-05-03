@@ -4,7 +4,7 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 29.4.2020
+# 3.5.2020
 #
 # This is an interactive tool for analysing the results of my research survey.
 
@@ -105,13 +105,14 @@ supportcols <- c("id", "timestamp", "ip")
 # factor levels for plotting. Lastly, remove column "X"
 thesisdata <- 
   read.csv(file = datapath,
+           header = TRUE, 
+           sep = ",",
            colClasses = c(timestamp = "POSIXct", zipcode = "character", 
                           ip = "character", timeofday = "factor", 
                           parkspot = "factor", likert = "factor",
                           ua_forest = "factor", ykr_zone = "factor", 
                           subdiv = "factor"),
-           header = TRUE, 
-           sep = ",") %>%
+           stringsAsFactors = TRUE) %>%
   
   dplyr::mutate(parkspot = dplyr::recode(parkspot, 
                                          `1` = "On the side of street",
@@ -165,19 +166,19 @@ suuralue_f <-
                     as.data.frame(.) %>%
                       dplyr::mutate(id = as.character(dplyr::row_number() - 1)))} %>%
   
-  dplyr::mutate(Name = factor(Name, labels = 
-                                c("Vantaa Aviapolis", "Helsinki Southern", 
-                                  "Vantaa Hakunila", "Helsinki Eastern", 
-                                  "Helsinki Southeastern", "Kauniainen",
-                                  "Helsinki Central", "Vantaa Kivistö", 
-                                  "Helsinki Northeastern", "Vantaa Koivukylä", 
-                                  "Vantaa Korso", "Helsinki Western",
-                                  "Vantaa Myyrmäki", "Helsinki Northern", 
-                                  "Espoo Pohjois-Espoo", "Espoo Suur-Espoonlahti", 
-                                  "Espoo Suur-Kauklahti", "Espoo Suur-Leppävaara", 
-                                  "Espoo Suur-Matinkylä", "Espoo Suur-Tapiola", 
-                                  "Vantaa Tikkurila", "Espoo Vanha-Espoo",
-                                  "Helsinki Östersundom"))) %>%
+  dplyr::mutate(Name = factor(Name, 
+                              c("Vantaa Aviapolis", "Helsinki Southern", 
+                                "Vantaa Hakunila", "Helsinki Eastern", 
+                                "Helsinki Southeastern", "Kauniainen",
+                                "Helsinki Central", "Vantaa Kivistö", 
+                                "Helsinki Northeastern", "Vantaa Koivukylä", 
+                                "Vantaa Korso", "Helsinki Western",
+                                "Vantaa Myyrmäki", "Helsinki Northern", 
+                                "Espoo Pohjois-Espoo", "Espoo Suur-Espoonlahti", 
+                                "Espoo Suur-Kauklahti", "Espoo Suur-Leppävaara", 
+                                "Espoo Suur-Matinkylä", "Espoo Suur-Tapiola", 
+                                "Vantaa Tikkurila", "Espoo Vanha-Espoo",
+                                "Helsinki Östersundom"))) %>%
   
   dplyr::mutate(Name = factor(Name, levels = sort(levels(Name))))
 
@@ -264,9 +265,10 @@ zips <- unique(thesisdata$zipcode)
 # "ua_forest" with 100 for easier to view plotting
 postal <- 
   read.csv(file = postal_path,
-           colClasses = c(zipcode = "factor", kunta = "factor"),
            header = TRUE, 
-           sep = ",") %>%
+           sep = ",",
+           colClasses = c(zipcode = "factor", kunta = "factor"),
+           stringsAsFactors = TRUE) %>%
   dplyr::select(c(2, 3, 6, 108:121)) %>%
   dplyr::mutate(ua_forest = ua_forest * 100)
 
@@ -1162,7 +1164,7 @@ ui <- shinyUI(fluidPage(
       
       HTML("</div>"),
       HTML("<p style='font-size: 11px; color: grey; margin-top: -10px;'>",
-           "Analysis app version 29.4.2020</p>"),
+           "Analysis app version 3.5.2020</p>"),
       
       width = 3
     ),
@@ -1278,10 +1280,12 @@ shinyApp(ui = ui, server = server)
 # deleted.
 
 visitordata <- read.csv(file = visitorpath,
-                       colClasses = c(X = "integer", id = "integer", 
-                                      ip = "factor", ts_first = "POSIXct", 
-                                      ts_latest = "POSIXct", count = "integer"),
-                       header = TRUE, sep = ",")
+                        header = TRUE, 
+                        sep = ",",
+                        colClasses = c(X = "integer", id = "integer", 
+                                       ip = "factor", ts_first = "POSIXct", 
+                                       ts_latest = "POSIXct", count = "integer"),
+                       stringsAsFactors = TRUE)
 
 # The survey visitors table saved visitor timestamps as NOW() and that is UTC in 
 # MySQL. Change POSIXct object timezone to UTC+3, Helsinki summer time
@@ -1387,6 +1391,8 @@ visitor_ui <- basicPage(
 
   titlePanel("Sampo Vesanen MSc thesis research survey: received responses and survey page first visits"),
   p("Click and hold, then drag and release to zoom to a period of time. Double click to return to the full view."),
+  HTML("<p style='font-size: 11px; color: grey; margin-top: -10px;'>",
+       "Analysis app version 3.5.2020</p>"),
   HTML("<div class='contentsp'><div class='contentsc'>"),
   uiOutput("dygraph"),
   HTML("</div></div>")
