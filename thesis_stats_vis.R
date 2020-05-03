@@ -190,7 +190,7 @@ suuralue_f <-
 # Get municipality borders. Fortify SP DataFrame for ggplot. Shapefile data is 
 # Regional population density 2012, Statistics Finland.
 # http://urn.fi/urn:nbn:fi:csc-kata00001000000000000226. 
-muns_clipped_f2 <- 
+muns_clipped_f <- 
   rgdal::readOGR(munsclippedpath, stringsAsFactors = TRUE) %>%
   sp::spTransform(., sp::CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")) %>%
   {dplyr::left_join(ggplot2::fortify(.), 
