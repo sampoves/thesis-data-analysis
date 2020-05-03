@@ -161,7 +161,11 @@ thesisdata <-
 # as.data.frame(). Then align area names with thesisdata$subdiv with mutate().
 # Finally, factor levels by their new names.
 suuralue_f <- 
-  rgdal::readOGR(suuraluepath, use_iconv = TRUE, encoding = "UTF-8") %>%
+  rgdal::readOGR(suuraluepath, 
+                 use_iconv = TRUE, 
+                 encoding = "UTF-8", 
+                 stringsAsFactors = TRUE) %>%
+  
   {dplyr::left_join(ggplot2::fortify(.), 
                     as.data.frame(.) %>%
                       dplyr::mutate(id = as.character(dplyr::row_number() - 1)))} %>%
@@ -186,8 +190,8 @@ suuralue_f <-
 # Get municipality borders. Fortify SP DataFrame for ggplot. Shapefile data is 
 # Regional population density 2012, Statistics Finland.
 # http://urn.fi/urn:nbn:fi:csc-kata00001000000000000226. 
-muns_clipped_f <- 
-  rgdal::readOGR(munsclippedpath) %>%
+muns_clipped_f2 <- 
+  rgdal::readOGR(munsclippedpath, stringsAsFactors = TRUE) %>%
   sp::spTransform(., sp::CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")) %>%
   {dplyr::left_join(ggplot2::fortify(.), 
                     as.data.frame(.) %>%
@@ -269,6 +273,7 @@ postal <-
            sep = ",",
            colClasses = c(zipcode = "factor", kunta = "factor"),
            stringsAsFactors = TRUE) %>%
+  
   dplyr::select(c(2, 3, 6, 108:121)) %>%
   dplyr::mutate(ua_forest = ua_forest * 100)
 
@@ -292,7 +297,7 @@ data_f <- merge(ggplot2::fortify(data), as.data.frame(data), by.x = "id", by.y =
 
 # Get municipality borders from shapefile
 munsf <- 
-  rgdal::readOGR(munspath) %>%
+  rgdal::readOGR(munspath, stringsAsFactors = TRUE) %>%
   sp::spTransform(., crs) %>%
   {dplyr::left_join(ggplot2::fortify(.), 
                     as.data.frame(.) %>%
@@ -389,7 +394,7 @@ server <- function(input, output, session){
 
     postal <- currentpostal()
 
-    geometries <- lapply(postal[, "geometry"], "readWKT", p4s = crs) #rgeos::readWKT()
+    geometries <- lapply(postal[, "geometry"], "readWKT", p4s = crs)
     sp_tmp_ID <- mapply(sp::spChFIDs, geometries, as.character(postal[, 1]))
     row.names(postal) <- postal[, 1]
 
