@@ -142,12 +142,13 @@ thesisdata <-
                 # SYKE does not provide official translations for 
                 # "Yhdyskuntarakenteen vyohykkeet".
                 ykr_zone = forcats::fct_relevel(ykr_zone, 
-                                                c("keskustan jalankulkuvyohyke", 
-                                                  "keskustan reunavyohyke", 
-                                                  "alakeskuksen jalankulkuvyohyke", 
-                                                  "intensiivinen joukkoliikennevyohyke", 
-                                                  "joukkoliikennevyohyke",
-                                                  "autovyohyke", "novalue"))) %>%
+                                                c("keskustan jalankulkuvyöhyke", 
+                                                  "keskustan reunavyöhyke", 
+                                                  "alakeskuksen jalankulkuvyöhyke", 
+                                                  "intensiivinen joukkoliikennevyöhyke", 
+                                                  "joukkoliikennevyöhyke",
+                                                  "autovyöhyke", 
+                                                  "novalue"))) %>%
   dplyr::select(-X)
 
 
@@ -170,19 +171,19 @@ suuralue_f <-
                     as.data.frame(.) %>%
                       dplyr::mutate(id = as.character(dplyr::row_number() - 1)))} %>%
   
-  dplyr::mutate(Name = factor(Name, 
-                              c("Vantaa Aviapolis", "Helsinki Southern", 
-                                "Vantaa Hakunila", "Helsinki Eastern", 
-                                "Helsinki Southeastern", "Kauniainen",
-                                "Helsinki Central", "Vantaa Kivistö", 
-                                "Helsinki Northeastern", "Vantaa Koivukylä", 
-                                "Vantaa Korso", "Helsinki Western",
-                                "Vantaa Myyrmäki", "Helsinki Northern", 
-                                "Espoo Pohjois-Espoo", "Espoo Suur-Espoonlahti", 
-                                "Espoo Suur-Kauklahti", "Espoo Suur-Leppävaara", 
-                                "Espoo Suur-Matinkylä", "Espoo Suur-Tapiola", 
-                                "Vantaa Tikkurila", "Espoo Vanha-Espoo",
-                                "Helsinki Östersundom"))) %>%
+  dplyr::mutate(Name = factor(Name, labels =
+                                c("Vantaa Aviapolis", "Helsinki Southern", 
+                                  "Vantaa Hakunila", "Helsinki Eastern", 
+                                  "Helsinki Southeastern", "Kauniainen",
+                                  "Helsinki Central", "Vantaa Kivistö", 
+                                  "Helsinki Northeastern", "Vantaa Koivukylä", 
+                                  "Vantaa Korso", "Helsinki Western",
+                                  "Vantaa Myyrmäki", "Helsinki Northern", 
+                                  "Espoo Pohjois-Espoo", "Espoo Suur-Espoonlahti", 
+                                  "Espoo Suur-Kauklahti", "Espoo Suur-Leppävaara", 
+                                  "Espoo Suur-Matinkylä", "Espoo Suur-Tapiola", 
+                                  "Vantaa Tikkurila", "Espoo Vanha-Espoo",
+                                  "Helsinki Östersundom"))) %>%
   
   dplyr::mutate(Name = factor(Name, levels = sort(levels(Name))))
 
@@ -360,21 +361,25 @@ server <- function(input, output, session){
                tally() %>% 
                tidyr::complete(zipcode = zips, fill = list(n = NA)) %>%
                pull(n),
+             
              parktime_mean = currentdata %>%
                group_by(zipcode) %>%
                summarise(mean(parktime)) %>%
                tidyr::complete(zipcode = zips, fill = list(n = NA)) %>%
                pull(),
+             
              parktime_median = currentdata %>%
                group_by(zipcode) %>%
                summarise(median(parktime)) %>%
                tidyr::complete(zipcode = zips, fill = list(n = NA)) %>%
                pull(),
+             
              walktime_mean = currentdata %>%
                group_by(zipcode) %>%
                summarise(mean(walktime)) %>%
                tidyr::complete(zipcode = zips, fill = list(n = NA)) %>%
                pull(),
+             
              walktime_median = currentdata %>%
                group_by(zipcode) %>%
                summarise(median(walktime)) %>%
@@ -415,7 +420,7 @@ server <- function(input, output, session){
       "checkGroup", 
       label = NULL, 
       choiceNames = levels(thesisdata[, x]),
-      choiceValues = levels(thesisdata[, x]),)
+      choiceValues = levels(thesisdata[, x]), )
     
     
     # Determine availability of barplot ----------------------------------------
