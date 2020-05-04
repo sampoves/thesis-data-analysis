@@ -4,7 +4,7 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 3.5.2020
+# 4.5.2020
 #
 # This is an interactive tool for analysing the results of my research survey.
 
@@ -897,8 +897,12 @@ server <- function(input, output, session){
     }
     
     # Create jenks breaks columns here so that user gets the control of Jenks
-    # breaks classes
-    inputdata <- CreateJenksColumn(inputdata, inputpostal, datacol, input$karttacol, input$jenks_n)
+    # breaks classes. classInt::classIntervals() together with cut() creates
+    # non-overlapping intervals, which are denoted as follows, for example:
+    # Levels: (183,271] (102,183] (56,102] (24,56] [1,24]
+    # In this notation ( means "is not included" and [ or ] means "is included"
+    inputdata <- CreateJenksColumn(inputdata, inputpostal, datacol, input$karttacol, 
+                                   input$jenks_n)
     
     # Format map labels. Remove [, ], (, and ). Also add list dash
     labels <- gsub("(])|(\\()|(\\[)", "", levels(inputdata[, input$karttacol]))
@@ -943,8 +947,16 @@ server <- function(input, output, session){
                    size = 0.4) +
       coord_fixed(xlim = c(minlon, maxlon),
                   ylim = c(minlat, maxlat)) +
+      
+      # Class intervals disclaimer
+      labs(caption = paste("The Jenks breaks classes are non-overlapping. The",
+                           "lowest value of each range, with the exception of",
+                           "the most bottom one, are not included in that class.")) +
+      
+      # Legend settings
       theme(legend.title = element_text(size = 15),
-            legend.text = element_text(size = 14))
+            legend.text = element_text(size = 14),
+            plot.caption = element_text(size = 13, hjust = 0.5))
     
     ggiraph(code = print(g), 
             width_svg = 16, 
