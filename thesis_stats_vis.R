@@ -4,7 +4,7 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 4.5.2020
+# 6.5.2020
 #
 # This is an interactive tool for analysing the results of my research survey.
 
@@ -51,6 +51,7 @@ gc()
 #install.packages("rgeos")
 #install.packages("classInt")
 #install.packages("rlang")
+#install.packages("shinyWidgets")
 
 # Libraries
 library(onewaytests)
@@ -71,7 +72,7 @@ library(shinyjs)
 library(ggiraph)
 library(widgetframe)
 library(rgeos)
-
+library(shinyWidgets)
 
 
 # Working directory
@@ -198,20 +199,14 @@ muns_clipped_f <-
                     as.data.frame(.) %>%
                       dplyr::mutate(id = as.character(dplyr::row_number() - 1)))} 
 
-# Annotate municipalities in ggplot. Adapted from:
-# https://stackoverflow.com/a/28963405/9455395
-centroids <- setNames(
-  do.call("rbind.data.frame", by(muns_clipped_f, muns_clipped_f$nimi, function(x) 
-  {Polygon(x[c("long", "lat")])@labpt})), c("long", "lat")) 
-
-centroids2 <- setNames(
-  do.call("rbind.data.frame", by(suuralue_f, suuralue_f$Name, function(x) 
-  {Polygon(x[c("long", "lat")])@labpt})), c("long", "lat"))
+# Annotate municipalities in ggplot
+muns_cntr <- GetCentroids(muns_clipped_f, "nimi", "nimi")
+subdiv_cntr <- GetCentroids(suuralue_f, "Name", "Name")
 
 # Manually set better location for the annotation of Helsinki and Espoo
-centroids[2, "lat"] <- centroids[2, "lat"] + 0.02
-centroids[1, "lat"] <- centroids[1, "lat"] + 0.01
-centroids$label <- c("Espoo", "Helsinki", "Kauniainen", "Vantaa")
+muns_cntr[2, "lat"] <- muns_cntr[2, "lat"] + 0.02
+muns_cntr[1, "lat"] <- muns_cntr[1, "lat"] + 0.01
+muns_cntr$label <- c("Espoo", "Helsinki", "Kauniainen", "Vantaa")
 
 # Set color gradients for municipalities. Kauniainen will be a single color set 
 # below. These color gradients may be confusing. Investigate better colouring
@@ -247,15 +242,15 @@ suuralue_f <-
 
 # Name labels here so that all the reordering doesn't mix up stuff. Remove
 # munnames from subdiv annotations
-centroids2$label <- gsub(".* ", "", unique(suuralue_f$Name)) 
+subdiv_cntr$label <- gsub(".* ", "", unique(suuralue_f$Name)) 
 
 # Manually move Espoonlahti and Southeastern to be visible. Remove subdiv label
 # for Kauniainen
-centroids2[2, "lat"] <- centroids2[2, "lat"] + 0.05
-centroids2[2, "long"] <- centroids2[2, "long"] - 0.04
-centroids2[12, "lat"] <- centroids2[12, "lat"] + 0.08
-centroids2[12, "long"] <- centroids2[12, "long"] + 0.05
-centroids2[16, "label"] <- ""
+subdiv_cntr[2, "lat"] <- subdiv_cntr[2, "lat"] + 0.05
+subdiv_cntr[2, "long"] <- subdiv_cntr[2, "long"] - 0.04
+subdiv_cntr[12, "lat"] <- subdiv_cntr[12, "lat"] + 0.08
+subdiv_cntr[12, "long"] <- subdiv_cntr[12, "long"] + 0.05
+subdiv_cntr[16, "label"] <- ""
 
 
 
@@ -819,19 +814,20 @@ server <- function(input, output, session){
                           breaks = suuralue_f$color, 
                           guide = "legend") +
       
-      # Annotations. centroids2 is subdiv labels, centroids is municipality
+      # Annotations. subdiv_cntr is subdiv labels, muns_cntr is municipality
       # labels.
-      with(centroids, annotate(geom = "text", 
-                               x = long, 
-                               y = lat, 
-                               label = label, 
-                               size = 5,
-                               fontface = 2)) +
-      with(centroids2[!centroids2$label %in% gsub(".* ", "", c(input$subdivGroup)), ], 
+      with(muns_cntr,
            annotate(geom = "text", 
                     x = long, 
                     y = lat, 
                     label = label, 
+                    size = 5,
+                    fontface = 2)) +
+      with(subdiv_cntr[!subdiv_cntr$label %in% gsub(".* ", "", c(input$subdivGroup)), ], 
+           annotate(geom = "text",
+                    x = long,
+                    y = lat,
+                    label = label,
                     size = 4)) +
       
       # Tight layout and legend properties
@@ -904,6 +900,9 @@ server <- function(input, output, session){
     inputdata <- CreateJenksColumn(inputdata, inputpostal, datacol, input$karttacol, 
                                    input$jenks_n)
     
+    # Get centroids for labelling polygons
+    current_centr <- GetCentroids(inputdata, "zipcode", datacol)
+    
     # Format map labels. Remove [, ], (, and ). Also add list dash
     labels <- gsub("(])|(\\()|(\\[)", "", levels(inputdata[, input$karttacol]))
     labels <- gsub(",", " \U2012 ", labels)
@@ -951,17 +950,26 @@ server <- function(input, output, session){
       # Class intervals disclaimer
       labs(caption = paste("The Jenks breaks classes are non-overlapping. The",
                            "lowest value of each range, with the exception of",
-                           "the most bottom one, are not included in that class.")) +
+                           "the most bottom one, is not included in that class.")) +
       
       # Legend settings
       theme(legend.title = element_text(size = 15),
             legend.text = element_text(size = 14),
             plot.caption = element_text(size = 13, hjust = 0.5))
     
-    ggiraph(code = print(g), 
-            width_svg = 16, 
-            height_svg = 14, 
-            options = list(opts_sizing(rescale = FALSE)))
+    # Label switch boolean test
+    if(input$show_int_labels == TRUE) {
+      g = g + with(current_centr,
+                   annotate(geom = "text",
+                            x = long, 
+                            y = lat, 
+                            label = label, 
+                            size = 4))
+    }
+    
+    ggiraph(code = print(g),
+            width_svg = 16,
+            height_svg = 14)
   })
 }
 
@@ -978,6 +986,8 @@ ui <- shinyUI(fluidPage(
   #   because the long explanations would break it otherwise. 
   # - manually set sidebarPanel z-index to make the element always appear on top
   # - .checkbox input achieves strikeout on selected checkboxes
+  # - pointer-events: none; makes zipcode labels invisible to the cursor
+  # - noselect makes selecting ggiraph elements not possible
   tags$head(
     tags$style(HTML("
       html, body {
@@ -1031,12 +1041,23 @@ ui <- shinyUI(fluidPage(
         z-index: 50;
         scroll-behavior: smooth;
       }
+      text {
+        pointer-events: none;
+      }
       section, h1, li, img {
         -moz-transition: width 1s ease-in-out, left 1.5s ease-in-out;
         -webkit-transition: width 1s ease-in-out, left 1.5s ease-in-out;
         -moz-transition: width 1s ease-in-out, left 1.5s ease-in-out;
         -o-transition: width 1s ease-in-out, left 1.5s ease-in-out;
         transition: width 1s ease-in-out, left 1.5s ease-in-out;
+      }
+      .noselect {
+        -webkit-touch-callout: none; /* iOS Safari */
+        -webkit-user-select: none; /* Safari */
+        -khtml-user-select: none; /* Konqueror HTML */
+        -moz-user-select: none; /* Old versions of Firefox */
+        -ms-user-select: none; /* Internet Explorer/Edge */
+        user-select: none; /* Non-prefixed version, currently supported by Chrome, Opera and Firefox */
       }
       .girafe_container_std {
         text-align: left;
@@ -1177,6 +1198,12 @@ ui <- shinyUI(fluidPage(
         c("jenks_answer_count", "jenks_park_mean", "jenks_park_median", 
           "jenks_walk_mean", "jenks_walk_median", "jenks_ua_forest")),
       
+      # Switch for interactive map labels
+      HTML("<label class='control-label' for='show_int_labels'>Show labels</label>"),
+      shinyWidgets::switchInput(
+        inputId = "show_int_labels", 
+        value = TRUE),
+      
       sliderInput(
         "jenks_n",
         "Select the amount of classes",
@@ -1186,7 +1213,7 @@ ui <- shinyUI(fluidPage(
       
       HTML("</div>"),
       HTML("<p style='font-size: 11px; color: grey; margin-top: -10px;'>",
-           "Analysis app version 3.5.2020</p>"),
+           "Analysis app version 6.5.2020</p>"),
       
       width = 3
     ),
@@ -1252,14 +1279,18 @@ ui <- shinyUI(fluidPage(
       
       HTML("<div id='maplink'</div>"),
       h3("8 Active subdivisions"),
+      HTML("<div class='noselect'>"),
       ggiraphOutput("map"),
+      HTML("</div>"),
       hr(),
   
       HTML("<div id='intmaplink'</div>"),
       h3("9 Survey results on research area map"),
       HTML("<a style='font-size: 12px' href='#intmap-settings-link'>",
            "View the settings for this map</a>"),
+      HTML("<div class='noselect'>"),
       ggiraphOutput("interactive"),
+      HTML("</div>"),
       hr(),
       
       h3("Data providers"),

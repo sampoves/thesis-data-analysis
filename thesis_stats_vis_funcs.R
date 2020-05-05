@@ -16,6 +16,61 @@ library(classInt)
 
 
 
+GetCentroids <- function(fortified, unique_id, nominator) {
+  
+  # Annotate desired feature in ggplot. Adapted from: 
+  # https://stackoverflow.com/a/28963405/9455395
+  
+  # Insert a fortified Spatial object and the column name you want to use as 
+  # the label. With parameters "unique_id" and "nominator" a few functionalities 
+  # can be attained: 
+  
+  # Unique_id tells what column to use as the unique identifier. This can be 
+  # for example "kunta": four rows with coordinates and labels are created. 
+  # If used "zipcode", 167 rows are created with coordinates and labels. 
+  # "nominator" allocates the labels. "nominator" must contain the same amount 
+  # of unique values, or more, than "unique_id", for example combination
+  # unique_id = "kunta" and nominator = "zipcode" will create broken results.
+
+  # Examples:
+  # unique_id = "kunta" and nominator = "kunta":
+  # --- 4 rows, centroids in the middle of municipalities, labels by "kunta"
+  
+  # unique_id = "zipcode" and nominator = "parktime_median":
+  # --- 167 rows, centroids in the middle of zipcodes, labels by "parktime_median"
+  
+  # Change R options, otherwise as.numeric() loses some important digits
+  options(digits = 15)
+  
+  result <- 
+    do.call("rbind.data.frame",
+            by(fortified,
+               fortified[, unique_id],
+               function(x) {c(sp::Polygon(x[c("long", "lat")])@labpt,
+                              x %>% 
+                                group_by(!!rlang::sym(nominator)) %>%
+                                summarise() %>%
+                                pull() %>%
+                                as.vector())
+               })) %>%
+    setNames(., c("long", "lat", "label"))
+    
+  # Change long and lat to numeric vectors, if they already aren't
+  if(is.factor(result$long) == TRUE) {
+      result$long <- as.numeric(levels(result$long))[result$long]
+  } 
+  
+  if (is.factor(result$lat) == TRUE) {
+    result$lat <- as.numeric(levels(result$lat))[result$lat]
+  }
+  
+  return(result)
+}
+
+
+
+
+
 CreateJenksColumn <- function(fortified, postal, datacol, newcolname, classes_n = 5) {
   
   # Use this function to create a column in fortified dataframe that can be
