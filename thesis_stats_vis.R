@@ -902,6 +902,14 @@ server <- function(input, output, session){
     
     # Get centroids for labelling polygons
     current_centr <- GetCentroids(inputdata, "zipcode", datacol)
+
+    # Finetune locations for certain labels
+    current_centr[15, 1] <- current_centr[15, 1] + 500 # Taka-Töölö
+    current_centr[83, 1] <- current_centr[83, 1] - 850 # Etelä-Vuosaari
+    current_centr[107, 2] <- current_centr[107, 2] - 300 # Hämevaara 
+    current_centr[116, 2] <- current_centr[116, 2] - 500 # Vantaanpuisto
+    current_centr[144, 1] <- current_centr[144, 1] + 2400 # Suvisaaristo
+    current_centr[162, 1] <- current_centr[162, 1] + 1000 # Nupuri-Nuuksio
     
     # Format map labels. Remove [, ], (, and ). Also add list dash
     labels <- gsub("(])|(\\()|(\\[)", "", levels(inputdata[, input$karttacol]))
@@ -910,12 +918,13 @@ server <- function(input, output, session){
     tooltip_content <- paste0(
       "<div>%s, %s<br/>",
       "Answer count: <b>%s</b></div>",
-      "<div style='padding-top: 3px;'>Mean parktime: %s</br>",
-      "Median parktime: %s</div>",
-      "<div style='padding-top: 3px;'>Mean walktime: %s</br>",
-      "Median walktime: %s</div>",
-      "<div style='padding-top: 3px;'>Forest (%%): %s</br>",
-      "Largest YKR (%%): %s</div>")
+      "<hr style='margin-top:2px; margin-bottom:2px;'>",
+      "<div style='padding-top: 3px;'>Parktime, mean: %s</br>",
+      "Parktime, median: %s</div>",
+      "<div style='padding-top: 3px;'>Walktime, mean: %s</br>",
+      "Walktime, median: %s</div>",
+      "<div style='padding-top: 3px;'>Forest (%%): %s</div>",
+      "<div style='padding-top: 3px; line-height: 1.2;'>Largest YKR<br/>zone (%%): %s</div>")
     
     g <- ggplot(inputdata) +
       geom_polygon_interactive(
@@ -1218,6 +1227,7 @@ ui <- shinyUI(fluidPage(
       width = 3
     ),
   
+    
     ### mainPanel layout -------------------------------------------------------
     mainPanel(
       h2("Sampo Vesanen MSc thesis research survey results"),
