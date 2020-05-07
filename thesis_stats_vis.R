@@ -52,6 +52,7 @@ gc()
 #install.packages("classInt")
 #install.packages("rlang")
 #install.packages("shinyWidgets")
+#install.packages("grid")
 
 # Libraries
 library(onewaytests)
@@ -73,6 +74,7 @@ library(ggiraph)
 library(widgetframe)
 library(rgeos)
 library(shinyWidgets)
+library(grid)
 
 
 # Working directory
@@ -570,33 +572,40 @@ server <- function(input, output, session){
     inputdata <- currentdata()
     inputdata <- inputdata[!inputdata[[expl_col]] %in% c(input$checkGroup), ]
     inputdata <- inputdata[!inputdata$subdiv %in% c(input$subdivGroup), ]
+    resp_vect <- inputdata[[resp_col]] # for vertical line labels
     
     p <- ggplot(inputdata, aes(x = !!sym(resp_col))) + 
       geom_histogram(color = "black", fill = "grey", binwidth = binwidth) +
       
       # Vertical lines for mean and median, respectively. Also display exact
-      # values with geom_text().
+      # values with annotate_custom() and textGrobs.
       geom_vline(aes(xintercept = mean(!!sym(resp_col)),
                      color = "mean"),
                  linetype = "longdash", 
                  size = 1) +
-      geom_text(aes(x = mean(!!sym(resp_col)), 
-                    label = round(mean(!!sym(resp_col)), 2), 
-                    y = 0,
-                    hjust = -0.3,
-                    vjust = 1.2), 
-                colour = "red") +
+      annotation_custom(
+        grob = grid::textGrob(label = round(mean(resp_vect), 2), 
+                              hjust = -0.3,
+                              vjust = 1.2, 
+                              gp = grid::gpar(cex = 1, col = "red")),
+        ymin = 0,
+        ymax = 0,
+        xmin = round(mean(resp_vect), 2),
+        xmax = round(mean(resp_vect), 2)) +
       
       geom_vline(aes(xintercept = median(!!sym(resp_col)),
                      color = "median"),
                  linetype = "longdash", 
                  size = 1) +
-      geom_text(aes(x = median(!!sym(resp_col)), 
-                    label = median(!!sym(resp_col)), 
-                    y = 0,
-                    hjust = 2,
-                    vjust = 1.2), 
-                colour = "blue") +
+      annotation_custom(
+        grob = grid::textGrob(label = round(median(resp_vect), 2), 
+                              hjust = 2,
+                              vjust = 1.2, 
+                              gp = grid::gpar(cex = 1, col = "blue")),
+        ymin = 0,
+        ymax = 0,
+        xmin = round(median(resp_vect), 2),
+        xmax = round(median(resp_vect), 2)) +
       
       # This is kernel density estimate, a smoothed version of the histogram.
       # Usually geom_density() sets the scale for y axis, but here we will
@@ -1083,7 +1092,7 @@ ui <- shinyUI(fluidPage(
       .girafe_container_std {
         text-align: left;
       }
-      svg {
+      svg, img {
         border-radius: 4px;
       }
       .checkbox input[type=checkbox]:checked + span{
