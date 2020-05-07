@@ -387,10 +387,10 @@ print("\n", illegal_df[["parktime", "walktime"]])
 # Value "invalid "starts at 6 as at this point I have removed 3 of my own 
 # records and 3 others which were reported to me as false. See above, part 
 # "Process survey data".
-invalid = 6 #+ len(illegal_df)
+invalid = 6 + len(illegal_df)
 
 # Use indices of "illegal_df" to drop rows from "records"
-#records = records.drop(illegal_df.index).reset_index(drop=True)
+records = records.drop(illegal_df.index).reset_index(drop=True)
 
 
 
@@ -549,8 +549,10 @@ for row in postal.itertuples():
 
 ### A) Urban Atlas 2012 Forest
 
-# Merge ua_forest data from "postal"
+# Merge ua_forest data from "postal", then rename to differentiate numerical
+# data "ua_forest_vals" and Jenks classified "ua_forest"
 records = pd.merge(records, postal[["zipcode", "ua_forest"]], on="zipcode")
+records = records.rename(columns={"ua_forest": "ua_forest_vals"})
 
 # Calculate jenks breaks for ua_forest. Use breaks to reclassify values
 # in records. We will use code created by GitHub user Drewda. This is now
@@ -566,15 +568,15 @@ records = pd.merge(records, postal[["zipcode", "ua_forest"]], on="zipcode")
 # Reclassify using this clumsy nested np.where(). Use values calculated in
 # getJenksBreaks()
 records["ua_forest"] = np.where(
-        records.ua_forest < 0.062,
+        records.ua_forest_vals < 0.062,
         "Scarce forest", 
-        (np.where(records.ua_forest < 0.167,
+        (np.where(records.ua_forest_vals < 0.167,
                   "Some forest", 
-                  (np.where(records.ua_forest < 0.288, 
+                  (np.where(records.ua_forest_vals < 0.288, 
                             "Moderate forest", 
-                            (np.where(records.ua_forest < 0.495, 
+                            (np.where(records.ua_forest_vals < 0.495, 
                                       "Mostly forest", 
-                                      (np.where(records.ua_forest < 1, 
+                                      (np.where(records.ua_forest_vals < 1, 
                                                 "Predominantly forest",
                                                 "novalue"))))))))).tolist()
 
@@ -586,13 +588,22 @@ records["ua_forest"] = np.where(
 ykrColumns = ["ykr_alakesk_jalan", "ykr_autovyoh", "ykr_int_joukko", 
         "ykr_joukkoliik", "ykr_kesk_jalan", "ykr_kesk_reuna", "ykr_novalue"]
 
-# Create DataFrame with postal codes and reclassified ykr zones. idxmax will
-# fetch us the names of the columns where largest value of each row resides
+# Create DataFrame with postal codes and the largest value from postal columns
+# stated in "ykrColumns". This value will tell us how much of the postal code
+# area is of the largest YKR zone (zone name in "ykr_zone")
+largestYkrVals = postal[["zipcode"]].join([postal[ykrColumns].max(axis=1)])
+largestYkrVals = largestYkrVals.rename(columns={0: "ykr_zone_vals"})
+
+# Create DataFrame with postal codes and reclassified ykr zones. idxmax() will
+# fetch us the names of the columns where largest value of each row resides.
+# Column "ykr_zone" tells us in percentage how much a postal code area is
+# of the YKR zone
 largestYkr = postal[["zipcode"]].join([postal[ykrColumns].idxmax(axis=1)])
 largestYkr = largestYkr.rename(columns={0: "ykr_zone"})
-    
-# Merge will spread values of column "ykr_zone" over all occurrences of 
-# specific zipcodes
+
+# Merge will spread values of column "ykr_zone_vals" and "ykr_zone" over all 
+# occurrences of the specific zipcodes
+records = pd.merge(records, largestYkrVals, on="zipcode")
 records = pd.merge(records, largestYkr, on="zipcode")
 
 # Reverse dictKey, add entry for "ykr_novalue". Then rename ykr zone records 
@@ -657,7 +668,7 @@ l = []
 i = 0
 
 # Generate tuples of origin and destination points
-while i < 1000:
+while i < 100000:
     vals = random.sample(valuerange, 2)
     l.append(tuple(vals))
     i += 1
@@ -686,8 +697,7 @@ print("Percentage of the parking process of the entire travel time, mean, %\n",
 
 ### VISUALISE & DESCRIBE ------------------------------------------------------
 
-# These visualisations are mostly obsolete. Most visual mapping is now done
-# in R.
+# These visualisations are obsolete. Better visual mapping is now done in R.
 
 # PLOT AMOUNT OF RECORDS
 # Plot with layers as function
@@ -705,6 +715,14 @@ descri_postal[postal.kunta == "091"].describe() #hki
 descri_postal[postal.kunta == "092"].describe() #esp
 descri_postal[postal.kunta == "235"].describe() #kau
 descri_postal[postal.kunta == "049"].describe() #van
+
+
+
+### EXPORT TO SHP -------------------------------------------------------------
+
+# Postal data to QGIS for thesis visualisation. Ignore last column, "coords",
+# GeoPandas does not like the tuple format
+#postal.iloc[:, :-1].to_file("postal_for_qgis.shp")
 
 
 
