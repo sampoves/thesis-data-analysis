@@ -4,7 +4,7 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 9.4.2020
+# 8.5.2020
 
 # Initialise
 library(onewaytests)
@@ -48,9 +48,9 @@ GetCentroids <- function(fortified, unique_id, nominator) {
                fortified[, unique_id],
                function(x) {c(sp::Polygon(x[c("long", "lat")])@labpt,
                               x %>% 
-                                group_by(!!rlang::sym(nominator)) %>%
-                                summarise() %>%
-                                pull() %>%
+                                dplyr::group_by(!!rlang::sym(nominator)) %>%
+                                dplyr::summarise() %>%
+                                dplyr::pull() %>%
                                 as.vector())
                })) %>%
     setNames(., c("long", "lat", "label"))
@@ -94,9 +94,9 @@ CreateJenksColumn <- function(fortified, postal, datacol, newcolname, classes_n 
   # classes$brk has to be wrapped with unique(), otherwise we can't get more
   # than six classes for parktime_median or walktime_median
   result <- fortified %>%
-    mutate(!!newcolname := cut(!!rlang::sym(datacol), 
-                               unique(classes$brks), 
-                               include.lowest = T))
+    dplyr::mutate(!!newcolname := cut(!!rlang::sym(datacol), 
+                                      unique(classes$brks), 
+                                      include.lowest = T))
   
   # Reverse column values to enable rising values from bottom to top in ggplot.
   # In ggplot, use scale_fill_brewer(direction = -1) with this operation to flip
