@@ -847,8 +847,8 @@ server <- function(input, output, session){
             legend.position = "bottom")
     
     ggiraph(code = print(g2), 
-            width_svg = 16.5, 
-            height_svg = 14.5, 
+            width_svg = 16.7, 
+            height_svg = 14.7, 
             options = list(opts_sizing(rescale = FALSE)))
   })
   
@@ -987,8 +987,8 @@ server <- function(input, output, session){
     }
     
     ggiraph(code = print(g),
-            width_svg = 16.5,
-            height_svg = 14.5)
+            width_svg = 16.7,
+            height_svg = 14.7)
   })
 }
 
