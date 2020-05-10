@@ -4,7 +4,7 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 9.5.2020
+# 11.5.2020
 #
 # This is an interactive tool for analysing the results of my research survey.
 
@@ -689,38 +689,7 @@ server <- function(input, output, session){
   })
 
   
-  #### 5.4 Boxplot -------------------------------------------------------------
-  output$boxplot <- renderPlot({
-    
-    expl_col <- input$expl
-    resp_col <- input$resp
-    thisFormula <- as.formula(paste(resp_col, '~', expl_col))
-    
-    # Listen to user choices
-    inputdata <- currentdata()
-
-    legendnames <- levels(unique(inputdata[[expl_col]]))
-    
-    # ggplot2 plotting. Rotate labels if enough classes
-    p <- ggplot(inputdata, aes_string(x = expl_col, y = resp_col)) + 
-      geom_boxplot() + 
-      ylab(paste(resp_col, "(min)"))
-    
-    if(length(legendnames) > 5) {
-      p <- p +
-        theme(axis.text.x = element_text(size = 12, angle = 45, hjust = 1),
-              axis.text = element_text(size = 12),
-              axis.title = element_text(size = 14))
-    } else {
-      p <- p +
-        theme(axis.text = element_text(size = 12),
-              axis.title = element_text(size = 14))
-    }
-    p
-  })
-
-  
-  #### 5.5 Barplot -------------------------------------------------------------
+  #### 5.4 Barplot -------------------------------------------------------------
   output$barplot <- renderPlot({
     
     # See distribution of ordinal variables through a grouped bar plot
@@ -740,7 +709,7 @@ server <- function(input, output, session){
       dplyr::top_n(n = 1) %>%
       dplyr::pull(amount) %>%
       max()
-      
+    
     if (maximum <= 200) {
       tick_interval <- 50
     } else {
@@ -756,13 +725,66 @@ server <- function(input, output, session){
                          expand = expansion(mult = c(0, .1))) +
       xlab(expl_col) +
       ylab(yax) +
-      scale_fill_discrete(name = barplotval) +
+      labs(fill = barplotval) +
       theme(legend.position = "bottom",
             legend.title = element_text(size = 15),
             legend.text = element_text(size = 14),
             axis.text = element_text(size = 12),
             axis.title = element_text(size = 14))
+    
+    # Use RColorBrewer color scale. Paired has 12 set colors, interpolate if
+    # there are more values to map than that.
+    legendnames <- length(unique(inputdata[[barplotval]]))
+
+    if (legendnames > 12) {
+      cols <- grDevices::colorRampPalette(RColorBrewer::brewer.pal(12, "Paired"))
+      myPal <- cols(legendnames)
+      plo <- plo + scale_fill_manual(name = barplotval, values = myPal)
+    } else {
+      plo <- plo + scale_fill_brewer(palette = "Paired")
+    }
+    
     plo
+  })
+  
+  
+  #### 5.5 Boxplot -------------------------------------------------------------
+  output$boxplot <- renderPlot({
+    
+    expl_col <- input$expl
+    resp_col <- input$resp
+    thisFormula <- as.formula(paste(resp_col, '~', expl_col))
+    
+    # Listen to user choices
+    inputdata <- currentdata()
+    
+    legendnames <- levels(unique(inputdata[[expl_col]]))
+    
+    # ggplot2 plotting. Rotate labels if enough classes. Use scale_fill_hue()
+    # to distinguish boxplot colors from barplot colors.
+    p <- ggplot(inputdata, aes_string(x = expl_col, y = resp_col, fill = expl_col)) + 
+      geom_boxplot() + 
+      ylab(paste(resp_col, "(min)")) +
+      theme(axis.text = element_text(size = 12),
+            axis.title = element_text(size = 14),
+            legend.position = "none")
+    
+    # Use RColorBrewer color scale. Set3 has 12 set colors, interpolate if
+    # there are more values to map than that.
+    if (length(legendnames > 12)) {
+      cols <- grDevices::colorRampPalette(RColorBrewer::brewer.pal(12, "Set3"))
+      myPal <- cols(length(legendnames))
+      p <- p + scale_fill_manual(values = myPal)
+    } else {
+      p <- p + scale_fill_brewer(palette = "Set3")
+    }
+    
+    # Diagonal labels if more values to map than five
+    if(length(legendnames) > 5) {
+      p <- p + theme(axis.text.x = element_text(size = 12, angle = 45, hjust = 1))
+    }
+    
+    p
   })
   
   
@@ -1164,7 +1186,7 @@ ui <- shinyUI(fluidPage(
       HTML("</div>"),
       
       # Interactive map jenks breaks options
-      HTML("<div id='intmap-settings-link'></p>"),
+      HTML("<div id='intmap-settings-link'>"),
       HTML("<div id='contents'>"),
       checkboxGroupInput(
         "kunta",
@@ -1195,8 +1217,9 @@ ui <- shinyUI(fluidPage(
       
       HTML("</div>"),
       HTML("</div>"),
+      
       HTML("<p style='font-size: 11px; color: grey; margin-top: -10px;'>",
-           "Analysis app version 9.5.2020</p>"),
+           "Analysis app version 11.5.2020</p>"),
       
       width = 3
     ),

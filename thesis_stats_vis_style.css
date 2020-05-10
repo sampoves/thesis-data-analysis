@@ -97,28 +97,28 @@ section, h1, li, img {
 	user-select: none; /* Non-prefixed version, currently supported by Chrome, Opera and Firefox */
 }
 .girafe_container_std {
-	text-align: left;
+	text-align: left; /* align girafe elements to the left */
 }
 svg, img {
 	border-radius: 4px;
 }
 
-/* Anchor link highlighting */
+/* Anchor link highlight animation */
 @keyframes highlight {
 	0% {
 		background: none;
-		max-width: 1200px;
+		max-width: 1250px;
 	}
 	50% {
 		background: #67727f;
-		max-width: 1200px;
+		max-width: 1250px;
 		-moz-box-shadow: 0px 0px 15px rgba(140, 150, 162, 1);
 		-webkit-box-shadow: 0px 0px 15px rgba(140, 150, 162, 1);
 		box-shadow: 0px 0px 15px rgba(140, 150, 162, 1);
 	}
 	100% {
 		background: none;
-		max-width: 1200px;
+		max-width: 1250px;
 	}
 }
 #descrilink, #histlink, #barplotlink, #boxplotlink, #levenelink, 
@@ -129,6 +129,6 @@ svg, img {
 #descrilink:target, #histlink:target, #barplotlink:target,
 #boxplotlink:target, #levenelink:target, #anovalink:target,
 #brownlink:target, #maplink:target, #intmaplink:target, #intmap-settings-link:target {
-	animation: highlight 0.75s;
+	animation: highlight 0.75s ease-in-out;
 	animation-delay: 1s;
 }
