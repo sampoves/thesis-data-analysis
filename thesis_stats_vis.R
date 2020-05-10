@@ -78,8 +78,6 @@ library(rgeos)
 library(shinyWidgets)
 library(grid)
 
-
-
 # Working directory
 wd <- "C:/Sampon/Maantiede/Master of the Universe"
 
@@ -92,6 +90,9 @@ postal_path <- file.path(wd, "postal_for_r.csv")
 suuraluepath <- file.path(wd, "python/suuralueet/PKS_suuralue.kml")
 munsclippedpath <- file.path(wd, "python/paavo/hcr_muns_clipped.shp")
 munspath <- file.path(wd, "python/paavo/hcr_muns.shp")
+
+# CSS data
+csspath <- file.path(wd, "python/thesis_stats_vis_style.css")
 
 # Source functions and postal code variables
 source(file.path(wd, "python/thesis_stats_vis_funcs.R"))
@@ -321,9 +322,6 @@ data_f <- sp::SpatialPolygonsDataFrame(
                       dplyr::mutate(id = as.character(zipcode)),
                     by = "id")}
 
-
-
-
 # Get municipality borders from shapefile. Remove unnecessary columns to save 
 # memory
 muns_f <- 
@@ -333,19 +331,6 @@ muns_f <-
                     as.data.frame(.) %>%
                       dplyr::mutate(id = as.character(dplyr::row_number() - 1)))} %>%
   dplyr::select(-c(namn, vaestontih, km2, vakiluku))
-
-
-
-
-# kaka <- thesisdata[!thesisdata[["likert"]] %in% c("Extremely familiar", "Moderately familiar"), ]
-# kaka <- kaka[!kaka$subdiv %in% c("Espoo Suur-Tapiola", "Helsinki Southern"), ]
-# nrow(kaka)
-# 
-# kaka2 <- dplyr::filter(thesisdata, 
-#                        !likert %in% c("Extremely familiar", "Moderately familiar"),
-#                        !subdiv %in% c("Espoo Suur-Tapiola", "Helsinki Southern"))
-# nrow(kaka2)
-
 
 
 
@@ -1055,8 +1040,7 @@ ui <- shinyUI(fluidPage(
   
   ### 6.1 ShinyApp UI CSS ------------------------------------------------------ 
   
-  # Edit various CSS features of the ShinyApp: 
-  # - the Brown-Forsythe test box 
+  # Edit various features of the ShinyApp: 
   # - sidebarPanel (form.well) width. sidebarPanel width setting is important 
   #   because the long explanations would break it otherwise. 
   # - manually set sidebarPanel z-index to make the element always appear on top
@@ -1064,103 +1048,13 @@ ui <- shinyUI(fluidPage(
   # - pointer-events: none; makes zipcode labels invisible to the cursor
   # - noselect makes selecting ggiraph elements not possible
   # - :last-child pseudo-selector makes last row of descriptive statistics bold
-  tags$head(
-    tags$style(HTML("
-      html, body {
-        height: 100%;
-        scroll-behavior: smooth;
-      }
-      hr {
-        max-width: 1200px;
-        margin-left: 0px;
-      }
-      #brownf {
-        color: #c8c8c8;
-        background: #2e3338;
-        border: 1px solid #1c1e22;
-        font-size: 14px;
-        max-width: 1200px;
-      }
-      #descri {
-        overflow-x: auto;
-        max-height: 80vh;
-        max-width: 1200px;
-      }
-      #descri tr:last-child { 
-        font-weight: bold;
-      }
-      #boxplot, #barplot, #hist {
-        max-width: 1200px;
-      }
-      #resetSubdivs, #resetParkWalk {
-        width: 100%;
-        padding: 6px 0px 8px 0px;
-        white-space: normal;
-      }
-      #contents {
-        border: 5px solid #2e3338;
-        border-radius: 5px;
-        padding: 4px;
-        margin-bottom: 15px;
-      }
-      #linkheading_b {
-        margin-bottom: -2px;
-        margin-top: 6px;
-        font-weight: bold;
-      }
-      #linkheading_t {
-        margin-bottom: -2px;
-        font-weight: bold;
-      }
-      form.well {
-        display: 100%;
-        position: fixed;
-        overflow: auto;
-        overflow-y: auto;
-        max-height: 95vh;
-        resize: horizontal;
-        min-width: 250px;
-        max-width: 400px;
-        width: 250px;
-        z-index: 50;
-        scroll-behavior: smooth;
-      }
-      text {
-        pointer-events: none;
-      }
-      section, h1, li, img {
-        -moz-transition: width 1s ease-in-out, left 1.5s ease-in-out;
-        -webkit-transition: width 1s ease-in-out, left 1.5s ease-in-out;
-        -moz-transition: width 1s ease-in-out, left 1.5s ease-in-out;
-        -o-transition: width 1s ease-in-out, left 1.5s ease-in-out;
-        transition: width 1s ease-in-out, left 1.5s ease-in-out;
-      }
-      .noselect {
-        -webkit-touch-callout: none; /* iOS Safari */
-        -webkit-user-select: none; /* Safari */
-        -khtml-user-select: none; /* Konqueror HTML */
-        -moz-user-select: none; /* Old versions of Firefox */
-        -ms-user-select: none; /* Internet Explorer/Edge */
-        user-select: none; /* Non-prefixed version, currently supported by Chrome, Opera and Firefox */
-      }
-      .girafe_container_std {
-        text-align: left;
-      }
-      svg, img {
-        border-radius: 4px;
-      }
-      .checkbox input[type=checkbox]:checked + span{
-        text-decoration: line-through;
-        color: dimgray;
-      }"
-    ))
-  ),
+  tags$head(htmltools::includeCSS(csspath)),
   
   
   ### 6.2 Sidebar layout -------------------------------------------------------
   titlePanel(NULL, windowTitle = "Sampo Vesanen MSc thesis research survey results"),
   sidebarLayout(
-    sidebarPanel(
+  sidebarPanel(
       # &nbsp; is a non-breaking space. Will not be cut off at any situation
       HTML("<div id='contents'>"),
       HTML("<p id='linkheading_t'>Analysis</p>"),
@@ -1270,7 +1164,7 @@ ui <- shinyUI(fluidPage(
       HTML("</div>"),
       
       # Interactive map jenks breaks options
-      HTML("<p style='visibility: hidden' id='intmap-settings-link'></p>"),
+      HTML("<div id='intmap-settings-link'></p>"),
       HTML("<div id='contents'>"),
       checkboxGroupInput(
         "kunta",
@@ -1300,8 +1194,9 @@ ui <- shinyUI(fluidPage(
         value = 5),
       
       HTML("</div>"),
+      HTML("</div>"),
       HTML("<p style='font-size: 11px; color: grey; margin-top: -10px;'>",
-           "Analysis app version 8.5.2020</p>"),
+           "Analysis app version 9.5.2020</p>"),
       
       width = 3
     ),
@@ -1317,18 +1212,20 @@ ui <- shinyUI(fluidPage(
            "instructions how to use this application.</p>"),
       hr(),
       
-      HTML("<div id='descrilink'</div>"),
+      HTML("<div id='descrilink'>"),
       h3("1 Descriptive statistics"),
       tableOutput("descri"),
+      HTML("</div>"),
       hr(),
       
-      HTML("<div id='histlink'</div>"),
+      HTML("<div id='histlink'>"),
       h3("2 Histogram"),
       p("For the response (continuous) variables"),
       plotOutput("hist"),
+      HTML("</div>"),
       hr(),
       
-      HTML("<div id='barplotlink'</div>"),
+      HTML("<div id='barplotlink'>"),
       conditionalPanel(
         condition = 
           "input.expl == 'likert' || input.expl == 'parkspot' || input.expl == 'timeofday'",
@@ -1337,46 +1234,53 @@ ui <- shinyUI(fluidPage(
         plotOutput("barplot"),
         hr()
       ),
+      HTML("</div>"),
       
-      HTML("<div id='boxplotlink'</div>"),
+      HTML("<div id='boxplotlink'>"),
       h3("4 Boxplot"),
       plotOutput("boxplot", height = "500px"),
+      HTML("</div>"),
       hr(),
       
-      HTML("<div id='levenelink'</div>"),
+      HTML("<div id='levenelink'>"),
       h3("5 Test of Homogeneity of Variances (Levene's test)"),
       p("Levene value needs to be at least 0.05 for ANOVA test to be meaningful. If under 0.05, employ Brown-Forsythe test."),
       tableOutput("levene"),
       p("Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1", 
         style = "font-size:12px;margin-top:-12px"),
+      HTML("</div>"),
       hr(),
       
-      HTML("<div id='anovalink'</div>"),
+      HTML("<div id='anovalink'>"),
       h3("6 Analysis of variance (ANOVA)"),
       tableOutput("anova"),
       p("Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1", 
         style = "font-size:12px;margin-top:-12px"),
+      HTML("</div>"),
       hr(),
       
-      HTML("<div id='brownlink'</div>"),
+      HTML("<div id='brownlink'>"),
       h3("7 Brown-Forsythe test"),
       p("Please note that Brown-Forsythe test fails when selected response", 
         "variable maximum value is set to 0. The test requires a p.value that's", 
         "not NaN."),
       verbatimTextOutput("brownf"),
+      HTML("</div>"),
       hr(),
       
-      HTML("<div id='maplink'</div>"),
+      HTML("<div id='maplink'>"),
       h3("8 Active subdivisions"),
       ggiraphOutput("map"),
+      HTML("</div>"),
       hr(),
   
-      HTML("<div id='intmaplink'</div>"),
+      HTML("<div id='intmaplink'>"),
       h3("9 Survey results on research area map"),
       HTML("<a style='font-size: 12px' href='#intmap-settings-link'>",
            "View the settings for this map</a>"),
       HTML("<div class='noselect'>"),
       ggiraphOutput("interactive"),
+      HTML("</div>"),
       HTML("</div>"),
       hr(),
       
