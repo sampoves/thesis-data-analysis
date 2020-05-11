@@ -113,12 +113,19 @@ render reliably */
     font-variant: normal;
     text-rendering: auto;
     -webkit-font-smoothing: antialiased;
+	font-weight: 900;
 }
 .wrench::before {
-    font-weight: 900;
     content: "\f0ad";
     font-size: 1.0em;
-	margin-left: 5px;
+}
+.chart::before {
+	content: "\f080";
+	font-size: 1.0em;
+}
+.mapmark::before {
+	content: "\f59f";
+	font-size: 1.0em;
 }
 
 /* Anchor link highlight animation */
@@ -140,15 +147,16 @@ render reliably */
 	}
 }
 #descrilink, #histlink, #barplotlink, #boxplotlink, #levenelink, 
-#anovalink, #brownlink, #maplink, #intmaplink, #hist-settings-link, #barplot-settings-link, 
-#subdiv-settings-link, #intmap-settings-link {
+#anovalink, #brownlink, #maplink, #intmaplink, #stats-settings-link, #hist-settings-link, 
+#barplot-settings-link, #subdiv-settings-link, #intmap-settings-link {
 	scroll-margin-top: 40px; /* Arrive 40px above the anchor position */
 	border-radius: 5px;
 }
 #descrilink:target, #histlink:target, #barplotlink:target, #boxplotlink:target, 
 #levenelink:target, #anovalink:target, #brownlink:target, #maplink:target, 
-#intmaplink:target, #hist-settings-link:target, #barplot-settings-link:target, 
-#subdiv-settings-link:target, #intmap-settings-link:target {
+#intmaplink:target, #stats-settings-link:target, #hist-settings-link:target, 
+#barplot-settings-link:target, #subdiv-settings-link:target, 
+#intmap-settings-link:target {
 	animation: highlight 0.75s ease-in-out;
 	animation-delay: 1s;
 }

@@ -1051,7 +1051,7 @@ ui <- shinyUI(fluidPage(
   theme = shinytheme("slate"),
   
   
-  ### 6.1 ShinyApp UI CSS ------------------------------------------------------ 
+  ### 6.1 ShinyApp header ------------------------------------------------------ 
   
   # Edit various features of the ShinyApp: 
   # - sidebarPanel (form.well) width. sidebarPanel width setting is important 
@@ -1087,7 +1087,7 @@ ui <- shinyUI(fluidPage(
       HTML("</div>"),
       
       # Set allowed maximum for parktime and walktime. Default is 60 for both.
-      HTML("<div id='contents'>"),
+      HTML("<div id='stats-settings-link'><div id='contents'>"),
       sliderInput(
         "parktime_max",
         HTML("<p style='font-size: 9px'>(These selections affect sections", 
@@ -1131,7 +1131,7 @@ ui <- shinyUI(fluidPage(
         "Select inactive groups in current explanatory variable",
         choiceNames = c("Item A", "Item B", "Item C"),
         choiceValues = c("a", "b", "c")),
-      HTML("</div>"),
+      HTML("</div></div>"),
       
       # Allow user to access histogram binwidth
       HTML("<div id='hist-settings-link'><div id='contents'>"),
@@ -1229,14 +1229,18 @@ ui <- shinyUI(fluidPage(
       hr(),
       
       HTML("<div id='descrilink'>"),
-      h3("1 Descriptive statistics"),
+      HTML("<h3>1 Descriptive statistics&ensp;",
+           "<a href='#stats-settings-link'><i class='icon chart' title='Go to active variables'></i></a>",
+           "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a></h3>"),
       tableOutput("descri"),
       HTML("</div>"),
       hr(),
       
       HTML("<div id='histlink'>"),
-      HTML("<h3>2 Histogram",
-           "<a href='#hist-settings-link'><i class='icon wrench' title='Go to histogram settings'></i></a></h3>"),
+      HTML("<h3>2 Histogram&ensp;",
+           "<a href='#hist-settings-link'><i class='icon wrench' title='Go to histogram settings'></i></a>",           
+           "<a href='#stats-settings-link'><i class='icon chart' title='Go to active variables'></i></a>",
+           "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a></h3>"),
       p("For the response (continuous) variables"),
       plotOutput("hist"),
       HTML("</div>"),
@@ -1246,8 +1250,10 @@ ui <- shinyUI(fluidPage(
       conditionalPanel(
         condition = 
           "input.expl == 'likert' || input.expl == 'parkspot' || input.expl == 'timeofday'",
-        HTML("<h3>3 Distribution of ordinal variables",
-             "<a href='#barplot-settings-link'><i class='icon wrench' title='Go to barplot settings'></i></a></h3>"),
+        HTML("<h3>3 Distribution of ordinal variables&ensp;",
+             "<a href='#barplot-settings-link'><i class='icon wrench' title='Go to barplot settings'></i></a>",           
+             "<a href='#stats-settings-link'><i class='icon chart' title='Go to active variables'></i></a>",
+             "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a></h3>"),
         p("This plot appears when likert, parkspot or timeofday is selected as explanatory (ordinal) variable"),
         plotOutput("barplot"),
         hr()
@@ -1255,13 +1261,17 @@ ui <- shinyUI(fluidPage(
       HTML("</div>"),
       
       HTML("<div id='boxplotlink'>"),
-      h3("4 Boxplot"),
+      HTML("<h3>4 Boxplot&ensp;",
+           "<a href='#stats-settings-link'><i class='icon chart' title='Go to active variables'></i></a>",
+           "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a></h3>"),
       plotOutput("boxplot", height = "500px"),
       HTML("</div>"),
       hr(),
       
       HTML("<div id='levenelink'>"),
-      h3("5 Test of Homogeneity of Variances (Levene's test)"),
+      HTML("<h3>5 Test of Homogeneity of Variances (Levene's test)&ensp;",
+           "<a href='#stats-settings-link'><i class='icon chart' title='Go to active variables'></i></a>",
+           "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a></h3>"),
       p("Levene value needs to be at least 0.05 for ANOVA test to be meaningful. If under 0.05, employ Brown-Forsythe test."),
       tableOutput("levene"),
       p("Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1", 
@@ -1270,7 +1280,9 @@ ui <- shinyUI(fluidPage(
       hr(),
       
       HTML("<div id='anovalink'>"),
-      h3("6 Analysis of variance (ANOVA)"),
+      HTML("<h3>6 Analysis of variance (ANOVA)&ensp;",
+           "<a href='#stats-settings-link'><i class='icon chart' title='Go to active variables'></i></a>",
+           "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a></h3>"),
       tableOutput("anova"),
       p("Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1", 
         style = "font-size:12px;margin-top:-12px"),
@@ -1278,7 +1290,9 @@ ui <- shinyUI(fluidPage(
       hr(),
       
       HTML("<div id='brownlink'>"),
-      h3("7 Brown-Forsythe test"),
+      HTML("<h3>7 Brown-Forsythe test&ensp;",
+           "<a href='#stats-settings-link'><i class='icon chart' title='Go to active variables'></i></a>",
+           "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a></h3>"),
       p("Please note that Brown-Forsythe test fails when selected response", 
         "variable maximum value is set to 0. The test requires a p.value that's", 
         "not NaN."),
@@ -1287,15 +1301,17 @@ ui <- shinyUI(fluidPage(
       hr(),
       
       HTML("<div id='maplink'>"),
-      HTML("<h3>8 Active subdivisions",
-           "<a href='#subdiv-settings-link'><i class='icon wrench' title='Go to inactive subdivisions'></i></a></h3>"),
+      HTML("<h3>8 Active subdivisions&ensp;",
+           "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a></h3>"),
       ggiraphOutput("map"),
       HTML("</div>"),
       hr(),
   
       HTML("<div id='intmaplink'>"),
-      HTML("<h3>9 Survey results on research area map",
-           "<a href='#intmap-settings-link'><i class='icon wrench' title='Go to interactive map settings'></i></a></h3>"),
+      HTML("<h3>9 Survey results on research area map&ensp;",
+           "<a href='#intmap-settings-link'><i class='icon wrench' title='Go to interactive map settings'></i></a>",
+           "<a href='#stats-settings-link'><i class='icon chart' title='Go to active variables'></i></a>",
+           "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a></h3>"),
       HTML("<div class='noselect'>"),
       ggiraphOutput("interactive"),
       HTML("</div></div>"),
