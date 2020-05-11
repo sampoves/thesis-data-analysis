@@ -4,7 +4,7 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 11.5.2020
+# 12.5.2020
 #
 # This is an interactive tool for analysing the results of my research survey.
 
@@ -25,6 +25,11 @@
 #https://www.statisticshowto.datasciencecentral.com/brown-forsythe-test/
 #https://www.statisticshowto.datasciencecentral.com/levene-test/
 #https://www.statisticshowto.datasciencecentral.com/homoscedasticity/
+#https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5965542/ #levene+bf
+#https://statistics.laerd.com/spss-tutorials/one-way-anova-using-spss-statistics-2.php
+# LINKISTÄ: therefore, there is a statistically significant difference in the
+#mean length of time to complete the spreadsheet problem between the different 
+#courses taken.
 
 
 
@@ -1217,7 +1222,7 @@ ui <- shinyUI(fluidPage(
       HTML("</div></div>"),
       
       HTML("<p style='font-size: 11px; color: grey; margin-top: -10px;'>",
-           "Analysis app version 11.5.2020</p>"),
+           "Analysis app version 12.5.2020</p>"),
       
       width = 3
     ),
@@ -1226,13 +1231,13 @@ ui <- shinyUI(fluidPage(
     ### 6.3 mainPanel layout ---------------------------------------------------
     mainPanel(
       h2("Sampo Vesanen MSc thesis research survey results"),
-      HTML("<p style='max-width: 1200px;'>Welcome to the analysis application",
-           "for the survey results for the thesis 'Parking of private cars and",
-           "spatial accessibility in Helsinki Capital Region'. Please see the",
-           "thesis and GitHub repository for additional information and",
-           "instructions how to use this application.</p>"),
+      p("Welcome to the analysis application for the survey results for the",
+        "thesis 'Parking of private cars and spatial accessibility in Helsinki",
+        "Capital Region'. Please see the thesis and GitHub repository for",
+        "additional information and instructions how to use this application."),
       hr(),
       
+      # Descriptive statistics
       HTML("<div id='descrilink'>"),
       HTML("<h3>1 Descriptive statistics&ensp;",
            "<a href='#stats-settings-link'><i class='icon chart' title='Go to active variables'></i></a>",
@@ -1241,6 +1246,7 @@ ui <- shinyUI(fluidPage(
       HTML("</div>"),
       hr(),
       
+      # Histogram
       HTML("<div id='histlink'>"),
       HTML("<h3>2 Histogram&ensp;",
            "<a href='#hist-settings-link'><i class='icon wrench' title='Go to histogram settings'></i></a>",           
@@ -1251,6 +1257,7 @@ ui <- shinyUI(fluidPage(
       HTML("</div>"),
       hr(),
       
+      # Barplot
       HTML("<div id='barplotlink'>"),
       conditionalPanel(
         condition = 
@@ -1265,6 +1272,7 @@ ui <- shinyUI(fluidPage(
       ),
       HTML("</div>"),
       
+      # Boxplot
       HTML("<div id='boxplotlink'>"),
       HTML("<h3>4 Boxplot&ensp;",
            "<a href='#stats-settings-link'><i class='icon chart' title='Go to active variables'></i></a>",
@@ -1273,17 +1281,23 @@ ui <- shinyUI(fluidPage(
       HTML("</div>"),
       hr(),
       
+      # Levene's test
       HTML("<div id='levenelink'>"),
-      HTML("<h3>5 Test of homogeneity of variances (Levene's test)&ensp;",
+      HTML("<h3>5 Test for homogeneity of variances (Levene's test)&ensp;",
            "<a href='#stats-settings-link'><i class='icon chart' title='Go to active variables'></i></a>",
            "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a></h3>"),
-      p("Levene value needs to be at least 0.05 for ANOVA test to be meaningful. If under 0.05, employ Brown-Forsythe test."),
+      p("Look for p-value > 0.05 (0.05 '.' 0.1 ' ' 1) (variance across groups",
+        "is not statistically significant) for ANOVA test to be meaningful. If",
+        "p < 0.05, null hypothesis is rejected and it can be concluded that there",
+        "is a difference between the variances in the population. If p < 0.05,",
+        "employ Brown-Forsythe test."),
       tableOutput("levene"),
       p("Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1", 
         style = "font-size:12px;margin-top:-12px"),
       HTML("</div>"),
       hr(),
       
+      # ANOVA
       HTML("<div id='anovalink'>"),
       HTML("<h3>6 Analysis of variance (ANOVA)&ensp;",
            "<a href='#stats-settings-link'><i class='icon chart' title='Go to active variables'></i></a>",
@@ -1294,17 +1308,22 @@ ui <- shinyUI(fluidPage(
       HTML("</div>"),
       hr(),
       
+      # Brown & Forsythe
       HTML("<div id='brownlink'>"),
       HTML("<h3>7 Brown-Forsythe test&ensp;",
            "<a href='#stats-settings-link'><i class='icon chart' title='Go to active variables'></i></a>",
            "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a></h3>"),
-      p("Please note that Brown-Forsythe test fails when selected response", 
-        "variable maximum value is set to 0. The test requires a p.value that's", 
-        "not NaN."),
+      p("Look for a statistically significant difference between the selected", 
+        "explanatory variable. Brown-Forsythe test is less likely than the",
+        "Levene test to incorrectly declare that the assumption of equal", 
+        "variances has been violated.<br>Please note that Brown-Forsythe test",
+        "fails when selected response variable maximum value is set to 0. The",
+        "test requires a p.value that's not NaN."),
       verbatimTextOutput("brownf"),
       HTML("</div>"),
       hr(),
       
+      # Context map
       HTML("<div id='maplink'>"),
       HTML("<h3>8 Active subdivisions&ensp;",
            "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a></h3>"),
@@ -1312,6 +1331,7 @@ ui <- shinyUI(fluidPage(
       HTML("</div>"),
       hr(),
   
+      # Interactive map
       HTML("<div id='intmaplink'>"),
       HTML("<h3>9 Survey results on research area map&ensp;",
            "<a href='#intmap-settings-link'><i class='icon wrench' title='Go to interactive map settings'></i></a>",
@@ -1322,6 +1342,7 @@ ui <- shinyUI(fluidPage(
       HTML("</div></div>"),
       hr(),
       
+      # Data providers
       h3("Data providers"),
       HTML("<a href='https://hri.fi/data/dataset/paakaupunkiseudun-aluejakokartat'>",
            "Municipality subdivisions</a>",

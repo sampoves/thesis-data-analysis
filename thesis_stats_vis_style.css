@@ -9,6 +9,9 @@ html, body {
 	scroll-behavior: smooth;
 	position: relative;
 }
+p {
+	max-width: 1200px;
+}
 hr {
 	max-width: 1200px;
 	margin-left: 0px;
