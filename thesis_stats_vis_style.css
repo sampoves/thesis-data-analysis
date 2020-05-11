@@ -103,32 +103,52 @@ svg, img {
 	border-radius: 4px;
 }
 
+/* Font Awesome utilisation.
+Common properties for Font Awesome: All of these settings are required to make icons 
+render reliably */
+.icon::before {
+    font-family: "Font Awesome 5 Free";
+    display: inline-block;
+    font-style: normal;
+    font-variant: normal;
+    text-rendering: auto;
+    -webkit-font-smoothing: antialiased;
+}
+.wrench::before {
+    font-weight: 900;
+    content: "\f0ad";
+    font-size: 1.0em;
+	margin-left: 5px;
+}
+
 /* Anchor link highlight animation */
 @keyframes highlight {
 	0% {
 		background: none;
-		max-width: 1250px;
+		max-width: 1200px;
 	}
 	50% {
 		background: #67727f;
-		max-width: 1250px;
+		max-width: 1200px;
 		-moz-box-shadow: 0px 0px 15px rgba(140, 150, 162, 1);
 		-webkit-box-shadow: 0px 0px 15px rgba(140, 150, 162, 1);
 		box-shadow: 0px 0px 15px rgba(140, 150, 162, 1);
 	}
 	100% {
 		background: none;
-		max-width: 1250px;
+		max-width: 1200px;
 	}
 }
 #descrilink, #histlink, #barplotlink, #boxplotlink, #levenelink, 
-#anovalink, #brownlink, #maplink, #intmaplink, #intmap-settings-link {
+#anovalink, #brownlink, #maplink, #intmaplink, #hist-settings-link, #barplot-settings-link, 
+#subdiv-settings-link, #intmap-settings-link {
 	scroll-margin-top: 40px; /* Arrive 40px above the anchor position */
 	border-radius: 5px;
 }
-#descrilink:target, #histlink:target, #barplotlink:target,
-#boxplotlink:target, #levenelink:target, #anovalink:target,
-#brownlink:target, #maplink:target, #intmaplink:target, #intmap-settings-link:target {
+#descrilink:target, #histlink:target, #barplotlink:target, #boxplotlink:target, 
+#levenelink:target, #anovalink:target, #brownlink:target, #maplink:target, 
+#intmaplink:target, #hist-settings-link:target, #barplot-settings-link:target, 
+#subdiv-settings-link:target, #intmap-settings-link:target {
 	animation: highlight 0.75s ease-in-out;
 	animation-delay: 1s;
 }

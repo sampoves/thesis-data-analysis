@@ -4,7 +4,7 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 8.5.2020
+# 11.5.2020
 
 # Initialise
 library(onewaytests)
@@ -13,6 +13,8 @@ library(plotrix)
 library(moments)
 library(rlang)
 library(classInt)
+library(ggplot2)
+library(RColorBrewer)
 
 
 
@@ -68,6 +70,25 @@ GetCentroids <- function(fortified, unique_id, nominator) {
 }
 
 
+
+InterpolateGgplotColors <- function(plot_obj, active_items, palette_max_cols, 
+                                    palettename) {
+  
+  # Use RColorBrewer for the color scale in ggplot. If there are more active 
+  # items to be mapped than the maximum color amount in selected RColorBrewer 
+  # palette, interpolate the extra colors.
+  if (length(active_items) > palette_max_cols) {
+    cols <- grDevices::colorRampPalette(RColorBrewer::brewer.pal(palette_max_cols, palettename))
+    myPal <- cols(length(active_items))
+    result <- plot_obj + scale_fill_manual(values = myPal)
+  
+  # Selected RColorBrewer palette works without any tricks
+  } else {
+    result <- plot_obj + scale_fill_brewer(palette = palettename)
+  }
+  
+  return(result)
+}
 
 
 
