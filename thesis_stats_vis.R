@@ -1071,10 +1071,27 @@ ui <- shinyUI(fluidPage(
   # - pointer-events: none; makes zipcode labels invisible to the cursor
   # - noselect makes selecting ggiraph elements not possible
   # - :last-child pseudo-selector makes last row of descriptive statistics bold
+  # - add script which detects the the display css property of given div. Use
+  #   this to hide or display elements in the app and change icon accordingly
   tags$head(tags$link(rel = "stylesheet", 
                       type = "text/css", 
                       href = "https://use.fontawesome.com/releases/v5.8.1/css/all.css"),
-            htmltools::includeCSS(csspath)),
+            htmltools::includeCSS(csspath),
+            tags$script(HTML("function show_hide(divname, shrink_div) {
+                              var this_elem = document.getElementById(divname);
+                              var shrink_name = '#' + shrink_div;
+                              
+                            	if(this_elem.style.display === 'none') {
+                                this_elem.style.display = 'block';
+                                $(shrink_name).find('i.icon.eye').toggleClass('eye eyeslash');
+                                $(shrink_name).find('i.icon.eyeslash')[0].setAttribute('title', 'Hide element');
+                            	} else {
+                            		this_elem.style.display = 'none';
+                            		$(shrink_name).find('i.icon.eyeslash').toggleClass('eyeslash eye');
+                                $(shrink_name).find('i.icon.eye')[0].setAttribute('title', 'Show element');
+                            	}
+                            }"))),
+
   
   
   ### 6.2 Sidebar layout -------------------------------------------------------
@@ -1222,7 +1239,7 @@ ui <- shinyUI(fluidPage(
       HTML("</div></div>"),
       
       HTML("<p style='font-size: 11px; color: grey; margin-top: -10px;'>",
-           "Analysis app version 12.5.2020</p>"),
+           "Analysis app version 13.5.2020</p>"),
       
       width = 3
     ),
@@ -1241,7 +1258,8 @@ ui <- shinyUI(fluidPage(
       HTML("<div id='descrilink'>"),
       HTML("<h3>1 Descriptive statistics&ensp;",
            "<a href='#stats-settings-link'><i class='icon chart' title='Go to active variables'></i></a>",
-           "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a></h3>"),
+           "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a>",
+           "<button id='showhidebutton' onclick=\"show_hide('descri','descrilink')\"><i class='icon eyeslash' title='Hide element'></i></button></h3>"),
       tableOutput("descri"),
       HTML("</div>"),
       hr(),
@@ -1251,32 +1269,38 @@ ui <- shinyUI(fluidPage(
       HTML("<h3>2 Histogram&ensp;",
            "<a href='#hist-settings-link'><i class='icon wrench' title='Go to histogram settings'></i></a>",           
            "<a href='#stats-settings-link'><i class='icon chart' title='Go to active variables'></i></a>",
-           "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a></h3>"),
-      p("For the response (continuous) variables"),
+           "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a>",
+           "<button id='showhidebutton' onclick=\"show_hide('hist', 'histlink')\"><i class='icon eyeslash' title='Hide element'></i></button></h3>"),
       plotOutput("hist"),
       HTML("</div>"),
       hr(),
       
       # Barplot
       HTML("<div id='barplotlink'>"),
+      HTML("<h3>3 Distribution of ordinal variables&ensp;",
+           "<a href='#barplot-settings-link'><i class='icon wrench' title='Go to barplot settings'></i></a>",           
+           "<a href='#stats-settings-link'><i class='icon chart' title='Go to active variables'></i></a>",
+           "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a>",
+           "<button id='showhidebutton' onclick=\"show_hide('barplot_wrap', 'barplotlink')\"><i class='icon eyeslash' title='Hide element'></i></button></h3>"),
+      HTML("<div id='barplot_wrap'>"),
+      HTML("<p>This plot is active when <tt>likert</tt>, <tt>parkspot</tt>, or", 
+           "<tt>timeofday</tt> is selected as the explanatory (ordinal)",
+           "variable.</p>"),
       conditionalPanel(
         condition = 
           "input.expl == 'likert' || input.expl == 'parkspot' || input.expl == 'timeofday'",
-        HTML("<h3>3 Distribution of ordinal variables&ensp;",
-             "<a href='#barplot-settings-link'><i class='icon wrench' title='Go to barplot settings'></i></a>",           
-             "<a href='#stats-settings-link'><i class='icon chart' title='Go to active variables'></i></a>",
-             "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a></h3>"),
-        p("This plot appears when likert, parkspot or timeofday is selected as explanatory (ordinal) variable"),
         plotOutput("barplot"),
-        hr()
       ),
+      HTML("</div>"),
+      hr(),
       HTML("</div>"),
       
       # Boxplot
       HTML("<div id='boxplotlink'>"),
       HTML("<h3>4 Boxplot&ensp;",
            "<a href='#stats-settings-link'><i class='icon chart' title='Go to active variables'></i></a>",
-           "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a></h3>"),
+           "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a>",
+           "<button id='showhidebutton' onclick=\"show_hide('boxplot', 'boxplotlink')\"><i class='icon eyeslash' title='Hide element'></i></button></h3>"),
       plotOutput("boxplot", height = "500px"),
       HTML("</div>"),
       hr(),
@@ -1285,7 +1309,9 @@ ui <- shinyUI(fluidPage(
       HTML("<div id='levenelink'>"),
       HTML("<h3>5 Test for homogeneity of variances (Levene's test)&ensp;",
            "<a href='#stats-settings-link'><i class='icon chart' title='Go to active variables'></i></a>",
-           "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a></h3>"),
+           "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a>",
+           "<button id='showhidebutton' onclick=\"show_hide('levene_wrap', 'levenelink')\"><i class='icon eyeslash' title='Hide element'></i></button></h3>"),
+      HTML("<div id='levene_wrap'>"),
       p("Look for p-value > 0.05 (0.05 '.' 0.1 ' ' 1) (variance across groups",
         "is not statistically significant) for ANOVA test to be meaningful. If",
         "p < 0.05, null hypothesis is rejected and it can be concluded that there",
@@ -1294,39 +1320,44 @@ ui <- shinyUI(fluidPage(
       tableOutput("levene"),
       p("Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1", 
         style = "font-size:12px;margin-top:-12px"),
-      HTML("</div>"),
+      HTML("</div></div>"),
       hr(),
       
       # ANOVA
       HTML("<div id='anovalink'>"),
       HTML("<h3>6 Analysis of variance (ANOVA)&ensp;",
            "<a href='#stats-settings-link'><i class='icon chart' title='Go to active variables'></i></a>",
-           "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a></h3>"),
+           "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a>",
+           "<button id='showhidebutton' onclick=\"show_hide('anova_wrap', 'anovalink')\"><i class='icon eyeslash' title='Hide element'></i></button></h3>"),
+      HTML("<div id='anova_wrap'>"),
       tableOutput("anova"),
       p("Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1", 
         style = "font-size:12px;margin-top:-12px"),
-      HTML("</div>"),
+      HTML("</div></div>"),
       hr(),
       
       # Brown & Forsythe
       HTML("<div id='brownlink'>"),
       HTML("<h3>7 Brown-Forsythe test&ensp;",
            "<a href='#stats-settings-link'><i class='icon chart' title='Go to active variables'></i></a>",
-           "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a></h3>"),
+           "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a>",
+           "<button id='showhidebutton' onclick=\"show_hide('brown_wrap', 'brownlink')\"><i class='icon eyeslash' title='Hide element'></i></button></h3>"),
+      HTML("<div id='brown_wrap'>"),
       p("Look for a statistically significant difference between the selected", 
         "explanatory variable. Brown-Forsythe test is less likely than the",
         "Levene test to incorrectly declare that the assumption of equal", 
-        "variances has been violated.<br>Please note that Brown-Forsythe test",
+        "variances has been violated. Please note that Brown-Forsythe test",
         "fails when selected response variable maximum value is set to 0. The",
         "test requires a p.value that's not NaN."),
       verbatimTextOutput("brownf"),
-      HTML("</div>"),
+      HTML("</div></div>"),
       hr(),
       
       # Context map
       HTML("<div id='maplink'>"),
       HTML("<h3>8 Active subdivisions&ensp;",
-           "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a></h3>"),
+           "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a>",
+           "<button id='showhidebutton' onclick=\"show_hide('map', 'maplink')\"><i class='icon eyeslash' title='Hide element'></i></button></h3>"),
       ggiraphOutput("map"),
       HTML("</div>"),
       hr(),
@@ -1336,7 +1367,8 @@ ui <- shinyUI(fluidPage(
       HTML("<h3>9 Survey results on research area map&ensp;",
            "<a href='#intmap-settings-link'><i class='icon wrench' title='Go to interactive map settings'></i></a>",
            "<a href='#stats-settings-link'><i class='icon chart' title='Go to active variables'></i></a>",
-           "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a></h3>"),
+           "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a>",
+           "<button id='showhidebutton' onclick=\"show_hide('interactive', 'intmaplink')\"><i class='icon eyeslash' title='Hide element'></i></button></h3>"),
       HTML("<div class='noselect'>"),
       ggiraphOutput("interactive"),
       HTML("</div></div>"),

@@ -9,7 +9,7 @@ html, body {
 	scroll-behavior: smooth;
 	position: relative;
 }
-p {
+p, h3 {
 	max-width: 1200px;
 }
 hr {
@@ -65,6 +65,13 @@ form.well {
 - pointer-events: none; makes zipcode labels invisible to the cursor
 - noselect makes selecting ggiraph elements not possible
 - :last-child pseudo-selector makes last row of descriptive statistics bold */
+#showhidebutton {
+	float: right;
+	background: none;
+	border: none;
+	text-align: center; /* eyeslash and eye are of different width */
+	width: 45px;
+}
 #descri, #boxplot, #barplot, #hist, #brownf {
 	max-width: 1200px;
 }
@@ -129,6 +136,16 @@ render reliably */
 .mapmark::before {
 	content: "\f59f";
 	font-size: 1.0em;
+}
+.eyeslash::before {
+	content: "\f070";
+	font-size: 1.0em;
+	color: white;
+}
+.eye::before {
+	content: "\f06e";
+	font-size: 1.0em;
+	color: white;
 }
 
 /* Anchor link highlight animation */
