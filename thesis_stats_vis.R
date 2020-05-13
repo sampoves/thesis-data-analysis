@@ -98,6 +98,7 @@ munspath <- file.path(wd, "python/paavo/hcr_muns.shp")
 
 # CSS data
 csspath <- file.path(wd, "python/thesis_stats_vis_style.css")
+jspath <- file.path(wd, "python/thesis_stats_vis_script.js")
 
 # Source functions and postal code variables
 source(file.path(wd, "python/thesis_stats_vis_funcs.R"))
@@ -349,14 +350,14 @@ server <- function(input, output, session){
   
   #### 5.1 Listener functions --------------------------------------------------
   
-  # 5.1.1 Listen to clear subdivs button. Resetting uses library shinyjs -------
+  # 5.1.1 Listen to clear subdivs button ---------------------------------------
   observeEvent(input$resetSubdivs, {
-    reset("subdivGroup")
+    shinyjs::reset("subdivGroup")
   })
   
   observeEvent(input$resetParkWalk, {
-    reset("parktime_max")
-    reset("walktime_max")
+    shinyjs::reset("parktime_max")
+    shinyjs::reset("walktime_max")
   })
   
   
@@ -1071,26 +1072,29 @@ ui <- shinyUI(fluidPage(
   # - pointer-events: none; makes zipcode labels invisible to the cursor
   # - noselect makes selecting ggiraph elements not possible
   # - :last-child pseudo-selector makes last row of descriptive statistics bold
-  # - add script which detects the the display css property of given div. Use
-  #   this to hide or display elements in the app and change icon accordingly
+  # - add JavaScript function which detects the the display css property of 
+  #   given div. Use this to hide or display elements in the app and change icon 
+  #   accordingly
   tags$head(tags$link(rel = "stylesheet", 
                       type = "text/css", 
                       href = "https://use.fontawesome.com/releases/v5.8.1/css/all.css"),
             htmltools::includeCSS(csspath),
-            tags$script(HTML("function show_hide(divname, shrink_div) {
-                              var this_elem = document.getElementById(divname);
-                              var shrink_name = '#' + shrink_div;
-                              
-                            	if(this_elem.style.display === 'none') {
-                                this_elem.style.display = 'block';
-                                $(shrink_name).find('i.icon.eye').toggleClass('eye eyeslash');
-                                $(shrink_name).find('i.icon.eyeslash')[0].setAttribute('title', 'Hide element');
-                            	} else {
-                            		this_elem.style.display = 'none';
-                            		$(shrink_name).find('i.icon.eyeslash').toggleClass('eyeslash eye');
-                                $(shrink_name).find('i.icon.eye')[0].setAttribute('title', 'Show element');
-                            	}
-                            }"))),
+            # tags$script(HTML("function show_hide(divname, shrink_div) {
+            #                     var this_elem = document.getElementById(divname);
+            #                     var shrink_name = '#' + shrink_div;
+            #                     
+            #                   	if(this_elem.style.display === 'none') {
+            #                       this_elem.style.display = 'block';
+            #                       $(shrink_name).find('i.icon.eye').toggleClass('eye eyeslash');
+            #                       $(shrink_name).find('i.icon.eyeslash')[0].setAttribute('title', 'Hide element');
+            #                   	} else {
+            #                   		this_elem.style.display = 'none';
+            #                   		$(shrink_name).find('i.icon.eyeslash').toggleClass('eyeslash eye');
+            #                       $(shrink_name).find('i.icon.eye')[0].setAttribute('title', 'Show element');
+            #                   	}
+            #                   };"))
+            ),
+  includeScript(path = jspath),
 
   
   
@@ -1256,12 +1260,12 @@ ui <- shinyUI(fluidPage(
       
       # Descriptive statistics
       HTML("<div id='descrilink'>"),
-      HTML("<h3>1 Descriptive statistics&ensp;",
+      HTML("<h3 class='collapsible' title='Hide element'>1 Descriptive statistics&ensp;",
            "<a href='#stats-settings-link'><i class='icon chart' title='Go to active variables'></i></a>",
-           "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a>",
-           "<button id='showhidebutton' onclick=\"show_hide('descri','descrilink')\"><i class='icon eyeslash' title='Hide element'></i></button></h3>"),
+           "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a></h3>"),
+      HTML("<div class='content'>"),
       tableOutput("descri"),
-      HTML("</div>"),
+      HTML("</div></div>"),
       hr(),
       
       # Histogram
@@ -1527,7 +1531,7 @@ visitor_ui <- basicPage(
   titlePanel("Sampo Vesanen MSc thesis research survey: received responses and survey page first visits"),
   p("Click and hold, then drag and release to zoom to a period of time. Double click to return to the full view."),
   HTML("<p style='font-size: 11px; color: grey; margin-top: -10px;'>",
-       "Analysis app version 3.5.2020</p>"),
+       "Analysis app version 13.5.2020</p>"),
   HTML("<div class='contentsp'><div class='contentsc'>"),
   uiOutput("dygraph"),
   HTML("</div></div>")

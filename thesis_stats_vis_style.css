@@ -17,7 +17,9 @@ hr {
 	margin-left: 0px;
 }
 
-/* sidebarPanel() 
+/*----------------*/
+/* sidebarPanel() */
+/*------------------
 - set sidebarPanel (form.well) width. sidebarPanel width setting is important because the 
 long explanations would break it otherwise
 - manually set sidebarPanel z-index to make the element always appear on top
@@ -61,7 +63,9 @@ form.well {
 	color: dimgray;
 }
 
-/* mainPanel()
+/*-------------*/
+/* mainPanel() */
+/*---------------
 - pointer-events: none; makes zipcode labels invisible to the cursor
 - noselect makes selecting ggiraph elements not possible
 - :last-child pseudo-selector makes last row of descriptive statistics bold */
@@ -70,7 +74,7 @@ form.well {
 	background: none;
 	border: none;
 	text-align: center; /* eyeslash and eye are of different width */
-	width: 45px;
+	width: 45px; /* therefore align and give button fixed width */
 }
 #descri, #boxplot, #barplot, #hist, #brownf {
 	max-width: 1200px;
@@ -113,7 +117,9 @@ svg, img {
 	border-radius: 4px;
 }
 
-/* Font Awesome utilisation.
+/*--------------------------*/
+/* Font Awesome utilisation */
+/*----------------------------
 Common properties for Font Awesome: All of these settings are required to make icons 
 render reliably */
 .icon::before {
@@ -148,7 +154,9 @@ render reliably */
 	color: white;
 }
 
+/*---------------------------------*/
 /* Anchor link highlight animation */
+/*---------------------------------*/
 @keyframes highlight {
 	0% {
 		background: none;
@@ -179,4 +187,49 @@ render reliably */
 #intmap-settings-link:target {
 	animation: highlight 0.75s ease-in-out;
 	animation-delay: 1s;
+}
+
+/*-----------------*/
+/* new collapsible */
+/*-----------------*/
+.collapsible {
+	background-color: Transparent;
+	cursor: pointer;
+	width: 100%;
+	max-width: 1200px;
+	border: none;
+	text-align: left;
+	outline: none;
+}
+.collapsible:hover {
+	background-color: #555;
+}
+/* collapsible.after and .active:after are the eye-eyeslash icons. Use margin-right
+to adjust the position of the differently sized icons. */
+.collapsible:after {
+	font-family: "Font Awesome 5 Free";
+	content: "\f06e";
+	font-size: 1.0em;
+	font-weight: 900;
+	color: white;
+	text-rendering: auto;
+	-webkit-font-smoothing: antialiased;
+	float: right;
+	margin-right: 2px;
+}
+.active:after {
+	font-family: "Font Awesome 5 Free";
+	content: "\f070";
+	font-size: 1.0em;
+	font-weight: 900;
+	color: white;
+	text-rendering: auto;
+	-webkit-font-smoothing: antialiased;
+	float: right;
+	margin-right: 0.5px;
+}
+.content {
+	max-height: 0;
+	overflow: hidden;
+	transition: max-height 0.2s ease-out;
 }
