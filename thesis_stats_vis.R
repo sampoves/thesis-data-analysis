@@ -4,7 +4,7 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 12.5.2020
+# 14.5.2020
 #
 # This is an interactive tool for analysing the results of my research survey.
 
@@ -1078,22 +1078,7 @@ ui <- shinyUI(fluidPage(
   tags$head(tags$link(rel = "stylesheet", 
                       type = "text/css", 
                       href = "https://use.fontawesome.com/releases/v5.8.1/css/all.css"),
-            htmltools::includeCSS(csspath),
-            # tags$script(HTML("function show_hide(divname, shrink_div) {
-            #                     var this_elem = document.getElementById(divname);
-            #                     var shrink_name = '#' + shrink_div;
-            #                     
-            #                   	if(this_elem.style.display === 'none') {
-            #                       this_elem.style.display = 'block';
-            #                       $(shrink_name).find('i.icon.eye').toggleClass('eye eyeslash');
-            #                       $(shrink_name).find('i.icon.eyeslash')[0].setAttribute('title', 'Hide element');
-            #                   	} else {
-            #                   		this_elem.style.display = 'none';
-            #                   		$(shrink_name).find('i.icon.eyeslash').toggleClass('eyeslash eye');
-            #                       $(shrink_name).find('i.icon.eye')[0].setAttribute('title', 'Show element');
-            #                   	}
-            #                   };"))
-            ),
+            htmltools::includeCSS(csspath)),
   includeScript(path = jspath),
 
   
@@ -1243,7 +1228,7 @@ ui <- shinyUI(fluidPage(
       HTML("</div></div>"),
       
       HTML("<p style='font-size: 11px; color: grey; margin-top: -10px;'>",
-           "Analysis app version 13.5.2020</p>"),
+           "Analysis app version 14.5.2020</p>"),
       
       width = 3
     ),
@@ -1260,9 +1245,11 @@ ui <- shinyUI(fluidPage(
       
       # Descriptive statistics
       HTML("<div id='descrilink'>"),
-      HTML("<h3 class='collapsible' title='Hide element'>1 Descriptive statistics&ensp;",
+      HTML("<div id='collapsible'>"),
+      HTML("<h3 title='Hide element'>1 Descriptive statistics&ensp;",
            "<a href='#stats-settings-link'><i class='icon chart' title='Go to active variables'></i></a>",
            "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a></h3>"),
+      HTML("</div>"),
       HTML("<div class='content'>"),
       tableOutput("descri"),
       HTML("</div></div>"),
