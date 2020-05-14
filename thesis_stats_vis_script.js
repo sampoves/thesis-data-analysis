@@ -21,29 +21,26 @@ $(document).on('shiny:connected', function(event) {
 	var coll = document.getElementsByClassName('collapsible');
 	var i;
 	
-	// The first time Shiny app is connected and idle, set collapsibles open by default
+	// The first time Shiny app is connected and idle, set collapsibles open by default.
+	// maxHeight 2000px is quite hacky, but I couldn't find a better solution.
 	$(document).one('shiny:idle', function(event) {
-
-		var coll = document.getElementsByClassName('collapsible');
-		var i;
-
+		
 		for (i = 0; i < coll.length; i++) {
 			coll[i].classList.toggle('active');
 			var content = coll[i].nextElementSibling;
-			// This setting makes the transition not work for the first close and open
-			// because of the percentual value. Could not find a better solution.
-			content.style.maxHeight = '100%'; 
+			content.style.maxHeight = '2000px';
+			coll[i].setAttribute('title', 'Hide element');
 		};
 	});
-	
-	// Collapsible event listener
+
+	// Collapsible element event listener
 	for (i = 0; i < coll.length; i++) {
 		
 		coll[i].addEventListener('click', function() {
 			
 			this.classList.toggle('active');
 			var content = this.nextElementSibling;
-
+			
 			if (content.style.maxHeight) {
 				content.style.maxHeight = null;
 				this.setAttribute('title', 'Show element');
