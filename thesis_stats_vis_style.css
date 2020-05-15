@@ -9,13 +9,13 @@ html, body {
 	scroll-behavior: smooth;
 	position: relative;
 }
-p, h3 {
+.col-sm-8 { /* mainPanel() master */
 	max-width: 1200px;
 }
 hr {
-	max-width: 1200px;
 	margin-left: 0px;
 }
+
 
 /*----------------*/
 /* sidebarPanel() */
@@ -75,9 +75,6 @@ form.well {
 	border: none;
 	text-align: center; /* eyeslash and eye are of different width */
 	width: 45px; /* therefore align and give button fixed width */
-}
-#descri, #boxplot, #barplot, #hist, #brownf {
-	max-width: 1200px;
 }
 #descri {
 	overflow-x: auto;
@@ -160,18 +157,18 @@ render reliably */
 @keyframes highlight {
 	0% {
 		background: none;
-		max-width: inherit;
+		max-width: 100%;
 	}
 	50% {
 		background: #67727f;
-		max-width: inherit;
+		max-width: 100%;
 		-moz-box-shadow: 0px 0px 15px rgba(140, 150, 162, 1);
 		-webkit-box-shadow: 0px 0px 15px rgba(140, 150, 162, 1);
 		box-shadow: 0px 0px 15px rgba(140, 150, 162, 1);
 	}
 	100% {
 		background: none;
-		max-width: inherit;
+		max-width: 100%;
 	}
 }
 #descrilink, #histlink, #barplotlink, #boxplotlink, #levenelink, 
