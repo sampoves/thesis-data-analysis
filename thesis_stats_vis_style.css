@@ -160,18 +160,18 @@ render reliably */
 @keyframes highlight {
 	0% {
 		background: none;
-		max-width: 1200px;
+		max-width: inherit;
 	}
 	50% {
 		background: #67727f;
-		max-width: 1200px;
+		max-width: inherit;
 		-moz-box-shadow: 0px 0px 15px rgba(140, 150, 162, 1);
 		-webkit-box-shadow: 0px 0px 15px rgba(140, 150, 162, 1);
 		box-shadow: 0px 0px 15px rgba(140, 150, 162, 1);
 	}
 	100% {
 		background: none;
-		max-width: 1200px;
+		max-width: inherit;
 	}
 }
 #descrilink, #histlink, #barplotlink, #boxplotlink, #levenelink, 
@@ -180,11 +180,10 @@ render reliably */
 	scroll-margin-top: 40px; /* Arrive 40px above the anchor position */
 	border-radius: 5px;
 }
-#descrilink:target, #histlink:target, #barplotlink:target, #boxplotlink:target, 
-#levenelink:target, #anovalink:target, #brownlink:target, #maplink:target, 
-#intmaplink:target, #stats-settings-link:target, #hist-settings-link:target, 
-#barplot-settings-link:target, #subdiv-settings-link:target, 
-#intmap-settings-link:target {
+.animate {
 	animation: highlight 0.75s ease-in-out;
 	animation-delay: 1s;
+}
+.animate-immediately {
+	animation: highlight 0.75s ease-in-out;
 }
