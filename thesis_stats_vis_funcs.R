@@ -53,7 +53,7 @@ LabelBuilder <- function(plot_obj, expl, checkGroup, subdivGroup) {
     # Make additions to ggplot object
     result_plot <- plot_obj + 
       labs(caption = full_lab) +
-      theme(plot.caption = element_text(size = 14, hjust = 0, face = "italic"),
+      theme(plot.caption = element_text(size = 15, hjust = 0, face = "italic"),
             plot.caption.position =  "plot")
   }
   

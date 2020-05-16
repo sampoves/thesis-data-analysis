@@ -4,7 +4,7 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 16.5.2020
+# 17.5.2020
 #
 # This is an interactive tool for analysing the results of my research survey.
 
@@ -610,6 +610,8 @@ server <- function(input, output, session){
     row.names(desc)[nrow(desc)] <- "Total" # name the last row
     desc[int_cols] <- sapply(desc[int_cols], as.integer)
     desc_out <<- desc # Result to global environment to enable download
+    
+    # Render descriptive statistics table
     desc
   }, 
   striped = TRUE,
@@ -716,10 +718,10 @@ server <- function(input, output, session){
     hist_out <- LabelBuilder(p, input$expl, input$checkGroup, input$subdivGroup)
     hist_out <<- 
       hist_out + 
-      theme(legend.title = element_text(size = 18),
-            legend.text = element_text(size = 17),
-            axis.text = element_text(size = 15),
-            axis.title = element_text(size = 17))
+      theme(legend.title = element_text(size = 23),
+            legend.text = element_text(size = 22),
+            axis.text = element_text(size = 19),
+            axis.title = element_text(size = 22))
     
     # Render histogram
     p
@@ -804,10 +806,10 @@ server <- function(input, output, session){
     barplot_out <- LabelBuilder(plo, "", c(), input$subdivGroup)
     barplot_out <<- 
       barplot_out + 
-      theme(legend.title = element_text(size = 18),
-            legend.text = element_text(size = 17),
-            axis.text = element_text(size = 15),
-            axis.title = element_text(size = 17))
+      theme(legend.title = element_text(size = 22),
+            legend.text = element_text(size = 21),
+            axis.text = element_text(size = 20),
+            axis.title = element_text(size = 22))
     
     # Render barplot
     plo
@@ -867,9 +869,9 @@ server <- function(input, output, session){
     boxplot_out <- LabelBuilder(p, "", c(), input$subdivGroup)
     boxplot_out <<- 
       boxplot_out + 
-      theme(axis.text = element_text(size = 17),
-            axis.title = element_text(size = 19),
-            axis.text.x = element_text(size = 17))
+      theme(axis.text = element_text(size = 21),
+            axis.title = element_text(size = 23),
+            axis.text.x = element_text(size = 21))
     
     # Render boxplot
     p
@@ -1075,9 +1077,7 @@ server <- function(input, output, session){
     
     # Prepare the downloadable context map. Global context to enable the 
     # download. Use larger fonts.
-    map_out <- g2
-    map_out <<- 
-      map_out + 
+    map_out <<- g2 + 
       theme(text = element_text(size = 25),
             legend.title = element_text(size = 17),
             legend.text = element_text(size = 16),
@@ -1307,7 +1307,7 @@ ui <- shinyUI(fluidPage(
   titlePanel(NULL, windowTitle = "Sampo Vesanen MSc thesis research survey results"),
   sidebarLayout(
     sidebarPanel(id = "sidebar",
-      # &nbsp; is a non-breaking space. Will not be cut off at any situation
+      # &nbsp; is a non-breaking space
       HTML("<div id='contents'>"),
       HTML("<p id='linkheading_t'>Analysis</p>"),
       HTML("<a href='#descrilink'>1&nbsp;Descriptive statistics</a> &mdash;"),
@@ -1445,7 +1445,7 @@ ui <- shinyUI(fluidPage(
         value = 5),
       
       HTML("</div></div>"),
-      HTML("<p id='version-info'>Analysis app version 16.5.2020</p>"),
+      HTML("<p id='version-info'>Analysis app version 17.5.2020</p>"),
       
       width = 3
     ),
@@ -1565,7 +1565,7 @@ ui <- shinyUI(fluidPage(
            "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a>",
            "<button id='showhidebutton' onclick=\"show_hide('brown_wrap', 'brownlink')\"><i class='icon eyeslash' title='Hide element'></i></button></button>"),
       downloadLink("dl_brown",
-                   label = HTML("<i class='icon file' title='Download this table as txt'></i>")),
+                   label = HTML("<i class='icon file' title='Download this output as txt'></i>")),
       HTML("</h3>"),
       HTML("<div id='brown_wrap'>"),
       p("Look for a statistically significant difference between the selected", 
