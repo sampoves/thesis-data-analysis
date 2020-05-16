@@ -710,28 +710,18 @@ server <- function(input, output, session){
                aes(label = ifelse(..count.. > 0, ..count.., "")),
                vjust = -0.65)
     
-    # "hist_out" is brought global environment for download. Use larger fonts.
-    hist_out <- p
     
-    # Conditional disclaimer about excluded groups and subdivisions
-    if(length(input$subdivGroup) | length(input$checkGroup) > 0) {
-      hist_out <- hist_out +
-        labs(caption = 
-               paste("- Groups excluded from the explanatory variable ", input$expl, ":\n", 
-                     Every8th(c(input$checkGroup)),
-                     "\n- Subdivisions excluded:\n", Every8th(c(input$subdivGroup)),
-                     sep = ""))
-    }
-    
+    # Prepare the downloadable histogram. "hist_out" is brought global environment 
+    # for download. Use larger fonts.
+    hist_out <- LabelBuilder(p, input$expl, input$checkGroup, input$subdivGroup)
     hist_out <<- 
       hist_out + 
-      theme(legend.title = element_text(size = 17),
-            legend.text = element_text(size = 16),
-            axis.text = element_text(size = 14),
-            axis.title = element_text(size = 16),
-            plot.caption = element_text(size = 14, hjust = 0, face = "italic"),
-            plot.caption.position =  "plot")
+      theme(legend.title = element_text(size = 18),
+            legend.text = element_text(size = 17),
+            axis.text = element_text(size = 15),
+            axis.title = element_text(size = 17))
     
+    # Render histogram
     p
   })
 
@@ -742,6 +732,7 @@ server <- function(input, output, session){
       paste("hist_",
             "pmax", input$parktime_max, "-wmax", input$walktime_max, "_",
             input$resp, "-", input$expl, "_",
+            "binw", input$bin, "_",
             format(Sys.time(), "%d-%m-%Y"), 
             ".png",
             sep = "")
@@ -805,25 +796,18 @@ server <- function(input, output, session){
     legendnames <- unique(inputdata[[barplotval]])
     plo <- InterpolateGgplotColors(plo, legendnames, 12, "Paired")
     
-    # "barplot_out" is brought global environment for download. Use larger fonts.
-    barplot_out <- plo
     
-    # Conditional disclaimer about excluded subdivisions
-    if(length(input$subdivGroup) > 0) {
-      barplot_out <- barplot_out +
-        labs(caption = paste("\n- Subdivisions excluded:\n", 
-                             Every8th(c(input$subdivGroup)),
-                             sep = ""))
-    }
-    
+    # Prepare the downloadable barplot. "barplot_out" is brought global 
+    # environment for download. Use larger fonts.
+
+    # Labeling inactive checkGroup values is not meaningful in the barplot
+    barplot_out <- LabelBuilder(plo, "", c(), input$subdivGroup)
     barplot_out <<- 
       barplot_out + 
-      theme(legend.title = element_text(size = 17),
-            legend.text = element_text(size = 16),
-            axis.text = element_text(size = 14),
-            axis.title = element_text(size = 16),
-            plot.caption = element_text(size = 14, hjust = 0, face = "italic"),
-            plot.caption.position =  "plot")
+      theme(legend.title = element_text(size = 18),
+            legend.text = element_text(size = 17),
+            axis.text = element_text(size = 15),
+            axis.title = element_text(size = 17))
     
     # Render barplot
     plo
@@ -875,24 +859,17 @@ server <- function(input, output, session){
       p <- p + theme(axis.text.x = element_text(size = 12, angle = 45, hjust = 1))
     }
     
-    # "boxplot_out" is brought global environment for download. Use larger fonts.
-    boxplot_out <- p
     
-    # Conditional disclaimer about excluded subdivisions
-    if(length(input$subdivGroup) > 0) {
-      boxplot_out <- boxplot_out +
-        labs(caption = paste("\n- Subdivisions excluded:\n", 
-                             Every8th(c(input$subdivGroup)),
-                             sep = ""))
-    }
-    
+    # Prepare the downloadable boxplot. "boxplot_out" is brought global environment 
+    # for download. Use larger fonts.
+
+    # Labeling inactive checkGroup values is not meaningful in the boxplot
+    boxplot_out <- LabelBuilder(p, "", c(), input$subdivGroup)
     boxplot_out <<- 
       boxplot_out + 
-      theme(axis.text = element_text(size = 16),
-            axis.title = element_text(size = 18),
-            axis.text.x = element_text(size = 16),
-            plot.caption = element_text(size = 16, hjust = 0, face = "italic"),
-            plot.caption.position =  "plot")
+      theme(axis.text = element_text(size = 17),
+            axis.title = element_text(size = 19),
+            axis.text.x = element_text(size = 17))
     
     # Render boxplot
     p
@@ -929,6 +906,8 @@ server <- function(input, output, session){
     # Present "Df" as integer to prevent decimal places in app
     res["Df"] <- sapply(res["Df"], as.integer)
     levene_out <<- res # Result to global environment to enable download
+    
+    # Render Levene test
     res
   }, 
   digits = 6,
@@ -970,6 +949,8 @@ server <- function(input, output, session){
     
     anovasummary["Df"] <- sapply(anovasummary["Df"], as.integer)
     anova_out <<- anovasummary # Result to global environment to enable download
+    
+    # Render ANOVA
     anovasummary
   },
   digits = 6,
@@ -1011,6 +992,8 @@ server <- function(input, output, session){
                                file = NULL, 
                                append = TRUE)
     brown_out <<- captured # Result to global environment to enable download
+    
+    # Render Brown-Forsythe
     cat(captured, sep = "\n")
   })
   
@@ -1026,7 +1009,7 @@ server <- function(input, output, session){
             sep = "")
     },
     content = function(file) {
-      write.table(cat(brown_out, sep = "\n"), file)
+      cat(brown_out, file = file, sep = "\n")
     }
   )
   
@@ -1089,9 +1072,10 @@ server <- function(input, output, session){
             legend.text = element_text(size = 14),
             legend.position = "bottom")
     
-    # Global context to enable download
-    map_out <- g2
     
+    # Prepare the downloadable context map. Global context to enable the 
+    # download. Use larger fonts.
+    map_out <- g2
     map_out <<- 
       map_out + 
       theme(text = element_text(size = 25),
@@ -1100,7 +1084,7 @@ server <- function(input, output, session){
             axis.text = element_text(size = 14),
             axis.title = element_text(size = 16))
     
-    # render context map
+    # Render context map
     ggiraph(code = print(g2), 
             width_svg = 16.7, 
             height_svg = 14.7, 
@@ -1110,7 +1094,7 @@ server <- function(input, output, session){
   
   #### 5.9.1 Download context map ----
   output$dl_map <- downloadHandler(
-    filename = function() { 
+    filename = function() {
       paste("context-map_",
             format(Sys.time(), "%d-%m-%Y"), 
             ".png",
@@ -1256,28 +1240,17 @@ server <- function(input, output, session){
                             size = 4))
     }
     
-    # "interactive_out" is brought global environment for download. Use larger 
-    # fonts.
-    interactive_out <- g
     
-    # Conditional disclaimer about excluded groups and subdivisions
-    if(length(input$subdivGroup) | length(input$checkGroup) > 0) {
-      interactive_out <- interactive_out +
-        labs(caption = 
-               paste("- Groups excluded from the explanatory variable ", input$expl, ":\n", 
-                     Every8th(c(input$checkGroup)),
-                     "\n- Subdivisions excluded:\n", Every8th(c(input$subdivGroup)),
-                     sep = ""))
-    }
-    
+    # Prepare the downloadable interactive map. "interactive_out" is brought 
+    # to global environment for download. Use larger fonts.
+    interactive_out <- LabelBuilder(g, input$expl, input$checkGroup, 
+                                    input$subdivGroup)
     interactive_out <<- 
       interactive_out + 
       theme(legend.title = element_text(size = 17),
             legend.text = element_text(size = 16),
             axis.text = element_text(size = 14),
-            axis.title = element_text(size = 16),
-            plot.caption = element_text(size = 14, hjust = 0, face = "italic"),
-            plot.caption.position =  "plot")
+            axis.title = element_text(size = 16))
     
     # Render interactive map
     ggiraph(code = print(g),
@@ -1342,7 +1315,7 @@ ui <- shinyUI(fluidPage(
       HTML("<a href='#barplotlink'>3&nbsp;Barplot</a> &mdash;"),
       HTML("<a href='#boxplotlink'>4&nbsp;Boxplot</a> &mdash;"),
       HTML("<a href='#levenelink'>5&nbsp;Levene</a> &mdash;"),
-      HTML("<a href='#anovalink'>6&nbsp;ANOVA</a> &mdash;"),
+      HTML("<a href='#anovalink'>6&nbsp;One-way ANOVA</a> &mdash;"),
       HTML("<a href='#brownlink'>7&nbsp;Brown-Forsythe</a><br>"),
       HTML("<p id='linkheading_b'>Visualisation</p>"),
       HTML("<a href='#maplink'>8&nbsp;Context map</a> &mdash;"),
@@ -1508,7 +1481,7 @@ ui <- shinyUI(fluidPage(
            "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a>",
            "<button id='showhidebutton' onclick=\"show_hide('hist','histlink')\"><i class='icon eyeslash' title='Hide element'></i></button>"),
       downloadLink("dl_hist",
-                   label = HTML("<i class='icon file' title='Download histogram as png'></i>")),
+                   label = HTML("<i class='icon file' title='Download this plot as png'></i>")),
       HTML("</h3>"),
       plotOutput("hist"),
       HTML("</div>"),
@@ -1572,7 +1545,7 @@ ui <- shinyUI(fluidPage(
       
       # ANOVA
       HTML("<div id='anovalink'>"),
-      HTML("<h3>6 Analysis of variance (ANOVA)&ensp;",
+      HTML("<h3>6 One-way analysis of variance (One-way ANOVA)&ensp;",
            "<a href='#stats-settings-link'><i class='icon chart' title='Go to active variables'></i></a>",
            "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a>",
            "<button id='showhidebutton' onclick=\"show_hide('anova_wrap','anovalink')\"><i class='icon eyeslash' title='Hide element'></i></button>"),
@@ -1611,7 +1584,7 @@ ui <- shinyUI(fluidPage(
            "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a>",
            "<button id='showhidebutton' onclick=\"show_hide('map', 'maplink')\"><i class='icon eyeslash' title='Hide element'></i></button>"),
       downloadLink("dl_map",
-                   label = HTML("<i class='icon file' title='Download this map as png'></i>")),
+                   label = HTML("<i class='icon file' title='Download this figure as png'></i>")),
       HTML("</h3>"),
       ggiraphOutput("map"),
       HTML("</div>"),
@@ -1625,7 +1598,7 @@ ui <- shinyUI(fluidPage(
            "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a>",
            "<button id='showhidebutton' onclick=\"show_hide('interactive', 'intmaplink')\"><i class='icon eyeslash' title='Hide element'></i></button>"),
       downloadLink("dl_interactive",
-                   label = HTML("<i class='icon file' title='Download this map as png'></i>")),
+                   label = HTML("<i class='icon file' title='Download this figure as png'></i>")),
       HTML("</h3>"),
       HTML("<div class='noselect'>"),
       ggiraphOutput("interactive"),
