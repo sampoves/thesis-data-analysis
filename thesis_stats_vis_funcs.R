@@ -18,6 +18,28 @@ library(RColorBrewer)
 
 
 
+
+Every8th <- function(input) {
+  
+  # This function splits input$checkGroup and input$subdivGroup into bits of
+  # eight separated by a newline. For the use with downloadable versions of
+  # plots
+  
+  # Prevent situation where an empty input is fed to split()
+  if(length(input) < 1) {
+    return("")
+    
+  } else {
+    result <- split(input, ceiling(seq_along(input) / 8))
+    result <- sapply(result, function(x) paste0(x, collapse = ", "))
+    result <- capture.output(cat(paste(result, collapse = "\n")))
+    result <- paste0(result, collapse = "\n")
+  }
+  return(result)
+}
+
+
+
 GetCentroids <- function(fortified, unique_id, nominator) {
   
   # Annotate desired feature in ggplot. Adapted from: 

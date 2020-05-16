@@ -4,7 +4,7 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 15.5.2020
+# 16.5.2020
 #
 # This is an interactive tool for analysing the results of my research survey.
 
@@ -607,8 +607,9 @@ server <- function(input, output, session){
     # specific columns as integer to prevent useless decimal places in 
     # tableOutput
     desc <- rbind(desc, vect)
-    row.names(desc)[nrow(desc)] <- "Total" #name the last row
+    row.names(desc)[nrow(desc)] <- "Total" # name the last row
     desc[int_cols] <- sapply(desc[int_cols], as.integer)
+    desc_out <<- desc # Result to global environment to enable download
     desc
   }, 
   striped = TRUE,
@@ -616,6 +617,22 @@ server <- function(input, output, session){
   bordered = TRUE,
   rownames = TRUE,
   digits = 2)
+  
+  
+  #### 5.2.1 Download descriptive statistics ----
+  output$dl_descri <- downloadHandler(
+    filename = function() { 
+      paste("descriptives_",
+            "pmax", input$parktime_max, "-wmax", input$walktime_max, "_",
+            input$resp, "-", input$expl, "_",
+            format(Sys.time(), "%d-%m-%Y"), 
+            ".csv",
+            sep = "")
+    },
+    content = function(file) {
+      write.csv(desc_out, file)
+    }
+  )
   
   
   #### 5.3 Histogram for parktime or walktime ----------------------------------
@@ -630,6 +647,7 @@ server <- function(input, output, session){
     
     p <- ggplot(inputdata, aes(x = !!sym(resp_col))) + 
       geom_histogram(color = "black", fill = "grey", binwidth = binwidth) +
+      xlab(paste(resp_col, "(min)")) +
       
       # Vertical lines for mean and median, respectively. Also display exact
       # values with annotate_custom() and textGrobs.
@@ -678,7 +696,7 @@ server <- function(input, output, session){
       
       # Build legend, override colors to get visible color for density. Also,
       # override linetype to get a solid line for density.
-      scale_color_manual(name = paste("Legend for\n", resp_col), 
+      scale_color_manual(name = paste("Legend for\n", resp_col, sep = ""), 
                          values = c(median = "blue", 
                                     mean = "red", 
                                     "kernel density\nestimate" = alpha("black", 0.4))) +
@@ -687,13 +705,52 @@ server <- function(input, output, session){
                             linetype = c("solid", "longdash", "longdash")))) +
       
       # Conditional histogram bar labeling. No label for zero
-      stat_bin(binwidth = binwidth, 
-               geom = "text", 
+      stat_bin(binwidth = binwidth,
+               geom = "text",
                aes(label = ifelse(..count.. > 0, ..count.., "")),
                vjust = -0.65)
+    
+    # "hist_out" is brought global environment for download. Use larger fonts.
+    hist_out <- p
+    
+    # Conditional disclaimer about excluded groups and subdivisions
+    if(length(input$subdivGroup) | length(input$checkGroup) > 0) {
+      hist_out <- hist_out +
+        labs(caption = 
+               paste("- Groups excluded from the explanatory variable ", input$expl, ":\n", 
+                     Every8th(c(input$checkGroup)),
+                     "\n- Subdivisions excluded:\n", Every8th(c(input$subdivGroup)),
+                     sep = ""))
+    }
+    
+    hist_out <<- 
+      hist_out + 
+      theme(legend.title = element_text(size = 17),
+            legend.text = element_text(size = 16),
+            axis.text = element_text(size = 14),
+            axis.title = element_text(size = 16),
+            plot.caption = element_text(size = 14, hjust = 0, face = "italic"),
+            plot.caption.position =  "plot")
+    
     p
   })
 
+  
+  #### 5.3.1 Download histogram ----
+  output$dl_hist <- downloadHandler(
+    filename = function() { 
+      paste("hist_",
+            "pmax", input$parktime_max, "-wmax", input$walktime_max, "_",
+            input$resp, "-", input$expl, "_",
+            format(Sys.time(), "%d-%m-%Y"), 
+            ".png",
+            sep = "")
+    },
+    content = function(file) {
+      ggsave(plot = hist_out, file, height = 10, width = 26, dpi = 150)
+    }
+  )
+  
   
   #### 5.4 Barplot -------------------------------------------------------------
   output$barplot <- renderPlot({
@@ -748,8 +805,45 @@ server <- function(input, output, session){
     legendnames <- unique(inputdata[[barplotval]])
     plo <- InterpolateGgplotColors(plo, legendnames, 12, "Paired")
     
+    # "barplot_out" is brought global environment for download. Use larger fonts.
+    barplot_out <- plo
+    
+    # Conditional disclaimer about excluded subdivisions
+    if(length(input$subdivGroup) > 0) {
+      barplot_out <- barplot_out +
+        labs(caption = paste("\n- Subdivisions excluded:\n", 
+                             Every8th(c(input$subdivGroup)),
+                             sep = ""))
+    }
+    
+    barplot_out <<- 
+      barplot_out + 
+      theme(legend.title = element_text(size = 17),
+            legend.text = element_text(size = 16),
+            axis.text = element_text(size = 14),
+            axis.title = element_text(size = 16),
+            plot.caption = element_text(size = 14, hjust = 0, face = "italic"),
+            plot.caption.position =  "plot")
+    
+    # Render barplot
     plo
   })
+  
+  
+  #### 5.4.1 Download barplot ----
+  output$dl_barplot <- downloadHandler(
+    filename = function() { 
+      paste("barplot_",
+            "pmax", input$parktime_max, "-wmax", input$walktime_max, "_",
+            input$expl, "-", input$barplot, "_",
+            format(Sys.time(), "%d-%m-%Y"),
+            ".png",
+            sep = "")
+    },
+    content = function(file) {
+      ggsave(plot = barplot_out, file, height = 10, width = 26, dpi = 150)
+    }
+  )
   
   
   #### 5.5 Boxplot -------------------------------------------------------------
@@ -781,8 +875,44 @@ server <- function(input, output, session){
       p <- p + theme(axis.text.x = element_text(size = 12, angle = 45, hjust = 1))
     }
     
+    # "boxplot_out" is brought global environment for download. Use larger fonts.
+    boxplot_out <- p
+    
+    # Conditional disclaimer about excluded subdivisions
+    if(length(input$subdivGroup) > 0) {
+      boxplot_out <- boxplot_out +
+        labs(caption = paste("\n- Subdivisions excluded:\n", 
+                             Every8th(c(input$subdivGroup)),
+                             sep = ""))
+    }
+    
+    boxplot_out <<- 
+      boxplot_out + 
+      theme(axis.text = element_text(size = 16),
+            axis.title = element_text(size = 18),
+            axis.text.x = element_text(size = 16),
+            plot.caption = element_text(size = 16, hjust = 0, face = "italic"),
+            plot.caption.position =  "plot")
+    
+    # Render boxplot
     p
   })
+  
+  
+  #### 5.5.1 Download boxplot ----
+  output$dl_boxplot <- downloadHandler(
+    filename = function() { 
+      paste("boxplot_",
+            "pmax", input$parktime_max, "-wmax", input$walktime_max, "_",
+            input$resp, "-", input$expl, "_",
+            format(Sys.time(), "%d-%m-%Y"),
+            ".png",
+            sep = "")
+    },
+    content = function(file) {
+      ggsave(plot = boxplot_out, file, height = 12, width = 26, dpi = 150)
+    }
+  )
   
   
   #### 5.6 Levene test ---------------------------------------------------------
@@ -798,6 +928,7 @@ server <- function(input, output, session){
     
     # Present "Df" as integer to prevent decimal places in app
     res["Df"] <- sapply(res["Df"], as.integer)
+    levene_out <<- res # Result to global environment to enable download
     res
   }, 
   digits = 6,
@@ -806,6 +937,22 @@ server <- function(input, output, session){
   bordered = TRUE,
   rownames = TRUE)
 
+  
+  #### 5.6.1 Download levene test table ----
+  output$dl_levene <- downloadHandler(
+    filename = function() { 
+      paste("levene_",
+            "pmax", input$parktime_max, "-wmax", input$walktime_max, "_",
+            input$resp, "-", input$expl, "_",
+            format(Sys.time(), "%d-%m-%Y"), 
+            ".csv",
+            sep = "")
+    },
+    content = function(file) {
+      write.csv(levene_out, file)
+    }
+  )
+  
   
   #### 5.7 One-way ANOVA -------------------------------------------------------
   output$anova <- renderTable({
@@ -822,6 +969,7 @@ server <- function(input, output, session){
     anovasummary <- SigTableToShiny(anovasummary, FALSE)
     
     anovasummary["Df"] <- sapply(anovasummary["Df"], as.integer)
+    anova_out <<- anovasummary # Result to global environment to enable download
     anovasummary
   },
   digits = 6,
@@ -829,6 +977,22 @@ server <- function(input, output, session){
   hover = TRUE,
   bordered = TRUE,
   rownames = TRUE)
+  
+  
+  #### 5.7.1 Download One-way ANOVA table ----
+  output$dl_anova <- downloadHandler(
+    filename = function() { 
+      paste("oneway-anova_",
+            "pmax", input$parktime_max, "-wmax", input$walktime_max, "_",
+            input$resp, "-", input$expl, "_",
+            format(Sys.time(), "%d-%m-%Y"), 
+            ".csv",
+            sep = "")
+    },
+    content = function(file) {
+      write.csv(anova_out, file)
+    }
+  )
   
   
   ### 5.8 Brown-Forsythe test --------------------------------------------------
@@ -846,8 +1010,25 @@ server <- function(input, output, session){
     captured <- capture.output(onewaytests::bf.test(thisFormula, data = inputdata), 
                                file = NULL, 
                                append = TRUE)
+    brown_out <<- captured # Result to global environment to enable download
     cat(captured, sep = "\n")
   })
+  
+  
+  #### 5.8.1 Download Brown-Forsythe table ----
+  output$dl_brown <- downloadHandler(
+    filename = function() {
+      paste("brownf_",
+            "pmax", input$parktime_max, "-wmax", input$walktime_max, "_",
+            input$resp, "-", input$expl, "_",
+            format(Sys.time(), "%d-%m-%Y"), 
+            ".txt",
+            sep = "")
+    },
+    content = function(file) {
+      write.table(cat(brown_out, sep = "\n"), file)
+    }
+  )
   
   
   ### 5.9 Context map ----------------------------------------------------------
@@ -908,11 +1089,37 @@ server <- function(input, output, session){
             legend.text = element_text(size = 14),
             legend.position = "bottom")
     
+    # Global context to enable download
+    map_out <- g2
+    
+    map_out <<- 
+      map_out + 
+      theme(text = element_text(size = 25),
+            legend.title = element_text(size = 17),
+            legend.text = element_text(size = 16),
+            axis.text = element_text(size = 14),
+            axis.title = element_text(size = 16))
+    
+    # render context map
     ggiraph(code = print(g2), 
             width_svg = 16.7, 
             height_svg = 14.7, 
             options = list(opts_sizing(rescale = FALSE)))
   })
+  
+  
+  #### 5.9.1 Download context map ----
+  output$dl_map <- downloadHandler(
+    filename = function() { 
+      paste("context-map_",
+            format(Sys.time(), "%d-%m-%Y"), 
+            ".png",
+            sep = "")
+    },
+    content = function(file) {
+      ggsave(plot = map_out, file, height = 16, width = 18, dpi = 150)
+    }
+  )
   
   
   ### 5.10 Interactive map -----------------------------------------------------
@@ -1041,7 +1248,7 @@ server <- function(input, output, session){
     
     # Label switch boolean test
     if(input$show_int_labels == TRUE) {
-      g = g + with(current_centr,
+      g <- g + with(current_centr,
                    annotate(geom = "text",
                             x = long, 
                             y = lat, 
@@ -1049,11 +1256,51 @@ server <- function(input, output, session){
                             size = 4))
     }
     
+    # "interactive_out" is brought global environment for download. Use larger 
+    # fonts.
+    interactive_out <- g
+    
+    # Conditional disclaimer about excluded groups and subdivisions
+    if(length(input$subdivGroup) | length(input$checkGroup) > 0) {
+      interactive_out <- interactive_out +
+        labs(caption = 
+               paste("- Groups excluded from the explanatory variable ", input$expl, ":\n", 
+                     Every8th(c(input$checkGroup)),
+                     "\n- Subdivisions excluded:\n", Every8th(c(input$subdivGroup)),
+                     sep = ""))
+    }
+    
+    interactive_out <<- 
+      interactive_out + 
+      theme(legend.title = element_text(size = 17),
+            legend.text = element_text(size = 16),
+            axis.text = element_text(size = 14),
+            axis.title = element_text(size = 16),
+            plot.caption = element_text(size = 14, hjust = 0, face = "italic"),
+            plot.caption.position =  "plot")
+    
+    # Render interactive map
     ggiraph(code = print(g),
             width_svg = 16.7,
             height_svg = 14.7)
   })
+  
+  
+  #### 5.10.1 Download interactive map ----
+  output$dl_interactive <- downloadHandler(
+    filename = function() { 
+      paste("interactive-map_",
+            "pmax", input$parktime_max, "-wmax", input$walktime_max, "_",
+            format(Sys.time(), "%d-%m-%Y"), 
+            ".png",
+            sep = "")
+    },
+    content = function(file) {
+      ggsave(plot = interactive_out, file, height = 16, width = 18, dpi = 150)
+    }
+  )
 }
+
 
 
 ### 6 ShinyApp UI elements ----------------------------------------------------- 
@@ -1077,7 +1324,7 @@ ui <- shinyUI(fluidPage(
   #   accordingly
   tags$head(tags$link(rel = "stylesheet", 
                       type = "text/css", 
-                      href = "https://use.fontawesome.com/releases/v5.8.1/css/all.css"),
+                      href = "https://use.fontawesome.com/releases/v5.13.0/css/all.css"),
             htmltools::includeCSS(csspath)),
   includeScript(path = jspath),
 
@@ -1086,7 +1333,7 @@ ui <- shinyUI(fluidPage(
   ### 6.2 Sidebar layout -------------------------------------------------------
   titlePanel(NULL, windowTitle = "Sampo Vesanen MSc thesis research survey results"),
   sidebarLayout(
-  sidebarPanel(id = "sidebar",
+    sidebarPanel(id = "sidebar",
       # &nbsp; is a non-breaking space. Will not be cut off at any situation
       HTML("<div id='contents'>"),
       HTML("<p id='linkheading_t'>Analysis</p>"),
@@ -1246,6 +1493,8 @@ ui <- shinyUI(fluidPage(
            "<a href='#stats-settings-link'><i class='icon chart' title='Go to active variables'></i></a>",
            "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a>",
            "<button id='showhidebutton' onclick=\"show_hide('descri','descrilink')\"><i class='icon eyeslash' title='Hide element'></i></button>"),
+      downloadLink("dl_descri",
+                   label = HTML("<i class='icon file' title='Download this table as csv'></i>")),
       HTML("</h3>"),
       tableOutput("descri"),
       HTML("</div>"),
@@ -1258,6 +1507,8 @@ ui <- shinyUI(fluidPage(
            "<a href='#stats-settings-link'><i class='icon chart' title='Go to active variables'></i></a>",
            "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a>",
            "<button id='showhidebutton' onclick=\"show_hide('hist','histlink')\"><i class='icon eyeslash' title='Hide element'></i></button>"),
+      downloadLink("dl_hist",
+                   label = HTML("<i class='icon file' title='Download histogram as png'></i>")),
       HTML("</h3>"),
       plotOutput("hist"),
       HTML("</div>"),
@@ -1270,6 +1521,8 @@ ui <- shinyUI(fluidPage(
            "<a href='#stats-settings-link'><i class='icon chart' title='Go to active variables'></i></a>",
            "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a>",
            "<button id='showhidebutton' onclick=\"show_hide('barplot_wrap','barplotlink')\"><i class='icon eyeslash' title='Hide element'></i></button>"),
+      downloadLink("dl_barplot",
+                   label = HTML("<i class='icon file' title='Download this plot as png'></i>")),
       HTML("</h3>"),
       HTML("<div id='barplot_wrap'>"),
       HTML("<p>This plot is active when <tt>likert</tt>, <tt>parkspot</tt>, or", 
@@ -1290,6 +1543,8 @@ ui <- shinyUI(fluidPage(
            "<a href='#stats-settings-link'><i class='icon chart' title='Go to active variables'></i></a>",
            "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a>",
            "<button id='showhidebutton' onclick=\"show_hide('boxplot','boxplotlink')\"><i class='icon eyeslash' title='Hide element'></i></button>"),
+      downloadLink("dl_boxplot",
+                   label = HTML("<i class='icon file' title='Download this plot as png'></i>")),
       HTML("</h3>"),
       plotOutput("boxplot", height = "500px"),
       HTML("</div>"),
@@ -1301,6 +1556,8 @@ ui <- shinyUI(fluidPage(
            "<a href='#stats-settings-link'><i class='icon chart' title='Go to active variables'></i></a>",
            "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a>",
            "<button id='showhidebutton' onclick=\"show_hide('levene_wrap','levenelink')\"><i class='icon eyeslash' title='Hide element'></i></button>"),
+      downloadLink("dl_levene",
+                   label = HTML("<i class='icon file' title='Download this table as csv'></i>")),
       HTML("</h3>"),
       HTML("<div id='levene_wrap'>"),
       p("Look for p-value > 0.05 (0.05 '.' 0.1 ' ' 1) (variance across groups",
@@ -1319,6 +1576,8 @@ ui <- shinyUI(fluidPage(
            "<a href='#stats-settings-link'><i class='icon chart' title='Go to active variables'></i></a>",
            "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a>",
            "<button id='showhidebutton' onclick=\"show_hide('anova_wrap','anovalink')\"><i class='icon eyeslash' title='Hide element'></i></button>"),
+      downloadLink("dl_anova",
+                   label = HTML("<i class='icon file' title='Download this table as csv'></i>")),
       HTML("</h3>"),
       HTML("<div id='anova_wrap'>"),
       tableOutput("anova"),
@@ -1332,6 +1591,8 @@ ui <- shinyUI(fluidPage(
            "<a href='#stats-settings-link'><i class='icon chart' title='Go to active variables'></i></a>",
            "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a>",
            "<button id='showhidebutton' onclick=\"show_hide('brown_wrap', 'brownlink')\"><i class='icon eyeslash' title='Hide element'></i></button></button>"),
+      downloadLink("dl_brown",
+                   label = HTML("<i class='icon file' title='Download this table as txt'></i>")),
       HTML("</h3>"),
       HTML("<div id='brown_wrap'>"),
       p("Look for a statistically significant difference between the selected", 
@@ -1349,6 +1610,8 @@ ui <- shinyUI(fluidPage(
       HTML("<h3>8 Active subdivisions&ensp;",
            "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a>",
            "<button id='showhidebutton' onclick=\"show_hide('map', 'maplink')\"><i class='icon eyeslash' title='Hide element'></i></button>"),
+      downloadLink("dl_map",
+                   label = HTML("<i class='icon file' title='Download this map as png'></i>")),
       HTML("</h3>"),
       ggiraphOutput("map"),
       HTML("</div>"),
@@ -1361,6 +1624,8 @@ ui <- shinyUI(fluidPage(
            "<a href='#stats-settings-link'><i class='icon chart' title='Go to active variables'></i></a>",
            "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a>",
            "<button id='showhidebutton' onclick=\"show_hide('interactive', 'intmaplink')\"><i class='icon eyeslash' title='Hide element'></i></button>"),
+      downloadLink("dl_interactive",
+                   label = HTML("<i class='icon file' title='Download this map as png'></i>")),
       HTML("</h3>"),
       HTML("<div class='noselect'>"),
       ggiraphOutput("interactive"),
@@ -1369,30 +1634,26 @@ ui <- shinyUI(fluidPage(
       
       # Data providers
       h3("Data providers"),
-      HTML("<a href='https://hri.fi/data/dataset/paakaupunkiseudun-aluejakokartat'>",
-           "Municipality subdivisions</a>",
+      HTML("<a href='https://hri.fi/data/dataset/paakaupunkiseudun-aluejakokartat'>Municipality subdivisions</a>",
            "(C) Helsingin, Espoon, Vantaan ja Kauniaisten mittausorganisaatiot",
-           "2011. Aineisto on muokkaamaton. License <a href='https://creativecommons.org/licenses/by/4.0/deed.en'> CC BY 4.0</a>.",
+           "2011. Aineisto on muokkaamaton. License ",
+           "<a href='https://creativecommons.org/licenses/by/4.0/deed.en'> CC BY 4.0</a>.",
            
-           "<br><a href='https://www.stat.fi/tup/paavo/index_en.html'>",
-           "Postal code area boundaries</a> (C) Statistics Finland 2019.", 
-           "Retrieved 27.6.2019. License <a href='https://creativecommons.org/licenses/by/4.0/deed.en'>",
-           "CC BY 4.0</a>.",
+           "<br><a href='https://www.stat.fi/tup/paavo/index_en.html'>Postal code area boundaries</a>",
+           "(C) Statistics Finland 2019. Retrieved 27.6.2019. License ",
+           "<a href='https://creativecommons.org/licenses/by/4.0/deed.en'>CC BY 4.0</a>.",
            
-           "<br><a href='http://urn.fi/urn:nbn:fi:csc-kata00001000000000000226'>",
-           "Regional population density 2012</a> (C) Statistics Finland 2019.", 
-           "Retrieved 13.3.2020. License <a href='http://www.nic.funet.fi/index/geodata/tilastokeskus/Tilastokeskus_terms_of_use_2018.pdf'>",
-           "Other (Open)</a>.",
+           "<br><a href='http://urn.fi/urn:nbn:fi:csc-kata00001000000000000226'>Regional population density 2012</a>",
+           "(C) Statistics Finland 2019. Retrieved 13.3.2020. License ",
+           "<a href='http://www.nic.funet.fi/index/geodata/tilastokeskus/Tilastokeskus_terms_of_use_2018.pdf'>Other (Open)</a>.",
            
-           "<br><a href='https://land.copernicus.eu/local/urban-atlas/urban-atlas-2012'>",
-           "Urban Atlas 2012</a> (C) European Environment Agency 2016.", 
-           "Retrieved 27.6.2019. License <a href='https://land.copernicus.eu/local/urban-atlas/urban-atlas-2012?tab=metadata'>",
-           "available at Copernicus.eu</a>.",
+           "<br><a href='https://land.copernicus.eu/local/urban-atlas/urban-atlas-2012'>Urban Atlas 2012</a>",
+           "(C) European Environment Agency 2016. Retrieved 27.6.2019. License ",
+           "<a href='https://land.copernicus.eu/local/urban-atlas/urban-atlas-2012?tab=metadata'>available at Copernicus.eu</a>.",
            
-           "<br><a href='http://metatieto.ymparisto.fi:8080/geoportal/catalog/search/resource/details.page?uuid={B374BBB2-1EDF-4CF6-B11B-04E0017E9A26}'>",
-           "Yhdyskuntarakenteen vyöhykkeet 2017</a> (C) Finnish Environment Institute 2019.", 
-           "Retrieved 27.6.2019. License <a href='https://creativecommons.org/licenses/by/4.0/deed.en'>",
-           "CC BY 4.0</a>.")
+           "<br><a href='http://metatieto.ymparisto.fi:8080/geoportal/catalog/search/resource/details.page?uuid={B374BBB2-1EDF-4CF6-B11B-04E0017E9A26}'>Yhdyskuntarakenteen vyöhykkeet 2017</a>",
+           "(C) Finnish Environment Institute 2019. Retrieved 27.6.2019. License ",
+           "<a href='https://creativecommons.org/licenses/by/4.0/deed.en'>CC BY 4.0</a>.")
     )
   )
 ))

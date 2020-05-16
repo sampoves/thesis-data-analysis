@@ -138,8 +138,8 @@ form.well {
 	font-size: 14px;
 }
 #signif {
-	font-size:12px;
-	margin-top:-12px;
+	font-size: 12px;
+	margin-top: -12px;
 }
 text {
 	pointer-events: none;
@@ -178,29 +178,28 @@ render reliably */
     font-variant: normal;
     text-rendering: auto;
     -webkit-font-smoothing: antialiased;
-	font-weight: 900;
+	font-weight: 900; /* solid */
+	font-size: 1.0em;
 }
 .wrench::before {
     content: "\f0ad";
-    font-size: 1.0em;
 }
 .chart::before {
 	content: "\f080";
-	font-size: 1.0em;
 }
 .mapmark::before {
 	content: "\f59f";
-	font-size: 1.0em;
 }
 .eyeslash::before {
 	content: "\f070";
-	font-size: 1.0em;
 	color: white;
 }
 .eye::before {
 	content: "\f06e";
-	font-size: 1.0em;
 	color: white;
+}
+.file::before {
+	content: "\f56d";
 }
 
 /*---------------------------------*/
