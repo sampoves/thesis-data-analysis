@@ -1086,7 +1086,7 @@ ui <- shinyUI(fluidPage(
   ### 6.2 Sidebar layout -------------------------------------------------------
   titlePanel(NULL, windowTitle = "Sampo Vesanen MSc thesis research survey results"),
   sidebarLayout(
-  sidebarPanel(
+  sidebarPanel(id = "sidebar",
       # &nbsp; is a non-breaking space. Will not be cut off at any situation
       HTML("<div id='contents'>"),
       HTML("<p id='linkheading_t'>Analysis</p>"),
@@ -1245,14 +1245,12 @@ ui <- shinyUI(fluidPage(
       
       # Descriptive statistics
       HTML("<div id='descrilink'>"),
-      HTML("<div id='collapsible'>"),
-      HTML("<h3 title='Hide element'>1 Descriptive statistics&ensp;",
+      HTML("<h3>1 Descriptive statistics&ensp;",
            "<a href='#stats-settings-link'><i class='icon chart' title='Go to active variables'></i></a>",
-           "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a></h3>"),
-      HTML("</div>"),
-      HTML("<div class='content'>"),
+           "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a>",
+           "<button id='showhidebutton' onclick=\"show_hide('descri','descrilink')\"><i class='icon eyeslash' title='Hide element'></i></button></h3>"),
       tableOutput("descri"),
-      HTML("</div></div>"),
+      HTML("</div>"),
       hr(),
       
       # Histogram
