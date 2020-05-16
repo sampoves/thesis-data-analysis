@@ -91,6 +91,14 @@ form.well {
 #linkheading_b {
 	margin-top: 6px;
 }
+#version-info {
+	font-size: 11px; 
+	color: grey; 
+	margin-top: -10px;
+}
+#smalltext {
+	font-size: 9px;
+}
 /* reset buttons */
 #resetSubdivs, #resetParkWalk {
 	width: 100%;
@@ -128,6 +136,10 @@ form.well {
 	background: #2e3338;
 	border: 1px solid #1c1e22;
 	font-size: 14px;
+}
+#signif {
+	font-size:12px;
+	margin-top:-12px;
 }
 text {
 	pointer-events: none;
