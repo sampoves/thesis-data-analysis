@@ -16,6 +16,37 @@ function show_hide(shrink_me, parent_div) {
 	}
 };
 
+// Specified function to hide/show sidebar
+function show_hide_sb() {
+	var elem_to_hide = document.getElementById('sidebar');
+	var showhidebutton = document.getElementById('showhidebutton');
+
+	if(elem_to_hide.style.display === 'none') {
+		elem_to_hide.style.display = 'block';
+		$(showhidebutton).find('i.icon.eye').toggleClass('eye eyeslash');
+		$(showhidebutton).find('i.icon.eyeslash')[0].setAttribute('title', 'Hide sidebar');
+	} else {
+		elem_to_hide.style.display = 'none';
+		$(showhidebutton).find('i.icon.eyeslash').toggleClass('eyeslash eye');
+		$(showhidebutton).find('i.icon.eye')[0].setAttribute('title', 'Show sidebar');
+	}
+};
+
+// Insert sidebar hide/show button to col-sm-3, the div that contains the sidebar. Add
+// the button after the actual sidebar div. The button appears on the top right corner
+// of the sidebar.
+// Also make ggiraph outputs untouchable
+$(function() {
+	$('.well').after("<div class='hidesidebar'><button id='showhidebutton' onclick='show_hide_sb()'><i class='icon eyeslash' title='Hide sidebar'></i></button></div>");
+	
+	$("#hist").addClass('noselect');
+	$("#barplot_ord").addClass('noselect');
+	$("#boxplot").addClass('noselect');
+	$("#map").addClass('noselect');
+	$("#interactive").addClass('noselect');
+});
+
+
 // This jQuery function listens to anchor link clicking. With this function I aimed to
 // make repeated clicking possible, which was not with :target selectors I used earlier.
 // In short, this detects with the amount of clicks if we fire a delayed highlight or

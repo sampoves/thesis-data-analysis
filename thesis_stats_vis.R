@@ -638,7 +638,7 @@ server <- function(input, output, session){
   
   
   #### 5.3 Histogram for parktime or walktime ----------------------------------
-  output$hist <- renderPlot({
+  output$hist <- renderggiraph({
     
     resp_col <- input$resp
     expl_col <- input$expl
@@ -724,7 +724,9 @@ server <- function(input, output, session){
             axis.title = element_text(size = 22))
     
     # Render histogram
-    p
+    ggiraph(code = print(p),
+            width_svg = 16.7,
+            height_svg = 6)
   })
 
   
@@ -746,7 +748,7 @@ server <- function(input, output, session){
   
   
   #### 5.4 Barplot -------------------------------------------------------------
-  output$barplot <- renderPlot({
+  output$barplot_ord <- renderggiraph({
     
     # See distribution of ordinal variables through a grouped bar plot
     expl_col <- input$expl
@@ -812,7 +814,9 @@ server <- function(input, output, session){
             axis.title = element_text(size = 22))
     
     # Render barplot
-    plo
+    ggiraph(code = print(plo),
+            width_svg = 16.7,
+            height_svg = 6)
   })
   
   
@@ -833,7 +837,7 @@ server <- function(input, output, session){
   
   
   #### 5.5 Boxplot -------------------------------------------------------------
-  output$boxplot <- renderPlot({
+  output$boxplot <- renderggiraph({
     
     expl_col <- input$expl
     resp_col <- input$resp
@@ -874,7 +878,9 @@ server <- function(input, output, session){
             axis.text.x = element_text(size = 21))
     
     # Render boxplot
-    p
+    ggiraph(code = print(p),
+            width_svg = 16.7,
+            height_svg = 7)
   })
   
   
@@ -1449,7 +1455,7 @@ ui <- shinyUI(fluidPage(
       
       width = 3
     ),
-  
+    
     
     ### 6.3 mainPanel layout ---------------------------------------------------
     mainPanel(
@@ -1481,9 +1487,9 @@ ui <- shinyUI(fluidPage(
            "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a>",
            "<button id='showhidebutton' onclick=\"show_hide('hist','histlink')\"><i class='icon eyeslash' title='Hide element'></i></button>"),
       downloadLink("dl_hist",
-                   label = HTML("<i class='icon file' title='Download this plot as png'></i>")),
+                   label = HTML("<i class='icon file' title='Download hi-res version of this plot (png)'></i>")),
       HTML("</h3>"),
-      plotOutput("hist"),
+      ggiraphOutput("hist", height = "400px"),
       HTML("</div>"),
       hr(),
       
@@ -1495,7 +1501,7 @@ ui <- shinyUI(fluidPage(
            "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a>",
            "<button id='showhidebutton' onclick=\"show_hide('barplot_wrap','barplotlink')\"><i class='icon eyeslash' title='Hide element'></i></button>"),
       downloadLink("dl_barplot",
-                   label = HTML("<i class='icon file' title='Download this plot as png'></i>")),
+                   label = HTML("<i class='icon file' title='Download hi-res version of this plot (png)'></i>")),
       HTML("</h3>"),
       HTML("<div id='barplot_wrap'>"),
       HTML("<p>This plot is active when <tt>likert</tt>, <tt>parkspot</tt>, or", 
@@ -1504,7 +1510,7 @@ ui <- shinyUI(fluidPage(
       conditionalPanel(
         condition = 
           "input.expl == 'likert' || input.expl == 'parkspot' || input.expl == 'timeofday'",
-        plotOutput("barplot"),
+        ggiraphOutput("barplot_ord", height = "400px"),
       ),
       HTML("</div>"),
       hr(),
@@ -1517,9 +1523,9 @@ ui <- shinyUI(fluidPage(
            "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a>",
            "<button id='showhidebutton' onclick=\"show_hide('boxplot','boxplotlink')\"><i class='icon eyeslash' title='Hide element'></i></button>"),
       downloadLink("dl_boxplot",
-                   label = HTML("<i class='icon file' title='Download this plot as png'></i>")),
+                   label = HTML("<i class='icon file' title='Download hi-res version of this plot (png)'></i>")),
       HTML("</h3>"),
-      plotOutput("boxplot", height = "500px"),
+      ggiraphOutput("boxplot", height = "500px"),
       HTML("</div>"),
       hr(),
       
@@ -1584,7 +1590,7 @@ ui <- shinyUI(fluidPage(
            "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a>",
            "<button id='showhidebutton' onclick=\"show_hide('map', 'maplink')\"><i class='icon eyeslash' title='Hide element'></i></button>"),
       downloadLink("dl_map",
-                   label = HTML("<i class='icon file' title='Download this figure as png'></i>")),
+                   label = HTML("<i class='icon file' title='Download hi-res version of this figure (png)'></i>")),
       HTML("</h3>"),
       ggiraphOutput("map"),
       HTML("</div>"),
@@ -1598,11 +1604,10 @@ ui <- shinyUI(fluidPage(
            "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a>",
            "<button id='showhidebutton' onclick=\"show_hide('interactive', 'intmaplink')\"><i class='icon eyeslash' title='Hide element'></i></button>"),
       downloadLink("dl_interactive",
-                   label = HTML("<i class='icon file' title='Download this figure as png'></i>")),
+                   label = HTML("<i class='icon file' title='Download hi-res version of this figure (png)'></i>")),
       HTML("</h3>"),
-      HTML("<div class='noselect'>"),
       ggiraphOutput("interactive"),
-      HTML("</div></div>"),
+      HTML("</div>"),
       hr(),
       
       # Data providers

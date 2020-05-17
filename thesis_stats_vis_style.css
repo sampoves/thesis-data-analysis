@@ -65,7 +65,6 @@ long explanations would break it otherwise
 - manually set sidebarPanel z-index to make the element always appear on top
 - .checkbox input achieves strikeout on selected checkboxes */
 form.well {
-	display: 100%;
 	position: fixed;
 	overflow: auto;
 	overflow-y: auto;
@@ -110,6 +109,14 @@ form.well {
 	text-decoration: line-through;
 	color: dimgray;
 }
+.hidesidebar {
+	position: fixed;
+	z-index: 100;
+	margin-left: -5px;
+	margin-top: -5px;
+	background-color: rgba(0,0,0,0.3);
+	border-radius: 10px;
+}
 
 /*-------------*/
 /* mainPanel() */
@@ -124,7 +131,7 @@ form.well {
 	text-align: center; /* eyeslash and eye are of different width */
 	width: 45px; /* therefore align and give button fixed width */
 }
-#descri {
+#descri, #levene, #anova {
 	overflow-x: auto;
 	max-height: 80vh;
 }
@@ -144,20 +151,22 @@ form.well {
 text {
 	pointer-events: none;
 }
-section, h1, li, img { 
+/*section, h1, li, img { 
 	-moz-transition: width 1s ease-in-out, left 1.5s ease-in-out;
 	-webkit-transition: width 1s ease-in-out, left 1.5s ease-in-out;
 	-moz-transition: width 1s ease-in-out, left 1.5s ease-in-out;
 	-o-transition: width 1s ease-in-out, left 1.5s ease-in-out;
 	transition: width 1s ease-in-out, left 1.5s ease-in-out;
-}
+}*/
+/* use this class to make ggiraphOutputs untouchable. Class is added to ids in 
+JavaScript */
 .noselect {
-	-webkit-touch-callout: none; /* iOS Safari */
-	-webkit-user-select: none; /* Safari */
-	-khtml-user-select: none; /* Konqueror HTML */
-	-moz-user-select: none; /* Old versions of Firefox */
-	-ms-user-select: none; /* Internet Explorer/Edge */
-	user-select: none; /* Non-prefixed version, currently supported by Chrome, Opera and Firefox */
+	-webkit-touch-callout: none;
+	-webkit-user-select: none;
+	-khtml-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
 }
 .girafe_container_std {
 	text-align: left; /* align girafe elements to the left */
