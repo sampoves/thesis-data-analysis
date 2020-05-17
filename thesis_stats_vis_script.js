@@ -60,6 +60,9 @@ $(document).one('shiny:idle', function(event) {
 	var sig = "<p id='signif'>Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</p>";
 	
 	setTimeout(function() {
+		// Disable mobile keyboard on dropdown menus
+		$('.selectize-input input').attr('readonly','readonly');
+		
 		$('#levene table').after(sig);
 		$('#anova table').after(sig);
 	}, 8000);
