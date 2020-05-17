@@ -1,3 +1,10 @@
+
+// JavaScript for the analysis app of my thesis results
+
+// "Parking of private cars and spatial accessibility in Helsinki Capital Region" 
+// by Sampo Vesanen, 17.5.2020
+
+
 // This JS function checks the state of the display parameter of inputted div "shrink_me"
 // and edits the value accordingly. Also change the eye icon of the inputted "parent_div"
 // parameter.

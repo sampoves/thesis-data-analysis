@@ -1,19 +1,26 @@
 
-/* CSS style sheet of for the analysis app of thesis results
+/* CSS style sheet of for the analysis app of my thesis results
 
 "Parking of private cars and spatial accessibility in Helsinki Capital Region" 
-by Sampo Vesanen 2020 */
+by Sampo Vesanen, 17.5.2020 */
 
 html, body {
 	height: 100%;
 	scroll-behavior: smooth;
 	position: relative;
 }
-.col-sm-8 { /* mainPanel() master */
+/* mainPanel() master */
+.col-sm-8 {
 	max-width: 1225px;
 }
 hr {
 	margin-left: 0px;
+}
+/* specifying font-family is important in shinyapps.io to prohibit the use of ugly
+default fonts in ggiraph (svg) objects */
+text {
+	font-family: helvetica,arial,sans-serf;
+	pointer-events: none;
 }
 
 /*------------------*/
@@ -148,9 +155,7 @@ form.well {
 	font-size: 12px;
 	margin-top: -12px;
 }
-text {
-	pointer-events: none;
-}
+
 /* use this class to make ggiraphOutputs untouchable. Class is added to ids in 
 JavaScript */
 .noselect {
