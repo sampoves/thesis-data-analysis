@@ -1768,36 +1768,3 @@ visitor_ui <- basicPage(
   HTML("</div></div>")
 )
 shinyApp(visitor_ui, visitor_server)
-
-
-
-#### Obsolete material ####
-
-# All of the functionality below is superseded by the analysis ShinyApp 
-# presented above. Preserve these for the sake of alternatives and simplicity.
-
-# Run tests with GetANOVA()
-
-# We use GetANOVA() function, which performs multiple analyses with the 
-# information fed to it. 
-
-# Get walktime by timeofday
-#GetANOVA(walktime ~ timeofday, thesisdata$walktime, thesisdata$timeofday,
-#         thesisdata, c(1, 2, 3, 4, 5))
-
-# Get walktime by timeofday, remove "Can't specify"
-#GetANOVA(walktime ~ timeofday, thesisdata$walktime, thesisdata$timeofday,
-#         thesisdata[-which(as.integer(thesisdata$timeofday) == 4), ],
-#         c(1, 2, 3, 4, 5))
-
-# parktime by parkspot
-#GetANOVA(parktime ~ parkspot, thesisdata$parktime, thesisdata$parkspot,
-#         thesisdata, c(1, 2, 3, 4, 5))
-
-# parktime by subdivision
-#GetANOVA(parktime ~ subdiv, thesisdata$parktime, thesisdata$subdiv,
-#         thesisdata, c(1, 2, 3, 4, 5))
-
-# walktime by ykr zone
-#GetANOVA(walktime ~ ykr_zone, thesisdata$walktime, thesisdata$ykr_zone,
-#         thesisdata, c(1, 2, 3, 4, 5))
