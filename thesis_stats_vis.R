@@ -660,8 +660,8 @@ server <- function(input, output, session){
       annotation_custom(
         grob = grid::textGrob(label = round(mean(resp_vect), 2), 
                               hjust = -0.3,
-                              vjust = 1.2, 
-                              gp = grid::gpar(cex = 1, col = "red")),
+                              vjust = 1.25, 
+                              gp = grid::gpar(cex = 1.2, col = "red")),
         ymin = 0,
         ymax = 0,
         xmin = round(mean(resp_vect), 2),
@@ -674,8 +674,8 @@ server <- function(input, output, session){
       annotation_custom(
         grob = grid::textGrob(label = round(median(resp_vect), 2), 
                               hjust = 2,
-                              vjust = 1.2, 
-                              gp = grid::gpar(cex = 1, col = "blue")),
+                              vjust = 1.25, 
+                              gp = grid::gpar(cex = 1.2, col = "blue")),
         ymin = 0,
         ymax = 0,
         xmin = round(median(resp_vect), 2),
@@ -690,11 +690,12 @@ server <- function(input, output, session){
                    show.legend = FALSE,
                    adjust = binwidth) +
       
-      theme(legend.title = element_text(size = 15),
-            legend.text = element_text(size = 14),
-            legend.spacing.y = unit(0.2, "cm"),
-            axis.text = element_text(size = 12),
-            axis.title = element_text(size = 14)) +
+      theme(legend.title = element_text(size = 16),
+            legend.text = element_text(size = 15),
+            legend.spacing.y = unit(0.3, "cm"),
+            axis.text = element_text(size = 13),
+            axis.title = element_text(size = 15),
+            text = element_text(size = 13)) +
       
       # Build legend, override colors to get visible color for density. Also,
       # override linetype to get a solid line for density.
@@ -790,10 +791,10 @@ server <- function(input, output, session){
       ylab(yax) +
       labs(fill = barplotval) +
       theme(legend.position = "bottom",
-            legend.title = element_text(size = 15),
-            legend.text = element_text(size = 14),
-            axis.text = element_text(size = 12),
-            axis.title = element_text(size = 14))
+            legend.title = element_text(size = 16),
+            legend.text = element_text(size = 15),
+            axis.text = element_text(size = 13),
+            axis.title = element_text(size = 15))
     
     # Use RColorBrewer color scale. Paired has 12 set colors, interpolate if
     # there are more values to map than that.
@@ -852,8 +853,8 @@ server <- function(input, output, session){
     p <- ggplot(inputdata, aes_string(x = expl_col, y = resp_col, fill = expl_col)) + 
       geom_boxplot() + 
       ylab(paste(resp_col, "(min)")) +
-      theme(axis.text = element_text(size = 12),
-            axis.title = element_text(size = 14),
+      theme(axis.text = element_text(size = 13),
+            axis.title = element_text(size = 15),
             legend.position = "none")
     
     # Use RColorBrewer color scale. Set3 has 12 set colors, interpolate if
@@ -862,7 +863,7 @@ server <- function(input, output, session){
 
     # Diagonal labels if more values to map than five
     if(length(legendnames) > 5) {
-      p <- p + theme(axis.text.x = element_text(size = 12, angle = 45, hjust = 1))
+      p <- p + theme(axis.text.x = element_text(size = 13, angle = 45, hjust = 1))
     }
     
     
