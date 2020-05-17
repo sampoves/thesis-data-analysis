@@ -35,10 +35,10 @@ function show_hide_sb() {
 // Insert sidebar hide/show button to col-sm-3, the div that contains the sidebar. Add
 // the button after the actual sidebar div. The button appears on the top right corner
 // of the sidebar.
-// Also make ggiraph outputs untouchable
 $(function() {
 	$('.well').after("<div class='hidesidebar'><button id='showhidebutton' onclick='show_hide_sb()'><i class='icon eyeslash' title='Hide sidebar'></i></button></div>");
 	
+	// Make ggiraph outputs untouchable
 	$("#hist").addClass('noselect');
 	$("#barplot_ord").addClass('noselect');
 	$("#boxplot").addClass('noselect');
@@ -46,6 +46,17 @@ $(function() {
 	$("#interactive").addClass('noselect');
 });
 
+// Insert significance element right after table element so that overflow-x: auto;
+// does not hide the text. Again with the hacky setTimeout() approach. Could not figure
+// a better way in this timeframe.
+$(document).one('shiny:idle', function(event) {
+	var sig = "<p id='signif'>Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</p>";
+	
+	setTimeout(function() {
+		$('#levene table').after(sig);
+		$('#anova table').after(sig);
+	}, 8000);
+});
 
 // This jQuery function listens to anchor link clicking. With this function I aimed to
 // make repeated clicking possible, which was not with :target selectors I used earlier.

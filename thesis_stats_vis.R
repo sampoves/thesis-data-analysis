@@ -1234,7 +1234,7 @@ server <- function(input, output, session){
       # Legend settings
       theme(legend.title = element_text(size = 15),
             legend.text = element_text(size = 14),
-            plot.caption = element_text(size = 13, hjust = 0.5))
+            plot.caption = element_text(size = 13, hjust = 0.5, face = "italic"))
     
     # Label switch boolean test
     if(input$show_int_labels == TRUE) {
@@ -1529,7 +1529,7 @@ ui <- shinyUI(fluidPage(
       HTML("</div>"),
       hr(),
       
-      # Levene's test
+      # Levene's test. Significance legend is inserted with JavaScript
       HTML("<div id='levenelink'>"),
       HTML("<h3>5 Test for homogeneity of variances (Levene's test)&ensp;",
            "<a href='#stats-settings-link'><i class='icon chart' title='Go to active variables'></i></a>",
@@ -1545,7 +1545,6 @@ ui <- shinyUI(fluidPage(
         "is a difference between the variances in the population. If p < 0.05,",
         "employ Brown-Forsythe test."),
       tableOutput("levene"),
-      HTML("<p id='signif'>Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</p>"),
       HTML("</div></div>"),
       hr(),
       
@@ -1560,7 +1559,6 @@ ui <- shinyUI(fluidPage(
       HTML("</h3>"),
       HTML("<div id='anova_wrap'>"),
       tableOutput("anova"),
-      HTML("<p id='signif'>Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</p>"),
       HTML("</div></div>"),
       hr(),
       
