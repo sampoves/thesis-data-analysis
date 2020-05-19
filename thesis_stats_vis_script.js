@@ -117,3 +117,58 @@ $(function() {
 		}
     });
 });
+
+// Add a subdivision switch on/off buttons for all municipalities. Achieve this by
+// adding ids to subdivGroup checkboxes, which previously didn't have any. Use this
+// crude function to programmatically click all correct subdivision buttons.
+function munClick(id) {
+	if(id === 1) { 
+		$("#subdiv_0").click(); // Espoo
+		$("#subdiv_1").click();
+		$("#subdiv_2").click();
+		$("#subdiv_3").click();
+		$("#subdiv_4").click();
+		$("#subdiv_5").click();
+		$("#subdiv_6").click();
+	} if (id === 2) {
+		$("#subdiv_7").click(); // Helsinki
+		$("#subdiv_8").click();
+		$("#subdiv_9").click();
+		$("#subdiv_10").click();
+		$("#subdiv_11").click();
+		$("#subdiv_12").click();
+		$("#subdiv_13").click();
+		$("#subdiv_14").click();
+	} if (id === 3) {
+		$("#subdiv_15").click(); // Kauniainen
+	} if (id === 4) {
+		$("#subdiv_16").click(); // Vantaa
+		$("#subdiv_17").click();
+		$("#subdiv_18").click();
+		$("#subdiv_19").click();
+		$("#subdiv_20").click();
+		$("#subdiv_21").click();
+		$("#subdiv_22").click();
+	}
+};
+
+$(document).ready(function() {
+	// Add identifiers for subdivGroup checkboxes
+	var checkboxes = $("#subdivGroup").find(".checkbox input");
+	for(var i = 0; i < checkboxes.length; i++) {
+		checkboxes[i].setAttribute("id", "subdiv_" + i);
+	};
+	
+	// Add switches after subdivGroup
+	var buttonCol = "<div class='mun-btn-container' id='contents'>" +
+		"<button class='btn btn-default munbutton' onclick='munClick(1)'>Espoo</button>" +
+		"<button class='btn btn-default munbutton' onclick='munClick(2)'>Helsinki</button>" +
+		"<button class='btn btn-default munbutton' onclick='munClick(3)'>Kauniainen</button>" +
+		"<button class='btn btn-default munbutton' onclick='munClick(4)'>Vantaa</button>" +
+		"</div>";
+	
+	$('#subdivGroup div.shiny-options-group').after(buttonCol);
+	
+	// Move "reset subdivisions" action button inside the new button container
+	$("#resetSubdivs").appendTo($(".mun-btn-container"));
+});

@@ -108,9 +108,13 @@ form.well {
 /* reset buttons */
 #resetSubdivs, #resetParkWalk {
 	width: 100%;
-	padding: 6px 0px 8px 0px;
+	padding: 4px 0px 6px 0px;
 	white-space: normal;
 }
+#resetSubdivs {
+	margin-top: 4px;
+}
+
 /* checkbox strikethrough */
 .checkbox input[type=checkbox]:checked + span {
 	text-decoration: line-through;
@@ -123,6 +127,22 @@ form.well {
 	margin-top: -5px;
 	background-color: rgba(0,0,0,0.3);
 	border-radius: 10px;
+}
+/* Municipality on/off switches */
+/* Flex settings make buttons fill up the parent container */
+.mun-btn-container {
+	display: flex; 
+	flex-direction: row; 
+	flex-wrap: wrap;
+	margin-top: 15px;
+}
+.munbutton {
+	padding: 5px 7px 5px 7px;
+	font-size: 12px;
+	flex-grow: 1; 
+	flex-shrink: 1; 
+	flex-basis: 0;
+	margin: 1px;
 }
 
 /*-------------*/
@@ -208,6 +228,11 @@ render reliably */
 .file::before {
 	content: "\f56d";
 }
+.history::before {
+	content: "\f1da";
+	margin-right: 6px;
+}
+
 
 /*---------------------------------*/
 /* Anchor link highlight animation */

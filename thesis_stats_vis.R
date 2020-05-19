@@ -4,7 +4,7 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 17.5.2020
+# 19.5.2020
 #
 # This is an interactive tool for analysing the results of my research survey.
 
@@ -27,10 +27,6 @@
 #https://www.statisticshowto.datasciencecentral.com/homoscedasticity/
 #https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5965542/ #levene+bf
 #https://statistics.laerd.com/spss-tutorials/one-way-anova-using-spss-statistics-2.php
-# LINKISTÄ: therefore, there is a statistically significant difference in the
-#mean length of time to complete the spreadsheet problem between the different 
-#courses taken.
-
 
 
 #### 1 Initialise --------------------------------------------------------------
@@ -1420,7 +1416,7 @@ ui <- shinyUI(fluidPage(
       # Reset inactivations with this button
       actionButton(
         "resetSubdivs", 
-        "Clear inactive subdivisions"),
+        HTML("<i class='icon history'></i>Clear all selections")),
       HTML("</div></div>"),
       
       # Interactive map jenks breaks options
@@ -1452,7 +1448,7 @@ ui <- shinyUI(fluidPage(
         value = 5),
       
       HTML("</div></div>"),
-      HTML("<p id='version-info'>Analysis app version 17.5.2020</p>"),
+      HTML("<p id='version-info'>Analysis app version 19.5.2020</p>"),
       
       width = 3
     ),
