@@ -4,7 +4,7 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 19.5.2020
+# 21.5.2020
 #
 # This is an interactive tool for analysing the results of my research survey.
 
@@ -181,13 +181,16 @@ thesisdata <-
 # as.data.frame(). Then align area names with thesisdata$subdiv with mutate().
 # Remove unnecessary column "Description" to save memory. Finally, factor levels 
 # by their new names.
+app_crs <- sp::CRS("+init=epsg:3067")
+
 suuralue_f <- 
   rgdal::readOGR(suuraluepath, 
                  use_iconv = TRUE, 
                  encoding = "UTF-8", 
                  stringsAsFactors = TRUE) %>%
+  sp::spTransform(., app_crs) %>%
   
-  {dplyr::left_join(ggplot2::fortify(.), 
+  {dplyr::left_join(ggplot2::fortify(.),
                     as.data.frame(.) %>%
                       dplyr::mutate(id = as.character(dplyr::row_number() - 1)))} %>%
   
@@ -246,11 +249,9 @@ suuralue_f <- suuralue_f %>%
 # columns to save memory.
 # Shapefile data is Regional population density 2012, Statistics Finland.
 # http://urn.fi/urn:nbn:fi:csc-kata00001000000000000226.
-muns_crs <- sp::CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
-
 muns_clipped_f <-
   rgdal::readOGR(munsclippedpath, stringsAsFactors = TRUE) %>%
-  sp::spTransform(., muns_crs) %>%
+  sp::spTransform(., app_crs) %>%
   {dplyr::left_join(ggplot2::fortify(.),
                     as.data.frame(.) %>%
                       dplyr::mutate(id = as.character(dplyr::row_number() - 1)))} %>%
@@ -272,12 +273,15 @@ muns_cntr$label <- c("Espoo", "Helsinki", "Kauniainen", "Vantaa")
 # munnames from subdiv annotations
 subdiv_cntr$label <- gsub(".* ", "", unique(suuralue_f$Name)) 
 
-# Manually move Espoonlahti and Southeastern to be visible. Remove subdiv label
-# for Kauniainen
-subdiv_cntr[2, "lat"] <- subdiv_cntr[2, "lat"] + 0.05
-subdiv_cntr[2, "long"] <- subdiv_cntr[2, "long"] - 0.04
-subdiv_cntr[12, "lat"] <- subdiv_cntr[12, "lat"] + 0.08
-subdiv_cntr[12, "long"] <- subdiv_cntr[12, "long"] + 0.05
+# Manually move labels for Espoonlahti and Southeastern as we are going to use
+# some y axis limits when drawing the map. For Espoonlahti, take lat of Helsinki
+# Southern. For long, take Pohjois-Espoo's. For Southeastern, take long of Korso.
+# Remove subdiv label for Kauniainen.
+
+subdiv_cntr[2, "lat"] <- subdiv_cntr[13, "lat"]
+subdiv_cntr[2, "long"] <- subdiv_cntr[1, "long"]
+subdiv_cntr[12, "lat"] <- subdiv_cntr[13, "lat"] + 1000
+subdiv_cntr[12, "long"] <- subdiv_cntr[21, "long"]
 subdiv_cntr[16, "label"] <- ""
 
 
@@ -309,14 +313,13 @@ postal <- cbind(postal, largest_ykr = paste(largest_ykr, largest_ykr_no))
 
 # "postal" geometries are in well-known text format. Some processing is needed 
 # to utilise these polygons in R. readWKT()
-postal_crs <- sp::CRS("+init=epsg:3067")
-geometries <- lapply(postal[, "geometry"], "readWKT", p4s = postal_crs)
+geometries <- lapply(postal[, "geometry"], "readWKT", p4s = app_crs)
 sp_tmp_ID <- mapply(sp::spChFIDs, geometries, as.character(postal[, 1]))
 row.names(postal) <- postal[, 1]
 
 data_f <- sp::SpatialPolygonsDataFrame(
   sp::SpatialPolygons(unlist(lapply(sp_tmp_ID, function(x) x@polygons)),
-                      proj4string = postal_crs), data = postal) %>%
+                      proj4string = app_crs), data = postal) %>%
 
   # Fortify and preserve Polygon attribute data
   {dplyr::left_join(ggplot2::fortify(.),
@@ -328,7 +331,7 @@ data_f <- sp::SpatialPolygonsDataFrame(
 # memory
 muns_f <- 
   rgdal::readOGR(munspath, stringsAsFactors = TRUE) %>%
-  sp::spTransform(., postal_crs) %>%
+  sp::spTransform(., app_crs) %>%
   {dplyr::left_join(ggplot2::fortify(.), 
                     as.data.frame(.) %>%
                       dplyr::mutate(id = as.character(dplyr::row_number() - 1)))} %>%
@@ -442,13 +445,13 @@ server <- function(input, output, session){
 
     currentpostal <- currentpostal()
 
-    geometries <- lapply(currentpostal[, "geometry"], "readWKT", p4s = postal_crs)
+    geometries <- lapply(currentpostal[, "geometry"], "readWKT", p4s = app_crs)
     sp_tmp_ID <- mapply(sp::spChFIDs, geometries, as.character(currentpostal[, 1]))
     row.names(currentpostal) <- currentpostal[, 1]
 
     data_f <- sp::SpatialPolygonsDataFrame(
       sp::SpatialPolygons(unlist(lapply(sp_tmp_ID, function(x) x@polygons)),
-                          proj4string = postal_crs), data = currentpostal) %>%
+                          proj4string = app_crs), data = currentpostal) %>%
       
       {dplyr::left_join(ggplot2::fortify(.),
                         as.data.frame(.) %>%
@@ -1046,8 +1049,10 @@ server <- function(input, output, session){
         fill = NA,
         color = "black",
         size = 0.4) +
-      coord_map(ylim = c(60.07, 60.42)) +
       
+      #coord_map(ylim = c(60.07, 60.42)) +
+      coord_equal(ratio=1, ylim = c(6662000, 6698000)) +
+    
       # Legend contents
       scale_fill_identity(paste0("Currently active\nsubdivisions\n(", 
                                  active_subdivs, " out of 23)"), 
@@ -1211,24 +1216,36 @@ server <- function(input, output, session){
                         direction = -1,
                         name = legendname,
                         labels = labels,
-                        na.value = "#ebebeb") +
-      
+                        na.value = "#ebebeb")
+    
+    # Plot municipality and/or subdivision borders on the interactive map
+    if(input$show_muns == TRUE) {
       # Municipality borders
-      geom_polygon(data = muns_f,
-                   aes(long, lat, group = group),
-                   linetype = "longdash",
-                   color = alpha("black", 0.6), 
-                   fill = "NA",
-                   size = 0.4) +
-      coord_fixed(xlim = c(minlon, maxlon),
-                  ylim = c(minlat, maxlat)) +
+      g <- g + geom_polygon(data = muns_f,
+                            aes(long, lat, group = group),
+                            linetype = "solid",
+                            color = alpha("black", 0.9), 
+                            fill = "NA",
+                            size = 0.8)
+    }
+    if(input$show_subdivs == TRUE) {
+      g <- g + geom_polygon(data = suuralue_f,
+                            aes(long, lat, group = group),
+                            linetype = "solid",
+                            color = alpha("black", 0.6), 
+                            fill = "NA",
+                            size = 0.8)
+    }
+    
+    g <- g + coord_fixed(xlim = c(minlon, maxlon),
+                         ylim = c(minlat, maxlat)) +
       
       # Class intervals disclaimer
       labs(caption = paste("The Jenks breaks classes are non-overlapping. The",
                            "lowest value of each range, with the exception of",
                            "the most bottom one, is not included in that class.")) +
       
-      # Legend settings
+      # Legend and caption settings
       theme(legend.title = element_text(size = 15),
             legend.text = element_text(size = 14),
             plot.caption = element_text(size = 13, hjust = 0.5, face = "italic"))
@@ -1310,6 +1327,8 @@ ui <- shinyUI(fluidPage(
   titlePanel(NULL, windowTitle = "Sampo Vesanen MSc thesis research survey results"),
   sidebarLayout(
     sidebarPanel(id = "sidebar",
+                 
+      ### 6.2.1 Table of contents ----
       # &nbsp; is a non-breaking space
       HTML("<div id='contents'>"),
       HTML("<p id='linkheading_t'>Analysis</p>"),
@@ -1325,12 +1344,16 @@ ui <- shinyUI(fluidPage(
       HTML("<a href='#intmaplink'>9&nbsp;Interactive map</a>"),
       HTML("</div>"),
       
+      
+      ### 6.2.2 Maximum allowed values ----
       # Set allowed maximum for parktime and walktime. Default is 60 for both.
-      HTML("<div id='stats-settings-link'><div id='contents'>"),
+      HTML("<div id='stats-settings-link'>",
+           "<label>Set maximum allowed values",
+           "<p id='smalltext'>(Affects sections 1&mdash;7, 9)</p></label>",
+           "<div id='contents'>"),
       sliderInput(
         "parktime_max",
-        HTML("<p id='smalltext'>(These selections affect sections 1&mdash;7, 9)</p>",
-             "Set maximum allowed value for parktime (min)"),
+        HTML("parktime (min)"),
         min = min(thesisdata$parktime),
         max = max(thesisdata$parktime),
         value = 59,
@@ -1338,7 +1361,7 @@ ui <- shinyUI(fluidPage(
       
       sliderInput(
         "walktime_max",
-        HTML("Set maximum allowed value for walktime (min)"), 
+        HTML("walktime (min)"), 
         min = min(thesisdata$walktime),
         max = max(thesisdata$walktime),
         value = 59,
@@ -1346,16 +1369,20 @@ ui <- shinyUI(fluidPage(
       
       actionButton(
         "resetParkWalk", 
-        HTML("Revert values to default (59&nbsp;min)")),
+        HTML("<i class='icon history'></i>Revert values to default (59&nbsp;min)")),
       
       HTML("</div>"),
       
+      
+      ### 6.2.3 Active variables ----
       # Select walktime or parktime
-      HTML("<div id='contents'>"),
+      HTML("<label>Currently active variables",
+           "<p id='smalltext'>(Affects sections 1&mdash;7, 9)</p>",
+           "</label>",
+           "<div id='contents'>"),
       selectInput(
         "resp", 
-        HTML("<p id='smalltext'>(These selections affect sections 1&mdash;7, 9)</p>",
-             "Response (continuous)"),
+        HTML("Response (continuous)"),
         names(thesisdata[continuous])),
       
       # likert, parkspot, timeofday, ua_forest, ykr_zone, subdiv
@@ -1372,17 +1399,23 @@ ui <- shinyUI(fluidPage(
         choiceValues = c("a", "b", "c")),
       HTML("</div></div>"),
       
+      
+      ### 6.2.4 Histogram ----
       # Allow user to access histogram binwidth
-      HTML("<div id='hist-settings-link'><div id='contents'>"),
+      HTML("<div id='hist-settings-link'>",
+           "<label>2 Histogram",
+           "<a id='smalltext' href='#histlink'><i class='icon link' title='Go to the plot'></i></a></label>",
+           "<div id='contents'>"),
       sliderInput(
         "bin",
-        HTML("Select binwidth for the current response variable",
-             "<a id='smalltext' href='#histlink'>(2 Histogram)</a>"), 
+        HTML("Binwidth for the current response variable"), 
         min = 1, 
         max = 10, 
         value = 2),
       HTML("</div></div>"),
       
+      
+      ### 6.2.5 Barplot ----
       # Provide user possibility to see distribution of answers within the
       # ordinal variables.
       # The values of this conditionalPanel are changed with the observer
@@ -1391,25 +1424,31 @@ ui <- shinyUI(fluidPage(
         condition = 
           "input.expl == 'likert' || input.expl == 'parkspot' || input.expl == 'timeofday'",
         
-        HTML("<div id='barplot-settings-link'><div id='contents'>"),
+        HTML("<div id='barplot-settings-link'>",
+             "<label>3 Distribution of ordinal variables",
+             "<a id='smalltext' href='#barplotlink'><i class='icon link' title='Go to the plot'></i></a></label>",
+             "<div id='contents'>"),
         selectInput(
           "barplot", 
-          HTML("Y axis for Distribution of ordinal variables",
-               "<a id='smalltext' href='#barplotlink'>",
-               "(3 Distribution of ordinal variables)</a>"),
+          HTML("Y axis for the barplot"),
           names(thesisdata[c("zipcode", "likert", "walktime")]),
         ),
         HTML("</div></div>")
       ),
       
+      
+      ### 6.2.6 Inactive subdivisions ----
       # Select to inactivate subdivs. Overrides all options (except interactive 
       # map) 
-      HTML("<div id='subdiv-settings-link'><div id='contents'>"),
+      HTML("<div id='subdiv-settings-link'>",
+           "<label>Select inactive subdivisions",
+           "<p id='smalltext'>",
+           "(Affects sections 1&mdash;9. Please be aware that these selections",
+           "override Explanatory (ordinal) variable 'subdiv')</p></label>",
+           "<div id='contents'>"),
       checkboxGroupInput(
         "subdivGroup",
-        HTML("Select inactive subdivisions <p id='smalltext'>",
-          "(Affects sections 1&mdash;9. Please be aware that these selections", 
-          "override Explanatory (ordinal) variable 'subdiv')</p>"),
+        NULL,
         choiceNames = sort(as.character(unique(thesisdata$subdiv))),
         choiceValues = sort(as.character(unique(thesisdata$subdiv)))),
 
@@ -1419,36 +1458,67 @@ ui <- shinyUI(fluidPage(
         HTML("<i class='icon history'></i>Clear all selections")),
       HTML("</div></div>"),
       
-      # Interactive map jenks breaks options
-      HTML("<div id='intmap-settings-link'><div id='contents'>"),
+      
+      ### 6.2.7 Interactive map ----
+      # Interactive map Jenks breaks options
+      HTML("<div id='intmap-settings-link'>",
+           "<label>9 Interactive map",
+           "<a id='smalltext' href='#intmaplink'><i class='icon link' title='Go to the map'></i></a></label>",
+           "<div id='contents'>"),
       checkboxGroupInput(
         "kunta",
-        HTML("Select extent for the interactive map",
-             "<a id='smalltext' href='#intmaplink'>(9 Interactive map)</a>"),
+        HTML("Active municipalities"),
         choiceNames = c("Helsinki", "Vantaa", "Espoo", "Kauniainen"),
         choiceValues = c("091", "092", "049", "235")),
       
       selectInput(
         "karttacol",
-        HTML("Select Jenks breaks parameter for the interactive map"),
+        HTML("Jenks breaks parameter"),
         c("jenks_answer_count", "jenks_park_mean", "jenks_park_median", 
           "jenks_walk_mean", "jenks_walk_median", "jenks_ua_forest")),
       
+      # On-off switches
+      HTML("<div style='text-align: center;margin-bottom: 10px;'>"),
+      HTML("<div>"),
       # Switch for interactive map labels
       HTML("<label class='control-label' for='show_int_labels'>Show labels</label>"),
       shinyWidgets::switchInput(
         inputId = "show_int_labels", 
+        size = "mini",
+        inline = TRUE,
         value = TRUE),
+      HTML("</div>"),
+      
+      # Switch for muns
+      HTML("<div>"),
+      HTML("<label class='control-label' for='show_muns'>Show muns</label>"),
+      shinyWidgets::switchInput(
+        inputId = "show_muns", 
+        size = "mini",
+        inline = TRUE,
+        value = TRUE),
+      HTML("</div>"),
+      
+      # Switch for subdivisions
+      HTML("<div>"),
+      HTML("<label class='control-label' for='show_subdivs'>Show subdivs</label>"),
+      shinyWidgets::switchInput(
+        inputId = "show_subdivs", 
+        size = "mini",
+        inline = TRUE,
+        value = FALSE),
+      HTML("</div>"),
+      HTML("</div>"),
       
       sliderInput(
         "jenks_n",
-        "Select the amount of classes",
+        "Amount of classes",
         min = 2, 
         max = 8, 
         value = 5),
       
       HTML("</div></div>"),
-      HTML("<p id='version-info'>Analysis app version 19.5.2020</p>"),
+      HTML("<p id='version-info'>Analysis app version 21.5.2020</p>"),
       
       width = 3
     ),

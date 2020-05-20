@@ -2,7 +2,7 @@
 // JavaScript for the analysis app of my thesis results
 
 // "Parking of private cars and spatial accessibility in Helsinki Capital Region" 
-// by Sampo Vesanen, 17.5.2020
+// by Sampo Vesanen, 21.5.2020
 
 
 // This JS function checks the state of the display parameter of inputted div "shrink_me"
@@ -153,7 +153,7 @@ function munClick(id) {
 };
 
 $(document).ready(function() {
-	// Add identifiers for subdivGroup checkboxes
+	// Add identifiers to subdivGroup checkboxes
 	var checkboxes = $("#subdivGroup").find(".checkbox input");
 	for(var i = 0; i < checkboxes.length; i++) {
 		checkboxes[i].setAttribute("id", "subdiv_" + i);
@@ -171,4 +171,20 @@ $(document).ready(function() {
 	
 	// Move "reset subdivisions" action button inside the new button container
 	$("#resetSubdivs").appendTo($(".mun-btn-container"));
+});
+
+// Remove "for" attributes from slider inputs in this crude way. It seems that if for
+// points to a non-existent value, the sidebar scrolls to top. Somewhat annoying, get
+// rid of it.
+$(document).ready(function() {
+	// Add identifiers to all labels in sidebar
+	var all_labels = $("#sidebar").find("label.control-label");
+	for(var i = 0; i < all_labels.length; i++) {
+		all_labels[i].setAttribute("id", "lbl_" + i);
+	};
+	// Remove for's
+	$("label#lbl_0").removeAttr("for");
+	$("label#lbl_1").removeAttr("for");
+	$("label#lbl_5").removeAttr("for");
+	$("label#lbl_13").removeAttr("for");
 });
