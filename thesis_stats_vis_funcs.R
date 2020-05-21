@@ -4,7 +4,7 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 17.5.2020
+# 22.5.2020
 
 # Initialise
 library(onewaytests)
@@ -16,6 +16,65 @@ library(classInt)
 library(ggplot2)
 library(RColorBrewer)
 
+
+
+
+
+CalcBoxplotTooltip <- function(inputdata, resp_col, expl_col) {
+  
+  # This function calculates IQR values for the use of ggiraph's 
+  # geom_boxplot_interactive().
+  
+  # Calculate min, IQR and max for boxplot tooltip. Creates new columns for
+  # each.
+  resp_data <- inputdata[, resp_col]
+  expl_data <- inputdata[, expl_col]
+  
+  # Interquartile range (IQR)
+  q1 <- tapply(resp_data, expl_data, quantile, probs = 0.25)
+  q1 <- as.numeric(q1[match(expl_data, names(q1))])
+  inputdata$tooltip_q1 <- q1
+  
+  mdn <- sapply(split(resp_data, expl_data), median)
+  mdn <- as.numeric(mdn[match(inputdata[, expl_col], names(mdn))])
+  inputdata$tooltip_mdn <- mdn
+  
+  q3 <- tapply(resp_data, expl_data, quantile, probs = 0.75)
+  q3 <- as.numeric(q3[match(expl_data, names(q3))])
+  inputdata$tooltip_q3 <- q3
+  
+  # Whiskers: Max and min. In ggplot, the max and min are only as large/small as 
+  # the corresponding value in resp_col. Therefore, parktime whisker max may be 
+  # in actuality 15.5, but that value could not have been inputted to the survey. 
+  # Closest user inputted value is 15, so ggplot whisker reaches only that.
+  # First calculate max and min as they one would normally do. Then, use dplyr
+  # to get the max values used by ggplot for each group.
+  # - Maximum is the name for unaltered maximum. tooltip_max will be inputted to
+  # boxplot tooltip. 
+  # - NB! The same treatment is not given to minimum! This is an oversight, but 
+  # the minimum seems to hang around zero 99,99 % of the time.
+  inputdata$maximum <- inputdata$tooltip_q3 + 1.5 * (inputdata$tooltip_q3 - inputdata$tooltip_q1)
+  inputdata$tooltip_min <- inputdata$tooltip_q1 - 1.5 * (inputdata$tooltip_q3 - inputdata$tooltip_q1)
+  inputdata$tooltip_min[inputdata$tooltip_min < 0] <- 0
+  
+  ggplot_max <- inputdata %>%
+    dplyr::select(!!rlang::sym(expl_col), !!rlang::sym(resp_col), maximum) %>%
+    dplyr::group_by(!!rlang::sym(expl_col)) %>%
+    dplyr::filter(!!rlang::sym(resp_col) <= maximum) %>%
+    dplyr::select(-maximum) %>%
+    dplyr::summarise_all(max) %>%
+    as.data.frame()
+
+  # Transform dataframe of two columns to named vector. Named vector is then
+  # matched with all the values in explanatory column.
+  named_vec <- ggplot_max[, resp_col]
+  names(named_vec) <- ggplot_max[, expl_col]
+  named_vec <- as.numeric(named_vec[match(expl_data, names(named_vec))])
+  
+  inputdata$tooltip_max <- named_vec
+
+  return(inputdata)
+}
 
 
 

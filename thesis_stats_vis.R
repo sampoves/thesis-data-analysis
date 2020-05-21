@@ -4,7 +4,7 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 21.5.2020
+# 22.5.2020
 #
 # This is an interactive tool for analysing the results of my research survey.
 
@@ -277,7 +277,6 @@ subdiv_cntr$label <- gsub(".* ", "", unique(suuralue_f$Name))
 # some y axis limits when drawing the map. For Espoonlahti, take lat of Helsinki
 # Southern. For long, take Pohjois-Espoo's. For Southeastern, take long of Korso.
 # Remove subdiv label for Kauniainen.
-
 subdiv_cntr[2, "lat"] <- subdiv_cntr[13, "lat"]
 subdiv_cntr[2, "long"] <- subdiv_cntr[1, "long"]
 subdiv_cntr[12, "lat"] <- subdiv_cntr[13, "lat"] + 1000
@@ -780,9 +779,10 @@ server <- function(input, output, session){
                             fill = get(barplotval))) +
       
       # Setting width and position_dodge adds space between bars
-      geom_bar(aes(y = stat(count)),
-               width = 0.8,
-               position = position_dodge(width = 0.9)) +
+      geom_bar_interactive(aes(y = stat(count),
+                               tooltip = paste(..count..)),
+                           width = 0.8,
+                           position = position_dodge(width = 0.9)) +
       
       scale_y_continuous(breaks = seq(0, maximum, by = tick_interval),
                          expand = expansion(mult = c(0, .1))) +
@@ -846,11 +846,31 @@ server <- function(input, output, session){
     # Listen to user choices
     inputdata <- currentdata()
     legendnames <- levels(unique(inputdata[[expl_col]]))
+    inputdata <- CalcBoxplotTooltip(inputdata, resp_col, expl_col)
+    
+    tooltip_content <- paste0("<div style='font-size: 12px;'>",
+                              "<div>Max = %s</div>",
+                              "<hr style='margin-top:2px; margin-bottom:2px;'>",
+                              "<b>Interquartile<br/>Range (IQR)</b><br/>",
+                              "<div style='padding-top: 3px;'>Q3 = %s<br/>",
+                              "Med = %s<br/>",
+                              "Q1 = %s</div>",
+                              "<hr style='margin-top:2px; margin-bottom:2px;'>",
+                              "<div style='padding-top: 3px;'>Min = %s</div>",
+                              "</div")
     
     # ggplot2 plotting. Rotate labels if enough classes. Use scale_fill_hue()
-    # to distinguish boxplot colors from barplot colors.
-    p <- ggplot(inputdata, aes_string(x = expl_col, y = resp_col, fill = expl_col)) + 
-      geom_boxplot() + 
+    # to distinguish boxplot colors from barplot colors. tooltip NULL activates
+    # tooltips on outliers.
+    p <- ggplot(inputdata, aes_string(x = expl_col, 
+                                      y = resp_col, 
+                                      fill = expl_col)) + 
+      geom_boxplot_interactive(aes(tooltip = sprintf(tooltip_content,
+                                                     tooltip_max,
+                                                     tooltip_q3, 
+                                                     tooltip_mdn,
+                                                     tooltip_q1,
+                                                     tooltip_min))) + 
       ylab(paste(resp_col, "(min)")) +
       theme(axis.text = element_text(size = 13),
             axis.title = element_text(size = 15),
@@ -864,7 +884,7 @@ server <- function(input, output, session){
     if(length(legendnames) > 5) {
       p <- p + theme(axis.text.x = element_text(size = 13, angle = 45, hjust = 1))
     }
-    
+    pele <<- ggplot_build(p)
     
     # Prepare the downloadable boxplot. "boxplot_out" is brought global environment 
     # for download. Use larger fonts.
@@ -1050,8 +1070,7 @@ server <- function(input, output, session){
         color = "black",
         size = 0.4) +
       
-      #coord_map(ylim = c(60.07, 60.42)) +
-      coord_equal(ratio=1, ylim = c(6662000, 6698000)) +
+      coord_equal(ratio = 1, ylim = c(6662000, 6698000)) +
     
       # Legend contents
       scale_fill_identity(paste0("Currently active\nsubdivisions\n(", 
@@ -1069,6 +1088,7 @@ server <- function(input, output, session){
                     label = label, 
                     size = 5,
                     fontface = 2)) +
+      
       with(subdiv_cntr[!subdiv_cntr$label %in% gsub(".* ", "", c(input$subdivGroup)), ], 
            annotate(geom = "text",
                     x = long,
@@ -1518,7 +1538,7 @@ ui <- shinyUI(fluidPage(
         value = 5),
       
       HTML("</div></div>"),
-      HTML("<p id='version-info'>Analysis app version 21.5.2020</p>"),
+      HTML("<p id='version-info'>Analysis app version 22.5.2020</p>"),
       
       width = 3
     ),
