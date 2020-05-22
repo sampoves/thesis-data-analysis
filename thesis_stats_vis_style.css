@@ -2,7 +2,7 @@
 /* CSS style sheet of for the analysis app of my thesis results
 
 "Parking of private cars and spatial accessibility in Helsinki Capital Region" 
-by Sampo Vesanen, 21.5.2020 */
+by Sampo Vesanen, 22.5.2020 */
 
 html, body {
 	height: 100%;
@@ -47,6 +47,9 @@ text {
 }
 ::-webkit-scrollbar-thumb:hover {
    background-color: #515c69;
+}
+::-webkit-scrollbar-corner { 
+	background: #272b30; 
 }
 /* sidebar scrollbar */
 #sidebar::-webkit-scrollbar {
@@ -153,6 +156,27 @@ form.well {
 	flex-basis: 0;
 	margin: 1px;
 }
+/* Interactive map on/off switches */
+.onoff-container {
+	display: flex; 
+	flex-direction: row; 
+	flex-wrap: wrap;
+	text-align: center;
+}
+.onoff-div {
+	padding: 3px 3px 0px 3px;
+	font-size: 12px;
+	flex-grow: 1; 
+	flex-shrink: 1; 
+	flex-basis: auto;
+	margin: 2px;
+	background-color: rgba(255,255,255,0.05);
+}
+.onoff-label {
+	font-weight: 400;
+	margin-top: 4px;
+	margin-bottom: 1px;
+}
 
 /*-------------*/
 /* mainPanel() */
@@ -184,7 +208,6 @@ form.well {
 	font-size: 12px;
 	margin-top: -12px;
 }
-
 /* use this class to make ggiraphOutputs untouchable. Class is added to ids in 
 JavaScript */
 .noselect {
@@ -200,6 +223,17 @@ JavaScript */
 }
 svg, img {
 	border-radius: 4px;
+}
+/* Custom tooltip properties */
+#app-tooltip {
+	font-size: 13px;
+}
+#tooltip-hr {
+	margin-top: 2px; 
+	margin-bottom: 2px;
+}
+#tooltip-div {
+	padding-top: 3px;
 }
 
 /*--------------------------*/
@@ -280,4 +314,24 @@ render reliably */
 }
 .animate-immediately {
 	animation: highlight 0.75s ease-in-out;
+}
+
+/*-------------------------*/
+/* Small screen properties */
+/*-------------------------*/
+@media only screen and (max-width: 1080px) {
+	::-webkit-scrollbar {
+		width: 8px;
+	}
+	::-webkit-scrollbar:horizontal {
+		height: 8px;
+	}
+	#app-tooltip {
+		font-size: 9px;
+	}
+	::-webkit-resizer {
+		border-top: 4px solid #1c1e22;
+		border-left: 9px solid #515c69;
+		border-bottom: 4px solid #1c1e22;
+	}
 }

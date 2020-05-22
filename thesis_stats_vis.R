@@ -771,14 +771,19 @@ server <- function(input, output, session){
       tick_interval <- 200
     }
     
+    tooltip_content <- paste0("<div id='app-tooltip'>",
+                              "<div>n=%s</div></div>")
+    
     plo <- 
       ggplot(inputdata, aes(x = get(expl_col), 
                             y = factor(get(barplotval)), 
                             fill = get(barplotval))) +
       
-      # Setting width and position_dodge adds space between bars
+      # Setting width and position_dodge adds space between bars. Add a simple
+      # tooltip.
       geom_bar_interactive(aes(y = stat(count),
-                               tooltip = paste(..count..)),
+                               tooltip = sprintf(tooltip_content,
+                                                 ..count..)),
                            width = 0.8,
                            position = position_dodge(width = 0.9)) +
       
@@ -845,15 +850,15 @@ server <- function(input, output, session){
     legendnames <- levels(unique(inputdata[[expl_col]]))
     inputdata <- CalcBoxplotTooltip(inputdata, resp_col, expl_col)
     
-    tooltip_content <- paste0("<div style='font-size: 12px;'>",
+    tooltip_content <- paste0("<div id='app-tooltip'>",
                               "<div>Max = %s</div>",
-                              "<hr style='margin-top:2px; margin-bottom:2px;'>",
+                              "<hr id='tooltip-hr'>",
                               "<b>Interquartile<br/>Range (IQR)</b><br/>",
-                              "<div style='padding-top: 3px;'>Q3 = %s<br/>",
+                              "<div id='tooltip-div'>Q3 = %s<br/>",
                               "Med = %s<br/>",
                               "Q1 = %s</div>",
-                              "<hr style='margin-top:2px; margin-bottom:2px;'>",
-                              "<div style='padding-top: 3px;'>Min = %s</div>",
+                              "<hr id='tooltip-hr'>",
+                              "<div id='tooltip-div'>Min = %s</div>",
                               "</div")
     
     # ggplot2 plotting. Rotate labels if enough classes. Use scale_fill_hue()
@@ -1185,29 +1190,33 @@ server <- function(input, output, session){
     
     # Get centroids for labelling polygons
     current_centr <- GetCentroids(inputdata, "zipcode", datacol)
-
-    # Finetune locations for certain labels
-    current_centr[15, 1] <- current_centr[15, 1] + 500 # Taka-Töölö
-    current_centr[83, 1] <- current_centr[83, 1] - 850 # Etelä-Vuosaari
-    current_centr[107, 2] <- current_centr[107, 2] - 300 # Hämevaara 
-    current_centr[116, 2] <- current_centr[116, 2] - 500 # Vantaanpuisto
-    current_centr[144, 1] <- current_centr[144, 1] + 2400 # Suvisaaristo
-    current_centr[162, 1] <- current_centr[162, 1] + 1000 # Nupuri-Nuuksio
+    
+    # Finetune locations for certain labels. GetCentroids saves the second
+    # parameter as rownames. We can use that to reliably find correct rows
+    # to finetune.
+    current_centr["00250", 1] <- current_centr["00250", 1] + 500 # Taka-Töölö
+    current_centr["00980", 1] <- current_centr["00980", 1] - 850 # Etelä-Vuosaari
+    current_centr["01640", 2] <- current_centr["01640", 2] - 300 # Hämevaara 
+    current_centr["01730", 2] <- current_centr["01730", 2] - 500 # Vantaanpuisto
+    current_centr["02380", 1] <- current_centr["02380", 1] + 2400 # Suvisaaristo
+    current_centr["02820", 1] <- current_centr["02820", 1] + 1000 # Nupuri-Nuuksio
     
     # Format map labels. Remove [, ], (, and ). Also add list dash
     labels <- gsub("(])|(\\()|(\\[)", "", levels(inputdata[, input$karttacol]))
     labels <- gsub(",", " \U2012 ", labels)
     
     tooltip_content <- paste0(
+      "<div id='app-tooltip'>",
       "<div>%s, %s<br/>",
       "Answer count: <b>%s</b></div>",
-      "<hr style='margin-top:2px; margin-bottom:2px;'>",
-      "<div style='padding-top: 3px;'>Parktime, mean: %s</br>",
+      "<hr id='tooltip-hr'>",
+      "<div id='tooltip-div'>Parktime, mean: %s</br>",
       "Parktime, median: %s</div>",
-      "<div style='padding-top: 3px;'>Walktime, mean: %s</br>",
+      "<div id='tooltip-div'>Walktime, mean: %s</br>",
       "Walktime, median: %s</div>",
-      "<div style='padding-top: 3px;'>Forest (%%): %s</div>",
-      "<div style='padding-top: 3px; line-height: 1.2;'>Largest YKR<br/>zone (%%): %s</div>")
+      "<div id='tooltip-div'>Forest (%%): %s</div>",
+      "<div style='padding-top: 3px; line-height: 1.2;'>Largest YKR<br/>zone (%%): %s</div>",
+      "</div>")
     
     g <- ggplot(inputdata) +
       geom_polygon_interactive(
@@ -1231,7 +1240,7 @@ server <- function(input, output, session){
     
     # Plot municipality and/or subdivision borders on the interactive map
     if(input$show_muns == TRUE) {
-      # Municipality borders
+      # Municipality boundaries
       g <- g + geom_polygon(data = muns_f,
                             aes(long, lat, group = group),
                             linetype = "solid",
@@ -1240,12 +1249,41 @@ server <- function(input, output, session){
                             size = 0.8)
     }
     if(input$show_subdivs == TRUE) {
+      # Subdivision boundaries
       g <- g + geom_polygon(data = suuralue_f,
                             aes(long, lat, group = group),
                             linetype = "solid",
                             color = alpha("black", 0.6), 
                             fill = "NA",
                             size = 0.8)
+    }
+    if(input$show_int_labels == TRUE) {
+      # Show current Jenks breaks value in zipcode area polygons 
+      g <- g + with(current_centr,
+                    annotate(geom = "text",
+                             x = long, 
+                             y = lat, 
+                             label = label, 
+                             size = 4))
+    }
+    if(input$show_muns_labels == TRUE) {
+      # Show municipality labels
+      g <- g + with(muns_cntr,
+                    annotate(geom = "text", 
+                             x = long, 
+                             y = lat, 
+                             label = label, 
+                             size = 5,
+                             fontface = 2))
+    }
+    if(input$show_subdivs_labels == TRUE) {
+      # Show subdivision labels
+      g <- g + with(subdiv_cntr[!subdiv_cntr$label %in% gsub(".* ", "", c(input$subdivGroup)), ], 
+                    annotate(geom = "text",
+                             x = long,
+                             y = lat,
+                             label = label,
+                             size = 4))
     }
     
     g <- g + coord_fixed(xlim = c(minlon, maxlon),
@@ -1261,17 +1299,7 @@ server <- function(input, output, session){
             legend.text = element_text(size = 14),
             plot.caption = element_text(size = 13, hjust = 0.5, face = "italic"))
     
-    # Label switch boolean test
-    if(input$show_int_labels == TRUE) {
-      g <- g + with(current_centr,
-                   annotate(geom = "text",
-                            x = long, 
-                            y = lat, 
-                            label = label, 
-                            size = 4))
-    }
-    
-    
+
     # Prepare the downloadable interactive map. "interactive_out" is brought 
     # to global environment for download. Use larger fonts.
     interactive_out <- LabelBuilder(g, input$expl, input$checkGroup, 
@@ -1329,7 +1357,7 @@ ui <- shinyUI(fluidPage(
                       type = "text/css", 
                       href = "https://use.fontawesome.com/releases/v5.13.0/css/all.css"),
             htmltools::includeCSS(csspath)),
-  includeScript(path = jspath),
+  htmltools::includeScript(path = jspath),
 
   
   
@@ -1487,39 +1515,6 @@ ui <- shinyUI(fluidPage(
         c("jenks_answer_count", "jenks_park_mean", "jenks_park_median", 
           "jenks_walk_mean", "jenks_walk_median", "jenks_ua_forest")),
       
-      # On-off switches
-      HTML("<div style='text-align: center;margin-bottom: 10px;'>"),
-      HTML("<div>"),
-      # Switch for interactive map labels
-      HTML("<label class='control-label' for='show_int_labels'>Show labels</label>"),
-      shinyWidgets::switchInput(
-        inputId = "show_int_labels", 
-        size = "mini",
-        inline = TRUE,
-        value = TRUE),
-      HTML("</div>"),
-      
-      # Switch for muns
-      HTML("<div>"),
-      HTML("<label class='control-label' for='show_muns'>Show muns</label>"),
-      shinyWidgets::switchInput(
-        inputId = "show_muns", 
-        size = "mini",
-        inline = TRUE,
-        value = TRUE),
-      HTML("</div>"),
-      
-      # Switch for subdivisions
-      HTML("<div>"),
-      HTML("<label class='control-label' for='show_subdivs'>Show subdivs</label>"),
-      shinyWidgets::switchInput(
-        inputId = "show_subdivs", 
-        size = "mini",
-        inline = TRUE,
-        value = FALSE),
-      HTML("</div>"),
-      HTML("</div>"),
-      
       sliderInput(
         "jenks_n",
         "Amount of classes",
@@ -1527,6 +1522,47 @@ ui <- shinyUI(fluidPage(
         max = 8, 
         value = 5),
       
+      # Layer options: on-off switches
+      HTML("<label class='control-label'>Layer options</label>",
+           "<div class='onoff-container'>",
+           "<div class='onoff-div'><b>Postal code areas</b><br>"),
+      # Switch for interactive map labels
+      HTML("<label class='control-label onoff-label' for='show_int_labels'>Labels</label>"),
+      shinyWidgets::switchInput(
+        inputId = "show_int_labels", 
+        size = "mini",
+        value = TRUE),
+      HTML("</div>"),
+      
+      # Switches for muns
+      HTML("<div class='onoff-div'><b>Municipalities</b><br>",
+           "<label class='control-label onoff-label' for='show_muns'>Boundaries</label>"),
+      shinyWidgets::switchInput(
+        inputId = "show_muns", 
+        size = "mini",
+        value = TRUE),
+      HTML("<label class='control-label onoff-label' for='show_muns_labels'>Labels</label>"),
+      shinyWidgets::switchInput(
+        inputId = "show_muns_labels", 
+        size = "mini",
+        value = FALSE),
+      HTML("</div>"),
+      
+      # Switches for subdivisions
+      HTML("<div class='onoff-div'><b>Subdivisions</b><br>"),
+      HTML("<label class='control-label onoff-label' for='show_subdivs'>Boundaries</label>"),
+      shinyWidgets::switchInput(
+        inputId = "show_subdivs", 
+        size = "mini",
+        value = FALSE),
+      HTML("<label class='control-label onoff-label' for='show_subdivs_labels'>Labels</label>"),
+      shinyWidgets::switchInput(
+        inputId = "show_subdivs_labels", 
+        size = "mini",
+        value = FALSE),
+      HTML("</div>"),
+      HTML("</div>"),
+
       HTML("</div></div>"),
       HTML("<p id='version-info'>Analysis app version 22.5.2020</p>"),
       

@@ -159,6 +159,9 @@ GetCentroids <- function(fortified, unique_id, nominator) {
   # "nominator" allocates the labels. "nominator" must contain the same amount 
   # of unique values, or more, than "unique_id", for example combination
   # unique_id = "kunta" and nominator = "zipcode" will create broken results.
+  
+  # unique_id will be stored as rowname for possible later use when row 
+  # identification is needed.
 
   # Examples:
   # unique_id = "kunta" and nominator = "kunta":
@@ -178,7 +181,6 @@ GetCentroids <- function(fortified, unique_id, nominator) {
                               x %>% 
                                 dplyr::group_by(!!rlang::sym(nominator)) %>%
                                 dplyr::summarise() %>%
-                                dplyr::pull() %>%
                                 as.vector())
                })) %>%
     setNames(., c("long", "lat", "label"))
@@ -187,7 +189,6 @@ GetCentroids <- function(fortified, unique_id, nominator) {
   if(is.factor(result$long) == TRUE) {
       result$long <- as.numeric(levels(result$long))[result$long]
   } 
-  
   if (is.factor(result$lat) == TRUE) {
     result$lat <- as.numeric(levels(result$lat))[result$lat]
   }

@@ -173,10 +173,12 @@ $(document).ready(function() {
 	$("#resetSubdivs").appendTo($(".mun-btn-container"));
 });
 
-// Remove "for" attributes from slider inputs in this crude way. It seems that if for
-// points to a non-existent value, the sidebar scrolls to top. Somewhat annoying, get
-// rid of it.
+// Attribute and CSS operations in sidebar
 $(document).ready(function() {
+	// Remove "for" attributes from slider inputs in this crude way. It seems that 
+	// if for points to a non-existent value, the sidebar scrolls to top. Somewhat 
+	// annoying, get rid of it.
+	
 	// Add identifiers to all labels in sidebar
 	var all_labels = $("#sidebar").find("label.control-label");
 	for(var i = 0; i < all_labels.length; i++) {
@@ -186,5 +188,12 @@ $(document).ready(function() {
 	$("label#lbl_0").removeAttr("for");
 	$("label#lbl_1").removeAttr("for");
 	$("label#lbl_5").removeAttr("for");
-	$("label#lbl_13").removeAttr("for");
+	$("label#lbl_10").removeAttr("for");
+	
+	// Additionally, find all on-off switches in Layer options and reduce their
+	// margin-bottoms.
+	var onoff = $(".onoff-container").find(".form-group.shiny-input-container");
+	for(var i = 0; i < onoff.length; i++) {
+		onoff[i].style.marginBottom = "6px";
+	};
 });
