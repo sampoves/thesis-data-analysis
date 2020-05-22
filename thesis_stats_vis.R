@@ -170,7 +170,7 @@ thesisdata <-
 
 
 
-#### 3 Context map for ShinyApp ------------------------------------------------
+#### 3 Prepare layers ----------------------------------------------------------
 
 #### 3.1 Subdivisions ----------------------------------------------------------
 
@@ -211,37 +211,6 @@ suuralue_f <-
   
   dplyr::mutate(Name = factor(Name, levels = sort(levels(Name))))
 
-# Set color gradients for municipalities. Kauniainen will be a single color set 
-# below. These color gradients may be confusing. Investigate better colouring
-# in the future
-c_esp <- RColorBrewer::brewer.pal(7, "YlOrRd")
-c_hel <- RColorBrewer::brewer.pal(8, "PuBu")
-c_van <- RColorBrewer::brewer.pal(7, "BuGn")
-
-# In the next phase, each color has to be repeated as many times as they show
-# up in suuralue_f. Find out how many.
-amounts <- unname(table(suuralue_f$Name))
-
-# Assign hex codes to the color column using the order of subdivisions and 
-# amount of rows per subdivision. First reorder dataframe by subdivision
-suuralue_f <- suuralue_f[order(suuralue_f$Name), ]
-suuralue_f$color <- c(rep(c_esp[1], amounts[1]), rep(c_esp[2], amounts[2]), 
-                      rep(c_esp[3], amounts[3]), rep(c_esp[4], amounts[4]), 
-                      rep(c_esp[5], amounts[5]), rep(c_esp[6], amounts[6]), 
-                      rep(c_esp[7], amounts[7]), rep(c_hel[1], amounts[8]), 
-                      rep(c_hel[2], amounts[9]), rep(c_hel[3], amounts[10]),
-                      rep(c_hel[4], amounts[11]), rep(c_hel[5], amounts[12]),
-                      rep(c_hel[6], amounts[13]), rep(c_hel[7], amounts[14]),
-                      rep(c_hel[8], amounts[15]), rep("#98817B", amounts[16]),
-                      rep(c_van[1], amounts[17]), rep(c_van[2], amounts[18]),
-                      rep(c_van[3], amounts[19]), rep(c_van[4], amounts[20]),
-                      rep(c_van[5], amounts[21]), rep(c_van[6], amounts[22]),
-                      rep(c_van[7], amounts[23]))
-
-# Colors to factors and reorder subdivision names to facilitate ggplot
-suuralue_f <- suuralue_f %>% 
-  dplyr::mutate(color = as.factor(color)) # to factor
-
 
 #### 3.2 Municipality borders --------------------------------------------------
 
@@ -260,13 +229,13 @@ muns_clipped_f <-
 
 #### 3.3 Annotation ------------------------------------------------------------
 
-# Annotate municipalities for ggplot2
+# Annotate municipalities and subdivisions for ggplot2
 muns_cntr <- GetCentroids(muns_clipped_f, "nimi", "nimi")
 subdiv_cntr <- GetCentroids(suuralue_f, "Name", "Name")
 
 # Manually set better location for the annotation of Helsinki and Espoo
-muns_cntr[2, "lat"] <- muns_cntr[2, "lat"] + 0.02
-muns_cntr[1, "lat"] <- muns_cntr[1, "lat"] + 0.01
+muns_cntr[2, "lat"] <- muns_cntr[2, "lat"] + 2000
+muns_cntr[1, "lat"] <- muns_cntr[1, "lat"] + 1000
 muns_cntr$label <- c("Espoo", "Helsinki", "Kauniainen", "Vantaa")
 
 # Name labels here so that all the reordering doesn't mix stuff up. Remove
@@ -276,12 +245,10 @@ subdiv_cntr$label <- gsub(".* ", "", unique(suuralue_f$Name))
 # Manually move labels for Espoonlahti and Southeastern as we are going to use
 # some y axis limits when drawing the map. For Espoonlahti, take lat of Helsinki
 # Southern. For long, take Pohjois-Espoo's. For Southeastern, take long of Korso.
-# Remove subdiv label for Kauniainen.
 subdiv_cntr[2, "lat"] <- subdiv_cntr[13, "lat"]
 subdiv_cntr[2, "long"] <- subdiv_cntr[1, "long"]
 subdiv_cntr[12, "lat"] <- subdiv_cntr[13, "lat"] + 1000
 subdiv_cntr[12, "long"] <- subdiv_cntr[21, "long"]
-subdiv_cntr[16, "label"] <- ""
 
 
 
@@ -1039,98 +1006,7 @@ server <- function(input, output, session){
   )
   
   
-  ### 5.9 Context map ----------------------------------------------------------
-  output$map <- renderggiraph({
-    
-    # Count active subdivs
-    active_subdivs <- length(unique(thesisdata$subdiv)) - length(input$subdivGroup)
-    
-    g2 <- ggplot() +
-      # Background grey subdivs appear when inactive subdivs present
-      geom_polygon(
-        data = suuralue_f,
-        aes(long, lat, group = group, fill = "#3d3d3d"),
-        colour = NA) +
-      
-      # Subdivisions proper
-      geom_polygon_interactive(
-        data = suuralue_f[!suuralue_f$Name %in% c(input$subdivGroup), ], 
-        size = 0.2,
-        aes(long, lat, group = group, fill = color),
-        colour = "grey") +
-      
-      # Municipality borders
-      geom_polygon(
-        data = muns_clipped_f,
-        aes(long, lat, group = group),
-        fill = NA,
-        color = "black",
-        size = 0.4) +
-      
-      coord_equal(ratio = 1, ylim = c(6662000, 6698000)) +
-    
-      # Legend contents
-      scale_fill_identity(paste0("Currently active\nsubdivisions\n(", 
-                                 active_subdivs, " out of 23)"), 
-                          labels = suuralue_f$Name, 
-                          breaks = suuralue_f$color, 
-                          guide = "legend") +
-      
-      # Annotations. subdiv_cntr is subdiv labels, muns_cntr is municipality
-      # labels.
-      with(muns_cntr,
-           annotate(geom = "text", 
-                    x = long, 
-                    y = lat, 
-                    label = label, 
-                    size = 5,
-                    fontface = 2)) +
-      
-      with(subdiv_cntr[!subdiv_cntr$label %in% gsub(".* ", "", c(input$subdivGroup)), ], 
-           annotate(geom = "text",
-                    x = long,
-                    y = lat,
-                    label = label,
-                    size = 4)) +
-      
-      # Tight layout and legend properties
-      theme(plot.margin = grid::unit(c(0, 0, 0, 0), "mm"),
-            legend.title = element_text(size = 15),
-            legend.text = element_text(size = 14),
-            legend.position = "bottom")
-    
-    
-    # Prepare the downloadable context map. Global context to enable the 
-    # download. Use larger fonts.
-    map_out <<- g2 + 
-      theme(text = element_text(size = 25),
-            legend.title = element_text(size = 17),
-            legend.text = element_text(size = 16),
-            axis.text = element_text(size = 14),
-            axis.title = element_text(size = 16))
-    
-    # Render context map
-    ggiraph(code = print(g2), 
-            width_svg = 16.7, 
-            height_svg = 14.7, 
-            options = list(opts_sizing(rescale = FALSE)))
-  })
-  
-  
-  #### 5.9.1 Download context map ----
-  output$dl_map <- downloadHandler(
-    filename = paste("context-map_",
-                     format(Sys.time(), "%d-%m-%Y"), 
-                     ".png",
-                     sep = ""),
-
-    content = function(file) {
-      ggsave(plot = map_out, file, height = 16, width = 18, dpi = 150)
-    }
-  )
-  
-  
-  ### 5.10 Interactive map -----------------------------------------------------
+  ### 5.9 Interactive map -----------------------------------------------------
   output$interactive <- renderggiraph({
 
     # Use reactive data_f and postal
@@ -1318,7 +1194,7 @@ server <- function(input, output, session){
   })
   
   
-  #### 5.10.1 Download interactive map ----
+  #### 5.9.1 Download interactive map ----
   output$dl_interactive <- downloadHandler(
     filename = paste("interactive-map_",
                      "pmax", input$parktime_max, "-wmax", input$walktime_max, "_",
@@ -1378,8 +1254,7 @@ ui <- shinyUI(fluidPage(
       HTML("<a href='#anovalink'>6&nbsp;One-way ANOVA</a> &mdash;"),
       HTML("<a href='#brownlink'>7&nbsp;Brown-Forsythe</a><br>"),
       HTML("<p id='linkheading_b'>Visualisation</p>"),
-      HTML("<a href='#maplink'>8&nbsp;Context map</a> &mdash;"),
-      HTML("<a href='#intmaplink'>9&nbsp;Interactive map</a>"),
+      HTML("<a href='#intmaplink'>8&nbsp;Interactive map</a>"),
       HTML("</div>"),
       
       
@@ -1387,7 +1262,7 @@ ui <- shinyUI(fluidPage(
       # Set allowed maximum for parktime and walktime. Default is 60 for both.
       HTML("<div id='stats-settings-link'>",
            "<label>Set maximum allowed values",
-           "<p id='smalltext'>(Affects sections 1&mdash;7, 9)</p></label>",
+           "<p id='smalltext'>(Affects sections 1&mdash;8)</p></label>",
            "<div id='contents'>"),
       sliderInput(
         "parktime_max",
@@ -1415,7 +1290,7 @@ ui <- shinyUI(fluidPage(
       ### 6.2.3 Active variables ----
       # Select walktime or parktime
       HTML("<label>Currently active variables",
-           "<p id='smalltext'>(Affects sections 1&mdash;7, 9)</p>",
+           "<p id='smalltext'>(Affects sections 1&mdash;8)</p>",
            "</label>",
            "<div id='contents'>"),
       selectInput(
@@ -1481,7 +1356,7 @@ ui <- shinyUI(fluidPage(
       HTML("<div id='subdiv-settings-link'>",
            "<label>Select inactive subdivisions",
            "<p id='smalltext'>",
-           "(Affects sections 1&mdash;9. Please be aware that these selections",
+           "(Affects sections 1&mdash;8. Please be aware that these selections",
            "override Explanatory (ordinal) variable 'subdiv')</p></label>",
            "<div id='contents'>"),
       checkboxGroupInput(
@@ -1694,22 +1569,10 @@ ui <- shinyUI(fluidPage(
       verbatimTextOutput("brownf"),
       HTML("</div></div>"),
       hr(),
-      
-      # Context map
-      HTML("<div id='maplink'>"),
-      HTML("<h3>8 Active subdivisions&ensp;",
-           "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a>",
-           "<button id='showhidebutton' onclick=\"show_hide('map', 'maplink')\"><i class='icon eyeslash' title='Hide element'></i></button>"),
-      downloadLink("dl_map",
-                   label = HTML("<i class='icon file' title='Download hi-res version of this figure (png)'></i>")),
-      HTML("</h3>"),
-      ggiraphOutput("map"),
-      HTML("</div>"),
-      hr(),
   
       # Interactive map
       HTML("<div id='intmaplink'>"),
-      HTML("<h3>9 Survey results on research area map&ensp;",
+      HTML("<h3>8 Survey results on research area map&ensp;",
            "<a href='#intmap-settings-link'><i class='icon wrench' title='Go to interactive map settings'></i></a>",
            "<a href='#stats-settings-link'><i class='icon chart' title='Go to active variables'></i></a>",
            "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a>",

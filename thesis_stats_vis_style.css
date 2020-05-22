@@ -303,7 +303,7 @@ render reliably */
 	}
 }
 #descrilink, #histlink, #barplotlink, #boxplotlink, #levenelink, 
-#anovalink, #brownlink, #maplink, #intmaplink, #stats-settings-link, #hist-settings-link, 
+#anovalink, #brownlink, #intmaplink, #stats-settings-link, #hist-settings-link, 
 #barplot-settings-link, #subdiv-settings-link, #intmap-settings-link {
 	scroll-margin-top: 40px; /* Arrive 40px above the anchor position */
 	border-radius: 5px;
