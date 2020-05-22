@@ -211,6 +211,8 @@ suuralue_f <-
   
   dplyr::mutate(Name = factor(Name, levels = sort(levels(Name))))
 
+suuralue_f <- suuralue_f[order(suuralue_f$Name), ]
+
 
 #### 3.2 Municipality borders --------------------------------------------------
 
