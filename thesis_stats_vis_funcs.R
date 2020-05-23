@@ -4,7 +4,7 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 22.5.2020
+# 23.5.2020
 
 # Initialise
 library(onewaytests)
@@ -17,6 +17,12 @@ library(ggplot2)
 library(RColorBrewer)
 
 
+
+
+# These custom infix operators work in the manner of += and ++ in C++/C# and
+# Java. Save some space and increase readability.
+`%+=%` = function(e1, e2) eval.parent(substitute(e1 <- e1 + e2))
+`%-=%` = function(e1, e2) eval.parent(substitute(e1 <- e1 - e2))
 
 
 

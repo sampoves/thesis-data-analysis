@@ -4,7 +4,7 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 22.5.2020
+# 23.5.2020
 #
 # This is an interactive tool for analysing the results of my research survey.
 
@@ -235,23 +235,28 @@ muns_clipped_f <-
 muns_cntr <- GetCentroids(muns_clipped_f, "nimi", "nimi")
 subdiv_cntr <- GetCentroids(suuralue_f, "Name", "Name")
 
-# Manually set better location for the annotation of Helsinki and Espoo
-muns_cntr[2, "lat"] <- muns_cntr[2, "lat"] + 2000
-muns_cntr[1, "lat"] <- muns_cntr[1, "lat"] + 1000
+# Manually set better location for the annotation of Helsinki and Espoo. Utilise
+# custom infix operators.
+muns_cntr[2, "lat"] %+=% 2000
+muns_cntr[1, "lat"] %+=% 1000
 muns_cntr$label <- c("Espoo", "Helsinki", "Kauniainen", "Vantaa")
 
 # Name labels here so that all the reordering doesn't mix stuff up. Remove
 # munnames from subdiv annotations
 subdiv_cntr$label <- gsub(".* ", "", unique(suuralue_f$Name)) 
+rownames(subdiv_cntr) <- gsub(".* ", "", unique(suuralue_f$Name))
 
 # Manually move labels for Espoonlahti and Southeastern as we are going to use
 # some y axis limits when drawing the map. For Espoonlahti, take lat of Helsinki
 # Southern. For long, take Pohjois-Espoo's. For Southeastern, take long of Korso.
-subdiv_cntr[2, "lat"] <- subdiv_cntr[13, "lat"]
-subdiv_cntr[2, "long"] <- subdiv_cntr[1, "long"]
-subdiv_cntr[12, "lat"] <- subdiv_cntr[13, "lat"] + 1000
-subdiv_cntr[12, "long"] <- subdiv_cntr[21, "long"]
-
+subdiv_cntr["Suur-Espoonlahti", "lat"] <- subdiv_cntr["Southern", "lat"]
+subdiv_cntr["Suur-Espoonlahti", "long"] <- subdiv_cntr["Pohjois-Espoo", "long"]
+subdiv_cntr["Southeastern", "lat"] <- subdiv_cntr["Southern", "lat"] + 1500
+subdiv_cntr["Southeastern", "long"] <- subdiv_cntr["Korso", "long"]
+subdiv_cntr["Southern", "lat"] %+=% 3000
+subdiv_cntr["Östersundom", "lat"] %-=% 500
+subdiv_cntr["Östersundom", "long"] %-=% 500
+subdiv_cntr["Suur-Matinkylä", "lat"] %-=% 500
 
 
 ### 4 Interactive map for ShinyApp --------------------------------------------- 
@@ -1072,12 +1077,12 @@ server <- function(input, output, session){
     # Finetune locations for certain labels. GetCentroids saves the second
     # parameter as rownames. We can use that to reliably find correct rows
     # to finetune.
-    current_centr["00250", 1] <- current_centr["00250", 1] + 500 # Taka-Töölö
-    current_centr["00980", 1] <- current_centr["00980", 1] - 850 # Etelä-Vuosaari
-    current_centr["01640", 2] <- current_centr["01640", 2] - 300 # Hämevaara 
-    current_centr["01730", 2] <- current_centr["01730", 2] - 500 # Vantaanpuisto
-    current_centr["02380", 1] <- current_centr["02380", 1] + 2400 # Suvisaaristo
-    current_centr["02820", 1] <- current_centr["02820", 1] + 1000 # Nupuri-Nuuksio
+    current_centr["00250", 1] %+=% 500 # Taka-Töölö
+    current_centr["00980", 1] %-=% 850 # Etelä-Vuosaari
+    current_centr["01640", 2] %-=% 300 # Hämevaara 
+    current_centr["01730", 2] %-=% 500 # Vantaanpuisto
+    current_centr["02380", 1] %+=% 2400 # Suvisaaristo
+    current_centr["02820", 1] %+=% 1000 # Nupuri-Nuuksio
     
     # Format map labels. Remove [, ], (, and ). Also add list dash
     labels <- gsub("(])|(\\()|(\\[)", "", levels(inputdata[, input$karttacol]))
@@ -1124,7 +1129,7 @@ server <- function(input, output, session){
                             linetype = "solid",
                             color = alpha("black", 0.9), 
                             fill = "NA",
-                            size = 0.8)
+                            size = 0.9)
     }
     if(input$show_subdivs == TRUE) {
       # Subdivision boundaries
@@ -1147,20 +1152,24 @@ server <- function(input, output, session){
     if(input$show_muns_labels == TRUE) {
       # Show municipality labels
       g <- g + with(muns_cntr,
-                    annotate(geom = "text", 
+                    annotate(geom = "label", 
                              x = long, 
                              y = lat, 
                              label = label, 
+                             label.size = NA,
+                             fill = alpha("white", 0.4),
                              size = 5,
                              fontface = 2))
     }
     if(input$show_subdivs_labels == TRUE) {
       # Show subdivision labels
-      g <- g + with(subdiv_cntr[!subdiv_cntr$label %in% gsub(".* ", "", c(input$subdivGroup)), ], 
-                    annotate(geom = "text",
+      g <- g + with(subdiv_cntr,
+                    annotate(geom = "label",
                              x = long,
                              y = lat,
                              label = label,
+                             label.size = NA,
+                             fill = alpha("white", 0.4),
                              size = 4))
     }
     
@@ -1243,21 +1252,21 @@ ui <- shinyUI(fluidPage(
   titlePanel(NULL, windowTitle = "Sampo Vesanen MSc thesis research survey results"),
   sidebarLayout(
     sidebarPanel(id = "sidebar",
-                 
+      
       ### 6.2.1 Table of contents ----
       # &nbsp; is a non-breaking space
-      HTML("<div id='contents'>"),
-      HTML("<p id='linkheading_t'>Analysis</p>"),
-      HTML("<a href='#descrilink'>1&nbsp;Descriptive statistics</a> &mdash;"),
-      HTML("<a href='#histlink'>2&nbsp;Histogram</a> &mdash;"),
-      HTML("<a href='#barplotlink'>3&nbsp;Barplot</a> &mdash;"),
-      HTML("<a href='#boxplotlink'>4&nbsp;Boxplot</a> &mdash;"),
-      HTML("<a href='#levenelink'>5&nbsp;Levene</a> &mdash;"),
-      HTML("<a href='#anovalink'>6&nbsp;One-way ANOVA</a> &mdash;"),
-      HTML("<a href='#brownlink'>7&nbsp;Brown-Forsythe</a><br>"),
-      HTML("<p id='linkheading_b'>Visualisation</p>"),
-      HTML("<a href='#intmaplink'>8&nbsp;Interactive map</a>"),
-      HTML("</div>"),
+      HTML("<div id='contents'>",
+           "<p id='linkheading_t'>Analysis</p>",
+           "<a href='#descrilink'>1&nbsp;Descriptive statistics</a> &mdash;",
+           "<a href='#histlink'>2&nbsp;Histogram</a> &mdash;",
+           "<a href='#barplotlink'>3&nbsp;Barplot</a> &mdash;",
+           "<a href='#boxplotlink'>4&nbsp;Boxplot</a> &mdash;",
+           "<a href='#levenelink'>5&nbsp;Levene</a> &mdash;",
+           "<a href='#anovalink'>6&nbsp;One-way ANOVA</a> &mdash;",
+           "<a href='#brownlink'>7&nbsp;Brown-Forsythe</a><br>",
+           "<p id='linkheading_b'>Visualisation</p>",
+           "<a href='#intmaplink'>8&nbsp;Interactive map</a>",
+           "</div>"),
       
       
       ### 6.2.2 Maximum allowed values ----
@@ -1312,7 +1321,8 @@ ui <- shinyUI(fluidPage(
         "Select inactive groups in current explanatory variable",
         choiceNames = c("Item A", "Item B", "Item C"),
         choiceValues = c("a", "b", "c")),
-      HTML("</div></div>"),
+      HTML("</div>",
+           "</div>"),
       
       
       ### 6.2.4 Histogram ----
@@ -1327,7 +1337,8 @@ ui <- shinyUI(fluidPage(
         min = 1, 
         max = 10, 
         value = 2),
-      HTML("</div></div>"),
+      HTML("</div>",
+           "</div>"),
       
       
       ### 6.2.5 Barplot ----
@@ -1348,7 +1359,8 @@ ui <- shinyUI(fluidPage(
           HTML("Y axis for the barplot"),
           names(thesisdata[c("zipcode", "likert", "walktime")]),
         ),
-        HTML("</div></div>")
+        HTML("</div>",
+             "</div>")
       ),
       
       
@@ -1371,7 +1383,8 @@ ui <- shinyUI(fluidPage(
       actionButton(
         "resetSubdivs", 
         HTML("<i class='icon history'></i>Clear all selections")),
-      HTML("</div></div>"),
+      HTML("</div>",
+           "</div>"),
       
       
       ### 6.2.7 Interactive map ----
@@ -1426,8 +1439,8 @@ ui <- shinyUI(fluidPage(
       HTML("</div>"),
       
       # Switches for subdivisions
-      HTML("<div class='onoff-div'><b>Subdivisions</b><br>"),
-      HTML("<label class='control-label onoff-label' for='show_subdivs'>Boundaries</label>"),
+      HTML("<div class='onoff-div'><b>Subdivisions</b><br>",
+           "<label class='control-label onoff-label' for='show_subdivs'>Boundaries</label>"),
       shinyWidgets::switchInput(
         inputId = "show_subdivs", 
         size = "mini",
@@ -1437,11 +1450,11 @@ ui <- shinyUI(fluidPage(
         inputId = "show_subdivs_labels", 
         size = "mini",
         value = FALSE),
-      HTML("</div>"),
-      HTML("</div>"),
-
-      HTML("</div></div>"),
-      HTML("<p id='version-info'>Analysis app version 22.5.2020</p>"),
+      HTML("</div>",
+           "</div>",
+           "</div>",
+           "</div>",
+           "<p id='version-info'>Analysis app version 23.5.2020</p>"),
       
       width = 3
     ),
@@ -1457,8 +1470,8 @@ ui <- shinyUI(fluidPage(
       hr(),
       
       # Descriptive statistics
-      HTML("<div id='descrilink'>"),
-      HTML("<h3>1 Descriptive statistics&ensp;",
+      HTML("<div id='descrilink'>",
+           "<h3>1 Descriptive statistics&ensp;",
            "<a href='#stats-settings-link'><i class='icon chart' title='Go to active variables'></i></a>",
            "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a>",
            "<button id='showhidebutton' onclick=\"show_hide('descri','descrilink')\"><i class='icon eyeslash' title='Hide element'></i></button>"),
@@ -1470,8 +1483,8 @@ ui <- shinyUI(fluidPage(
       hr(),
       
       # Histogram
-      HTML("<div id='histlink'>"),
-      HTML("<h3>2 Histogram&ensp;",
+      HTML("<div id='histlink'>",
+           "<h3>2 Histogram&ensp;",
            "<a href='#hist-settings-link'><i class='icon wrench' title='Go to histogram settings'></i></a>",           
            "<a href='#stats-settings-link'><i class='icon chart' title='Go to active variables'></i></a>",
            "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a>",
@@ -1484,17 +1497,17 @@ ui <- shinyUI(fluidPage(
       hr(),
       
       # Barplot
-      HTML("<div id='barplotlink'>"),
-      HTML("<h3>3 Distribution of ordinal variables&ensp;",
+      HTML("<div id='barplotlink'>",
+           "<h3>3 Distribution of ordinal variables&ensp;",
            "<a href='#barplot-settings-link'><i class='icon wrench' title='Go to barplot settings'></i></a>",           
            "<a href='#stats-settings-link'><i class='icon chart' title='Go to active variables'></i></a>",
            "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a>",
            "<button id='showhidebutton' onclick=\"show_hide('barplot_wrap','barplotlink')\"><i class='icon eyeslash' title='Hide element'></i></button>"),
       downloadLink("dl_barplot",
                    label = HTML("<i class='icon file' title='Download hi-res version of this plot (png)'></i>")),
-      HTML("</h3>"),
-      HTML("<div id='barplot_wrap'>"),
-      HTML("<p>This plot is active when <tt>likert</tt>, <tt>parkspot</tt>, or", 
+      HTML("</h3>",
+           "<div id='barplot_wrap'>",
+           "<p>This plot is active when <tt>likert</tt>, <tt>parkspot</tt>, or", 
            "<tt>timeofday</tt> is selected as the explanatory (ordinal)",
            "variable.</p>"),
       conditionalPanel(
@@ -1507,8 +1520,8 @@ ui <- shinyUI(fluidPage(
       HTML("</div>"),
       
       # Boxplot
-      HTML("<div id='boxplotlink'>"),
-      HTML("<h3>4 Boxplot&ensp;",
+      HTML("<div id='boxplotlink'>",
+           "<h3>4 Boxplot&ensp;",
            "<a href='#stats-settings-link'><i class='icon chart' title='Go to active variables'></i></a>",
            "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a>",
            "<button id='showhidebutton' onclick=\"show_hide('boxplot','boxplotlink')\"><i class='icon eyeslash' title='Hide element'></i></button>"),
@@ -1520,15 +1533,15 @@ ui <- shinyUI(fluidPage(
       hr(),
       
       # Levene's test. Significance legend is inserted with JavaScript
-      HTML("<div id='levenelink'>"),
-      HTML("<h3>5 Test for homogeneity of variances (Levene's test)&ensp;",
+      HTML("<div id='levenelink'>",
+           "<h3>5 Test for homogeneity of variances (Levene's test)&ensp;",
            "<a href='#stats-settings-link'><i class='icon chart' title='Go to active variables'></i></a>",
            "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a>",
            "<button id='showhidebutton' onclick=\"show_hide('levene_wrap','levenelink')\"><i class='icon eyeslash' title='Hide element'></i></button>"),
       downloadLink("dl_levene",
                    label = HTML("<i class='icon file' title='Download this table as csv'></i>")),
-      HTML("</h3>"),
-      HTML("<div id='levene_wrap'>"),
+      HTML("</h3>",
+           "<div id='levene_wrap'>"),
       p("Look for p-value > 0.05 (0.05 '.' 0.1 ' ' 1) (variance across groups",
         "is not statistically significant) for ANOVA test to be meaningful. If",
         "p < 0.05, null hypothesis is rejected and it can be concluded that there",
@@ -1539,29 +1552,30 @@ ui <- shinyUI(fluidPage(
       hr(),
       
       # ANOVA
-      HTML("<div id='anovalink'>"),
-      HTML("<h3>6 One-way analysis of variance (One-way ANOVA)&ensp;",
+      HTML("<div id='anovalink'>",
+           "<h3>6 One-way analysis of variance (One-way ANOVA)&ensp;",
            "<a href='#stats-settings-link'><i class='icon chart' title='Go to active variables'></i></a>",
            "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a>",
            "<button id='showhidebutton' onclick=\"show_hide('anova_wrap','anovalink')\"><i class='icon eyeslash' title='Hide element'></i></button>"),
       downloadLink("dl_anova",
                    label = HTML("<i class='icon file' title='Download this table as csv'></i>")),
-      HTML("</h3>"),
-      HTML("<div id='anova_wrap'>"),
+      HTML("</h3>",
+           "<div id='anova_wrap'>"),
       tableOutput("anova"),
-      HTML("</div></div>"),
+      HTML("</div>",
+           "</div>"),
       hr(),
       
       # Brown & Forsythe
-      HTML("<div id='brownlink'>"),
-      HTML("<h3>7 Brown-Forsythe test&ensp;",
+      HTML("<div id='brownlink'>",
+           "<h3>7 Brown-Forsythe test&ensp;",
            "<a href='#stats-settings-link'><i class='icon chart' title='Go to active variables'></i></a>",
            "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a>",
            "<button id='showhidebutton' onclick=\"show_hide('brown_wrap', 'brownlink')\"><i class='icon eyeslash' title='Hide element'></i></button></button>"),
       downloadLink("dl_brown",
                    label = HTML("<i class='icon file' title='Download this output as txt'></i>")),
-      HTML("</h3>"),
-      HTML("<div id='brown_wrap'>"),
+      HTML("</h3>",
+           "<div id='brown_wrap'>"),
       p("Look for a statistically significant difference between the selected", 
         "explanatory variable. Brown-Forsythe test is less likely than the",
         "Levene test to incorrectly declare that the assumption of equal", 
@@ -1569,12 +1583,13 @@ ui <- shinyUI(fluidPage(
         "fails when selected response variable maximum value is set to 0. The",
         "test requires a p.value that's not NaN."),
       verbatimTextOutput("brownf"),
-      HTML("</div></div>"),
+      HTML("</div>",
+           "</div>"),
       hr(),
   
       # Interactive map
-      HTML("<div id='intmaplink'>"),
-      HTML("<h3>8 Survey results on research area map&ensp;",
+      HTML("<div id='intmaplink'>",
+           "<h3>8 Survey results on research area map&ensp;",
            "<a href='#intmap-settings-link'><i class='icon wrench' title='Go to interactive map settings'></i></a>",
            "<a href='#stats-settings-link'><i class='icon chart' title='Go to active variables'></i></a>",
            "<a href='#subdiv-settings-link'><i class='icon mapmark' title='Go to inactive subdivisions'></i></a>",
@@ -1739,9 +1754,11 @@ visitor_ui <- basicPage(
 
   titlePanel("Sampo Vesanen MSc thesis research survey: received responses and survey page first visits"),
   p("Click and hold, then drag and release to zoom to a period of time. Double click to return to the full view."),
-  HTML("<p id='version-info'>Analysis app version 16.5.2020</p>"),
-  HTML("<div class='contentsp'><div class='contentsc'>"),
+  HTML("<p id='version-info'>Analysis app version 16.5.2020</p>",
+       "<div class='contentsp'>",
+       "<div class='contentsc'>"),
   uiOutput("dygraph"),
-  HTML("</div></div>")
+  HTML("</div>",
+       "</div>")
 )
 shinyApp(visitor_ui, visitor_server)

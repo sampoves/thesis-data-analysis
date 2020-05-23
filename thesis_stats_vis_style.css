@@ -2,7 +2,7 @@
 /* CSS style sheet of for the analysis app of my thesis results
 
 "Parking of private cars and spatial accessibility in Helsinki Capital Region" 
-by Sampo Vesanen, 22.5.2020 */
+by Sampo Vesanen, 23.5.2020 */
 
 html, body {
 	height: 100%;
@@ -16,8 +16,9 @@ html, body {
 hr {
 	margin-left: 0px;
 }
-/* specifying font-family is important in shinyapps.io to prohibit the use of ugly
-default fonts in ggiraph (svg) objects */
+/* Specifying font-family is important in shinyapps.io to prohibit the use of ugly
+default fonts in ggiraph (svg) objects. Property "pointer-events" here makes the zipcode 
+labels in Interactive map invisible to the cursor. */
 text {
 	font-family: helvetica,arial,sans-serf;
 	pointer-events: none;
@@ -181,7 +182,6 @@ form.well {
 /*-------------*/
 /* mainPanel() */
 /*---------------
-- pointer-events: none; makes zipcode labels invisible to the cursor
 - noselect makes selecting ggiraph elements not possible
 - :last-child pseudo-selector makes last row of descriptive statistics bold */
 #showhidebutton {
@@ -223,6 +223,13 @@ JavaScript */
 }
 svg, img {
 	border-radius: 4px;
+}
+/* This will re-enable zipcode tooltip on Interactive map when mouse hovers over svg 
+polygons or polylines that don't have a tooltip (attribute "title"). These are the label 
+background boxes and boundaries for municipalities and subdivisions. */
+polygon:not([title]), polygon[title=""],
+polyline:not([title]), polyline[title=""] {
+	pointer-events: none;
 }
 /* Custom tooltip properties */
 #app-tooltip {
