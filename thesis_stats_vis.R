@@ -237,8 +237,8 @@ subdiv_cntr <- GetCentroids(suuralue_f, "Name", "Name")
 
 # Manually set better location for the annotation of Helsinki and Espoo. Utilise
 # custom infix operators.
-muns_cntr[2, "lat"] %+=% 2000
-muns_cntr[1, "lat"] %+=% 1000
+muns_cntr["Helsinki", "lat"] %+=% 2000
+muns_cntr["Espoo", "lat"] %+=% 1100
 muns_cntr$label <- c("Espoo", "Helsinki", "Kauniainen", "Vantaa")
 
 # Name labels here so that all the reordering doesn't mix stuff up. Remove
@@ -255,7 +255,7 @@ subdiv_cntr["Southeastern", "lat"] <- subdiv_cntr["Southern", "lat"] + 1500
 subdiv_cntr["Southeastern", "long"] <- subdiv_cntr["Korso", "long"]
 subdiv_cntr["Southern", "lat"] %+=% 3000
 subdiv_cntr["Östersundom", "lat"] %-=% 500
-subdiv_cntr["Östersundom", "long"] %-=% 500
+subdiv_cntr["Östersundom", "long"] %-=% 400
 subdiv_cntr["Suur-Matinkylä", "lat"] %-=% 500
 
 
@@ -1084,6 +1084,10 @@ server <- function(input, output, session){
     current_centr["02380", 1] %+=% 2400 # Suvisaaristo
     current_centr["02820", 1] %+=% 1000 # Nupuri-Nuuksio
     
+    # Use a local version of subdiv centroids to conditionally delete label
+    # for Kauniainen
+    current_subdiv <- data.frame(subdiv_cntr)
+    
     # Format map labels. Remove [, ], (, and ). Also add list dash
     labels <- gsub("(])|(\\()|(\\[)", "", levels(inputdata[, input$karttacol]))
     labels <- gsub(",", " \U2012 ", labels)
@@ -1121,18 +1125,20 @@ server <- function(input, output, session){
                         labels = labels,
                         na.value = "#ebebeb")
     
-    # Plot municipality and/or subdivision borders on the interactive map
+    # Plot municipality boundaries on the interactive map
     if(input$show_muns == TRUE) {
-      # Municipality boundaries
+
       g <- g + geom_polygon(data = muns_f,
                             aes(long, lat, group = group),
                             linetype = "solid",
                             color = alpha("black", 0.9), 
                             fill = "NA",
-                            size = 0.9)
+                            size = 1.0)
     }
+    
+    # Subdivision boundaries
     if(input$show_subdivs == TRUE) {
-      # Subdivision boundaries
+
       g <- g + geom_polygon(data = suuralue_f,
                             aes(long, lat, group = group),
                             linetype = "solid",
@@ -1140,8 +1146,10 @@ server <- function(input, output, session){
                             fill = "NA",
                             size = 0.8)
     }
-    if(input$show_int_labels == TRUE) {
-      # Show current Jenks breaks value in zipcode area polygons 
+    
+    # Show current Jenks breaks value in zipcode area polygons 
+    if(input$show_postal_labels == TRUE) {
+
       g <- g + with(current_centr,
                     annotate(geom = "text",
                              x = long, 
@@ -1149,27 +1157,42 @@ server <- function(input, output, session){
                              label = label, 
                              size = 4))
     }
+    
+    # Show municipality labels
     if(input$show_muns_labels == TRUE) {
-      # Show municipality labels
+      
+      # Disable Kauniainen label on subdiv when muns labels visible
+      if(input$show_subdivs_labels == TRUE) {
+        current_subdiv["Kauniainen", "label"] <- NA
+      }
+      
+      # use geom name "label" and parameters label.size and fill to decide
+      # label background box
       g <- g + with(muns_cntr,
                     annotate(geom = "label", 
                              x = long, 
                              y = lat, 
                              label = label, 
                              label.size = NA,
-                             fill = alpha("white", 0.4),
+                             fill = alpha("white", 0.5),
                              size = 5,
                              fontface = 2))
     }
+    
+    # Show subdivision labels
     if(input$show_subdivs_labels == TRUE) {
-      # Show subdivision labels
-      g <- g + with(subdiv_cntr,
+      
+      # Disable Kauniainen label on subdiv when muns labels visible
+      if(input$show_muns_labels == TRUE) {
+        current_subdiv["Kauniainen", "label"] <- NA
+      }
+      g <- g + with(current_subdiv,
                     annotate(geom = "label",
                              x = long,
                              y = lat,
                              label = label,
                              label.size = NA,
-                             fill = alpha("white", 0.4),
+                             fill = alpha("white", 0.5),
                              size = 4))
     }
     
@@ -1417,9 +1440,9 @@ ui <- shinyUI(fluidPage(
            "<div class='onoff-container'>",
            "<div class='onoff-div'><b>Postal code areas</b><br>"),
       # Switch for interactive map labels
-      HTML("<label class='control-label onoff-label' for='show_int_labels'>Labels</label>"),
+      HTML("<label class='control-label onoff-label' for='show_postal_labels'>Labels</label>"),
       shinyWidgets::switchInput(
-        inputId = "show_int_labels", 
+        inputId = "show_postal_labels", 
         size = "mini",
         value = TRUE),
       HTML("</div>"),
