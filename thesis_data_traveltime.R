@@ -6,6 +6,12 @@
 # This interactive Travel time comparison test is dependent on ggiraph 0.7.7.
 # With my setup ggiraph 0.7.0 would load the map an unreasonably long time.
 
+
+
+#### 1 Initialise --------------------------------------------------------------
+rm(list = ls())
+gc()
+
 library(shiny)
 library(shinythemes)
 library(ggplot2)
@@ -16,50 +22,24 @@ library(shinyjs)
 library(ggiraph)
 library(data.table)
 
+# App version
+app_v <- "0005 (26.5.2020)"
+
+
 # Working directory
 wd <- "C:/Sampon/Maantiede/Master of the Universe"
 
 # Data directories
-#datapath <- file.path(wd, "records_for_r.csv")
-#visitorpath <- file.path(wd, "leaflet_survey_results/visitors.csv")
-#postal_path <- file.path(wd, "postal_for_r.csv")
+postal_path <- file.path(wd, "postal_for_r.csv")
 ttm_path <- file.path(wd, "HelsinkiTravelTimeMatrix2018")
 munspath <- file.path(wd, "python/paavo/hcr_muns_clipped.shp")
 gridpath <- file.path(wd, "python/MetropAccess_YKR_grid_EurefFIN.shp")
 
+# Directives
+csspath <- file.path(wd, "python/thesis_stats_traveltime_style.css")
 
-
-#### FUNCS -----
-
-CreateJenksColumn2 <- function(fortified, postal, datacol, newcolname, classes_n = 5) {
-  
-  # Use this function to create a column in fortified dataframe that can be
-  # used to portray Jenks breaks colouring in a ggplot map. Dplyr note: to
-  # enable parameters as column names in dplyr, apply !! and := for the left
-  # side and for the right side !!rlang::sym().
-  #
-  # Adapted from:
-  # https://medium.com/@traffordDataLab/lets-make-a-map-in-r-7bd1d9366098
-  
-  # Suppress n jenks warnings, problem probably handled
-  classes <- suppressWarnings(
-    classInt::classIntervals(postal[, datacol], n = classes_n, style = "equal"))
-  
-  # classes$brk has to be wrapped with unique(), otherwise we can't get more
-  # than six classes for parktime_median or walktime_median
-  result <- fortified %>%
-    dplyr::mutate(!!newcolname := cut(!!rlang::sym(datacol), 
-                                      unique(classes$brks), 
-                                      include.lowest = T))
-  
-  # Reverse column values to enable rising values from bottom to top in ggplot.
-  # In ggplot, use scale_fill_brewer(direction = -1) with this operation to flip
-  # the legend.
-  #result[, newcolname] = factor(result[, newcolname], 
-  #                              levels = rev(levels(result[, newcolname])))
-  
-  return(result)
-}
+# Source functions and postal code variables
+source(file.path(wd, "python/thesis_stats_traveltime_funcs.R"))
 
 
 
@@ -89,6 +69,35 @@ muns_f <-
                     as.data.frame(.) %>%
                       dplyr::mutate(id = as.character(dplyr::row_number() - 1)))} %>%
   dplyr::select(-c(namn, vaestontih, km2, vakiluku))
+
+
+#### 3.4 Postal code areas -----------------------------------------------------
+postal <- 
+  read.csv(file = postal_path,
+           header = TRUE, 
+           sep = ",",
+           colClasses = c(zipcode = "factor", kunta = "factor"),
+           stringsAsFactors = TRUE) %>%
+  dplyr::select(c(2, 3, 6, 108))
+
+# "postal" geometries are in well-known text format. Some processing is needed 
+# to utilise these polygons in R. readWKT()
+geometries <- lapply(postal[, "geometry"], "readWKT", p4s = app_crs)
+sp_tmp_ID <- mapply(sp::spChFIDs, geometries, as.character(postal[, 1]))
+row.names(postal) <- postal[, 1]
+
+data_f <- sp::SpatialPolygonsDataFrame(
+  sp::SpatialPolygons(unlist(lapply(sp_tmp_ID, function(x) x@polygons)),
+                      proj4string = app_crs), data = postal) %>%
+  
+  # Fortify and preserve Polygon attribute data
+  {dplyr::left_join(ggplot2::fortify(.),
+                    as.data.frame(.) %>%
+                      dplyr::mutate(id = as.character(zipcode)),
+                    by = "id")}
+
+# Create labels for zipcodes
+zipcode_lbl <- GetCentroids(data_f, "zipcode", "zipcode")
 
 
 
@@ -130,7 +139,7 @@ for(thispath in all_files) {
 }
 end.time <- Sys.time()
 time.taken <- end.time - start.time
-time.taken
+print(time.taken)
 
 # Did it work?
 #ggplot(data = result) + geom_polygon(aes(long, lat, group = group, fill = car_r_t))
@@ -139,9 +148,9 @@ result2 <- data.frame(result)
 result2$car_r_t <- dplyr::na_if(result2$car_r_t, -1)
 result2$car_m_t <- dplyr::na_if(result2$car_m_t, -1)
 result2$car_sl_t <- dplyr::na_if(result2$car_sl_t, -1)
-result2 <- CreateJenksColumn2(result2, result2, "car_r_t", "carrt_jenks", 11)
-result2 <- CreateJenksColumn2(result2, result2, "car_m_t", "carmt_jenks", 11)
-result2 <- CreateJenksColumn2(result2, result2, "car_sl_t", "carslt_jenks", 11)
+result2 <- CreateJenksColumn2(result2, result2, "car_r_t", "carrt_equal", 11)
+result2 <- CreateJenksColumn2(result2, result2, "car_m_t", "carmt_equal", 11)
+result2 <- CreateJenksColumn2(result2, result2, "car_sl_t", "carslt_equal", 11)
 
 
 
@@ -177,7 +186,9 @@ server <- function(input, output, session) {
                          labels = labels,
                          na.value = "darkgrey") +
       
-      coord_fixed() +
+      #coord_fixed() +
+      coord_fixed(xlim = c(min(result2$lon) + 200, max(result2$lon) - 1200),
+                  ylim = c(min(result2$lat) + 600, max(result2$lat) - 600)) +
       
       # Municipality boundaries
       geom_polygon(data = muns_f,
@@ -187,6 +198,14 @@ server <- function(input, output, session) {
                    fill = "NA",
                    size = 1.0) +
       
+      # Postal code area boundaries
+      geom_polygon(data = data_f,
+                   aes(long, lat, group = group),
+                   linetype = "solid",
+                   color = "black", 
+                   fill = "NA",
+                   size = 0.2) +
+      
       # Map starting position
       geom_polygon(data = origincell,
                    aes(long, lat, group = group),
@@ -195,6 +214,16 @@ server <- function(input, output, session) {
                    fill = "purple",
                    size = 0.6) +
       
+      # Add zipcode labels
+      with(zipcode_lbl,
+           annotate(geom = "label", 
+                    x = long, 
+                    y = lat, 
+                    label = label, 
+                    label.size = NA,
+                    fill = alpha("white", 0.5),
+                    size = 4)) +
+      
       # Legend settings
       theme(legend.title = element_text(size = 15),
             legend.text = element_text(size = 14))
@@ -202,8 +231,8 @@ server <- function(input, output, session) {
     
     # Render interactive map
     ggiraph(code = print(g),
-            width_svg = 21,
-            height_svg = 16)
+            width_svg = 23,
+            height_svg = 18)
   })
 }
 
@@ -212,6 +241,13 @@ ui <- shinyUI(
   fluidPage(
     useShinyjs(),
     theme = shinytheme("slate"),
+    
+    ####  ShinyApp header ------------------------------------------------------
+    tags$head(tags$link(rel = "stylesheet", 
+                        type = "text/css", 
+                        href = "https://use.fontawesome.com/releases/v5.13.0/css/all.css"),
+              htmltools::includeCSS(csspath)),
+    
     titlePanel(NULL, windowTitle = "Travel time comparison ShinyApp"),
     sidebarLayout(
       sidebarPanel(id = "sidebar",
@@ -219,9 +255,10 @@ ui <- shinyUI(
                    selectInput(
                      "fill_column", 
                      HTML("Select map fill"),
-                     c("carrt_jenks", "carmt_jenks", "carslt_jenks"),
-                     
+                     c("carrt_equal", "carmt_equal", "carslt_equal"),
                    ),
+                   HTML(paste("<p id='version-info'>Travel time comparison app version", 
+                               app_v, "</p>")),
                    width = 1),
     
       mainPanel(
