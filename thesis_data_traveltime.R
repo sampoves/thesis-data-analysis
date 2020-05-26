@@ -23,7 +23,7 @@ library(ggiraph)
 library(data.table)
 
 # App version
-app_v <- "0005 (26.5.2020)"
+app_v <- "0006 (27.5.2020)"
 
 
 # Working directory
@@ -43,7 +43,9 @@ source(file.path(wd, "python/thesis_stats_traveltime_funcs.R"))
 
 
 
-#### Import grid ---------------------------------------------------------------
+#### 2 Import layers -----------------------------------------------------------
+
+#### 2.1 Grid ------------------------------------------------------------------
 app_crs <- sp::CRS("+init=epsg:3067")
 
 grid <-
@@ -54,9 +56,12 @@ grid <-
                       dplyr::mutate(id = as.character(dplyr::row_number() - 1)))} %>%
   dplyr::select(-c(x, y))
 
+# get an origin cell for mapping
+origincell <- grid[grid["YKR_ID"] == as.numeric(origin_id), ]
 
 
-#### 3.2 Municipality borders --------------------------------------------------
+
+#### 2.2 Municipality borders --------------------------------------------------
 
 # Get municipality borders. Fortify SP DataFrame for ggplot. Remove unnecessary
 # columns to save memory.
@@ -71,7 +76,8 @@ muns_f <-
   dplyr::select(-c(namn, vaestontih, km2, vakiluku))
 
 
-#### 3.4 Postal code areas -----------------------------------------------------
+
+#### 2.3 Postal code areas -----------------------------------------------------
 postal <- 
   read.csv(file = postal_path,
            header = TRUE, 
@@ -101,7 +107,7 @@ zipcode_lbl <- GetCentroids(data_f, "zipcode", "zipcode")
 
 
 
-#### Prepare the map -----------------------------------------------------------
+#### 3 Prepare the map ---------------------------------------------------------
 
 # Only specify origin id (from_id in TTM18). to_id remains open because we want
 # to view all of the destinations.
@@ -122,10 +128,6 @@ result <- data.table(YKR_ID = integer(), long = numeric(), lat = numeric(),
                      car_sl_t = integer())
 
 start.time <- Sys.time()
-
-# get origin cell for mapping
-origincell <- grid[grid["YKR_ID"] == as.numeric(origin_id), ]
-
 # NB! This runs for 4-5 minutes
 for(thispath in all_files) {
   this_ttm <- file.path(ttm_path, thispath)
@@ -154,7 +156,7 @@ result2 <- CreateJenksColumn2(result2, result2, "car_sl_t", "carslt_equal", 11)
 
 
 
-#### Travel Time Comparison ShinyApp -------------------------------------------
+#### 4 Travel Time Comparison ShinyApp -----------------------------------------
 server <- function(input, output, session) {
 
   output$gridi <- renderggiraph({
@@ -231,22 +233,19 @@ server <- function(input, output, session) {
     
     # Render interactive map
     ggiraph(code = print(g),
-            width_svg = 23,
-            height_svg = 18)
+            width_svg = 26,
+            height_svg = 19)
   })
 }
 
-#### ShinyApp UI elements ------------------------------------------------------
+#### 4.1 ShinyApp UI elements --------------------------------------------------
 ui <- shinyUI(
   fluidPage(
     useShinyjs(),
     theme = shinytheme("slate"),
     
-    ####  ShinyApp header ------------------------------------------------------
-    tags$head(tags$link(rel = "stylesheet", 
-                        type = "text/css", 
-                        href = "https://use.fontawesome.com/releases/v5.13.0/css/all.css"),
-              htmltools::includeCSS(csspath)),
+    #### 4.2 ShinyApp header ---------------------------------------------------
+    tags$head(htmltools::includeCSS(csspath)),
     
     titlePanel(NULL, windowTitle = "Travel time comparison ShinyApp"),
     sidebarLayout(
