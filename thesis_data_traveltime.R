@@ -114,6 +114,9 @@ result <- data.table(YKR_ID = integer(), long = numeric(), lat = numeric(),
 
 start.time <- Sys.time()
 
+# get origin cell for mapping
+origincell <- grid[grid["YKR_ID"] == as.numeric(origin_id), ]
+
 # NB! This runs for 4-5 minutes
 for(thispath in all_files) {
   this_ttm <- file.path(ttm_path, thispath)
@@ -147,10 +150,14 @@ server <- function(input, output, session) {
 
   output$gridi <- renderggiraph({
     
+    # Format map labels. Remove [, ], (, and ). Also add list dash
+    labels <- gsub("(])|(\\()|(\\[)", "", levels(result2[, input$fill_column]))
+    labels <- gsub(",", " \U2012 ", labels)
+    
     tooltip_content <- paste0("<div><b>id: %s</b></br>",
-                              "r_t: %s</br>",
-                              "m_t: %s</br>",
-                              "sl_t: %s</div>")
+                              "r_t: %s min</br>",
+                              "m_t: %s min</br>",
+                              "sl_t: %s min</div>")
     
     g <- ggplot(data = result2) + 
       geom_polygon_interactive(
@@ -165,17 +172,33 @@ server <- function(input, output, session) {
       # Jenks classes colouring and labels
       scale_fill_brewer(palette = "RdYlGn",
                          direction = -1,
-                         name = "legendname",
+                         name = paste("Distance from\n", origin_id, ", (min)", 
+                                      sep = ""),
                          labels = labels,
                          na.value = "darkgrey") +
       
       coord_fixed() +
+      
+      # Municipality boundaries
       geom_polygon(data = muns_f,
                    aes(long, lat, group = group),
                    linetype = "solid",
                    color = alpha("black", 0.9), 
                    fill = "NA",
-                   size = 1.0)
+                   size = 1.0) +
+      
+      # Map starting position
+      geom_polygon(data = origincell,
+                   aes(long, lat, group = group),
+                   linetype = "solid",
+                   color = alpha("purple", 0.5), 
+                   fill = "purple",
+                   size = 0.6) +
+      
+      # Legend settings
+      theme(legend.title = element_text(size = 15),
+            legend.text = element_text(size = 14))
+    
     
     # Render interactive map
     ggiraph(code = print(g),
@@ -192,11 +215,12 @@ ui <- shinyUI(
     titlePanel(NULL, windowTitle = "Travel time comparison ShinyApp"),
     sidebarLayout(
       sidebarPanel(id = "sidebar",
-                   HTML("wow mapp"),
+                   
                    selectInput(
                      "fill_column", 
                      HTML("Select map fill"),
                      c("carrt_jenks", "carmt_jenks", "carslt_jenks"),
+                     
                    ),
                    width = 1),
     
