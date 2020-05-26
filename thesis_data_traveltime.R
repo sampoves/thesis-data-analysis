@@ -24,7 +24,42 @@ wd <- "C:/Sampon/Maantiede/Master of the Universe"
 #visitorpath <- file.path(wd, "leaflet_survey_results/visitors.csv")
 #postal_path <- file.path(wd, "postal_for_r.csv")
 ttm_path <- file.path(wd, "HelsinkiTravelTimeMatrix2018")
+munspath <- file.path(wd, "python/paavo/hcr_muns_clipped.shp")
 gridpath <- file.path(wd, "python/MetropAccess_YKR_grid_EurefFIN.shp")
+
+
+
+#### FUNCS -----
+
+CreateJenksColumn2 <- function(fortified, postal, datacol, newcolname, classes_n = 5) {
+  
+  # Use this function to create a column in fortified dataframe that can be
+  # used to portray Jenks breaks colouring in a ggplot map. Dplyr note: to
+  # enable parameters as column names in dplyr, apply !! and := for the left
+  # side and for the right side !!rlang::sym().
+  #
+  # Adapted from:
+  # https://medium.com/@traffordDataLab/lets-make-a-map-in-r-7bd1d9366098
+  
+  # Suppress n jenks warnings, problem probably handled
+  classes <- suppressWarnings(
+    classInt::classIntervals(postal[, datacol], n = classes_n, style = "equal"))
+  
+  # classes$brk has to be wrapped with unique(), otherwise we can't get more
+  # than six classes for parktime_median or walktime_median
+  result <- fortified %>%
+    dplyr::mutate(!!newcolname := cut(!!rlang::sym(datacol), 
+                                      unique(classes$brks), 
+                                      include.lowest = T))
+  
+  # Reverse column values to enable rising values from bottom to top in ggplot.
+  # In ggplot, use scale_fill_brewer(direction = -1) with this operation to flip
+  # the legend.
+  #result[, newcolname] = factor(result[, newcolname], 
+  #                              levels = rev(levels(result[, newcolname])))
+  
+  return(result)
+}
 
 
 
@@ -38,6 +73,22 @@ grid <-
                     as.data.frame(.) %>%
                       dplyr::mutate(id = as.character(dplyr::row_number() - 1)))} %>%
   dplyr::select(-c(x, y))
+
+
+
+#### 3.2 Municipality borders --------------------------------------------------
+
+# Get municipality borders. Fortify SP DataFrame for ggplot. Remove unnecessary
+# columns to save memory.
+# Shapefile data is Regional population density 2012, Statistics Finland.
+# http://urn.fi/urn:nbn:fi:csc-kata00001000000000000226.
+muns_f <-
+  rgdal::readOGR(munsclippedpath, stringsAsFactors = TRUE) %>%
+  sp::spTransform(., app_crs) %>%
+  {dplyr::left_join(ggplot2::fortify(.),
+                    as.data.frame(.) %>%
+                      dplyr::mutate(id = as.character(dplyr::row_number() - 1)))} %>%
+  dplyr::select(-c(namn, vaestontih, km2, vakiluku))
 
 
 
@@ -63,7 +114,7 @@ result <- data.table(YKR_ID = integer(), long = numeric(), lat = numeric(),
 
 start.time <- Sys.time()
 
-# THIS RUNS FOR 4-5 MINUTES
+# NB! This runs for 4-5 minutes
 for(thispath in all_files) {
   this_ttm <- file.path(ttm_path, thispath)
   thisTable <- data.table::fread(this_ttm, select = col_range)
@@ -74,17 +125,20 @@ for(thispath in all_files) {
     result <- rbindlist(list(result, ddd), fill = TRUE)
   }
 }
-
 end.time <- Sys.time()
 time.taken <- end.time - start.time
 time.taken
 
 # Did it work?
-ggplot(data = result) + geom_polygon(aes(long, lat, group = group, fill = car_r_t))
+#ggplot(data = result) + geom_polygon(aes(long, lat, group = group, fill = car_r_t))
 
-
-
-
+result2 <- data.frame(result)
+result2$car_r_t <- dplyr::na_if(result2$car_r_t, -1)
+result2$car_m_t <- dplyr::na_if(result2$car_m_t, -1)
+result2$car_sl_t <- dplyr::na_if(result2$car_sl_t, -1)
+result2 <- CreateJenksColumn2(result2, result2, "car_r_t", "carrt_jenks", 11)
+result2 <- CreateJenksColumn2(result2, result2, "car_m_t", "carmt_jenks", 11)
+result2 <- CreateJenksColumn2(result2, result2, "car_sl_t", "carslt_jenks", 11)
 
 
 
@@ -93,17 +147,35 @@ server <- function(input, output, session) {
 
   output$gridi <- renderggiraph({
     
-    tooltip_content <- paste0("<div>%s</div>")
+    tooltip_content <- paste0("<div><b>id: %s</b></br>",
+                              "r_t: %s</br>",
+                              "m_t: %s</br>",
+                              "sl_t: %s</div>")
     
-    g <- ggplot(data = result) + 
+    g <- ggplot(data = result2) + 
       geom_polygon_interactive(
         color = "black",
         size = 0.2,
         aes_string("long", "lat", 
                    group = "group",
-                   tooltip = substitute(sprintf(tooltip_content, car_r_t)),
+                   tooltip = substitute(sprintf(tooltip_content, YKR_ID,
+                                                car_r_t, car_m_t, car_sl_t)),
                    fill = input$fill_column)) +
-      coord_fixed()
+      
+      # Jenks classes colouring and labels
+      scale_fill_brewer(palette = "RdYlGn",
+                         direction = -1,
+                         name = "legendname",
+                         labels = labels,
+                         na.value = "darkgrey") +
+      
+      coord_fixed() +
+      geom_polygon(data = muns_f,
+                   aes(long, lat, group = group),
+                   linetype = "solid",
+                   color = alpha("black", 0.9), 
+                   fill = "NA",
+                   size = 1.0)
     
     # Render interactive map
     ggiraph(code = print(g),
@@ -124,7 +196,7 @@ ui <- shinyUI(
                    selectInput(
                      "fill_column", 
                      HTML("Select map fill"),
-                     c("car_r_t", "car_m_t", "car_sl_t"),
+                     c("carrt_jenks", "carmt_jenks", "carslt_jenks"),
                    ),
                    width = 1),
     
