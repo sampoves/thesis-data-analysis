@@ -1,6 +1,6 @@
 
 # Travel time comparison test
-# 27.5.2020
+# 28.5.2020
 # Sampo Vesanen
 
 # This interactive Travel time comparison test is dependent on ggiraph 0.7.7
@@ -30,7 +30,7 @@ library(shinyWidgets)
 
 
 # App version
-app_v <- "0007 (27.5.2020)"
+app_v <- "0008 (28.5.2020)"
 
 
 # Working directory
@@ -63,13 +63,6 @@ grid <- rgdal::readOGR(gridpath, stringsAsFactors = TRUE) %>%
 
 # Save grid as centroids for spatial join
 grid_point <- rgeos::gCentroid(grid, byid = TRUE)
-
-# Fortify for ggplot OBSOLETE, DOES NOT CONTAIN POSTAL DATA
-#grid_f <- grid %>%
-#  {dplyr::left_join(ggplot2::fortify(.),
-#                    as.data.frame(.) %>%
-#                      dplyr::mutate(id = as.character(dplyr::row_number() - 1)))} %>%
-#  dplyr::select(-c(x, y))
 
 
 
@@ -119,8 +112,11 @@ postal_f <-
 
 
 
-#### 2.4 Spatial join postal data to grid ----------------------------------------
-# spat join test. Left FALSE is inner join
+#### 2.4 Spatial join postal data to grid, fortify -----------------------------
+
+# First, spatjoin postal data to grid centroids. Left FALSE is inner join. Then,
+# Join centroid data back to grid polygons and convert grid to SpatialPolygons.
+# Finally, fortify for ggplot while keeping important columns.
 grid_f <- 
   sf::st_join(st_as_sf(grid_point), 
               st_as_sf(postal), 
@@ -134,18 +130,6 @@ grid_f <-
                     as.data.frame(.) %>%
                       dplyr::mutate(id = as.character(dplyr::row_number() - 1)))} %>%
   dplyr::select(-c(x, y))
-
-
-
-#jeje <- sf::st_join(st_as_sf(grid), grid_join_inner, join = st_intersects)
-#jeje <- as(jeje, "Spatial")
-
-# Fortify for ggplot  
-#jeje_f <- jeje %>%
-#  {dplyr::left_join(ggplot2::fortify(.),
-#                    as.data.frame(.) %>%
-#                      dplyr::mutate(id = as.character(dplyr::row_number() - 1)))} %>%
-#  dplyr::select(-c(x, y))
 
 
 
@@ -205,16 +189,40 @@ print(time.taken)
 
 # backup to for not having to run that long forloop all the time
 result2 <- data.frame(result)
+car_cols <- c("car_r_t", "car_m_t", "car_sl_t", "car_r_t_avg", "car_m_t_avg", 
+              "car_sl_t_avg")
+
+# Get grouped means for TTM18 data for current starting point to all 
+# destinations
+result2 <- result2 %>%
+  #dplyr::mutate(zipcode = forcats::fct_explicit_na(zipcode)) %>%
+  dplyr::group_by(zipcode) %>%
+  dplyr::summarise(car_r_t_avg = mean(car_r_t),
+                   car_m_t_avg = mean(car_m_t),
+                   car_sl_t_avg = mean(car_sl_t)) %>%
+  dplyr::mutate_if(is.numeric, round, 2) %>%
+  dplyr::inner_join(result2, ., by = "zipcode") %>%
+  dplyr::mutate(car_r_t_avg = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ car_r_t_avg),
+                car_m_t_avg = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ car_m_t_avg),
+                car_sl_t_avg = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ car_sl_t_avg)) %>%
+  dplyr::mutate_at(car_cols, ~dplyr::na_if(., -1))
+
+
+
 
 # -1 to NA
-result2$car_r_t <- dplyr::na_if(result2$car_r_t, -1)
-result2$car_m_t <- dplyr::na_if(result2$car_m_t, -1)
-result2$car_sl_t <- dplyr::na_if(result2$car_sl_t, -1)
+# result2$car_r_t <- dplyr::na_if(result2$car_r_t, -1)
+# result2$car_m_t <- dplyr::na_if(result2$car_m_t, -1)
+# result2$car_sl_t <- dplyr::na_if(result2$car_sl_t, -1)
+# result2$car_r_t_avg <- dplyr::na_if(result2$car_r_t_avg, -1)
+# result2$car_m_t_avg <- dplyr::na_if(result2$car_m_t_avg, -1)
+# result2$car_sl_t_avg <- dplyr::na_if(result2$car_sl_t_avg, -1)
+
 
 # Insert equal breaks for mapping
-result2 <- CreateJenksColumn2(result2, result2, "car_r_t", "carrt_equal", 11)
-result2 <- CreateJenksColumn2(result2, result2, "car_m_t", "carmt_equal", 11)
-result2 <- CreateJenksColumn2(result2, result2, "car_sl_t", "carslt_equal", 11)
+result2 <- CreateJenksColumn2(result2, result2, "car_r_t_avg", "carrt_equal", 11)
+result2 <- CreateJenksColumn2(result2, result2, "car_m_t_avg", "carmt_equal", 11)
+result2 <- CreateJenksColumn2(result2, result2, "car_sl_t_avg", "carslt_equal", 11)
 
 
 
