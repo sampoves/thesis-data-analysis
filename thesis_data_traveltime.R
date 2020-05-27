@@ -30,7 +30,7 @@ library(shinyWidgets)
 
 
 # App version
-app_v <- "0008 (28.5.2020)"
+app_v <- "0009 (28.5.2020)"
 
 
 # Working directory
@@ -113,6 +113,9 @@ postal_f <-
 
 
 #### 2.4 Spatial join postal data to grid, fortify -----------------------------
+
+# TODO: maybe add buffer to postal so that gray border cells get recognised
+# as part of zipcodes
 
 # First, spatjoin postal data to grid centroids. Left FALSE is inner join. Then,
 # Join centroid data back to grid polygons and convert grid to SpatialPolygons.
@@ -220,9 +223,9 @@ result2 <- result2 %>%
 
 
 # Insert equal breaks for mapping
-result2 <- CreateJenksColumn2(result2, result2, "car_r_t_avg", "carrt_equal", 11)
-result2 <- CreateJenksColumn2(result2, result2, "car_m_t_avg", "carmt_equal", 11)
-result2 <- CreateJenksColumn2(result2, result2, "car_sl_t_avg", "carslt_equal", 11)
+#result2 <- CreateJenksColumn2(result2, result2, "car_r_t_avg", "carrt_equal", 11)
+#result2 <- CreateJenksColumn2(result2, result2, "car_m_t_avg", "carmt_equal", 11)
+#result2 <- CreateJenksColumn2(result2, result2, "car_sl_t_avg", "carslt_equal", 11)
 
 
 
@@ -242,14 +245,27 @@ server <- function(input, output, session) {
 
   output$gridi <- renderggiraph({
     
+    # Insert equal breaks for mapping
+    result2 <- CreateJenksColumn2(result2, result2, "car_r_t_avg", "carrt_equal", input$classIntervals_n)
+    result2 <- CreateJenksColumn2(result2, result2, "car_m_t_avg", "carmt_equal", input$classIntervals_n)
+    result2 <- CreateJenksColumn2(result2, result2, "car_sl_t_avg", "carslt_equal", input$classIntervals_n)
+    
     # Format map labels. Remove [, ], (, and ). Also add list dash
     labels <- gsub("(])|(\\()|(\\[)", "", levels(result2[, input$fill_column]))
     labels <- gsub(",", " \U2012 ", labels)
     
-    tooltip_content <- paste0("<div><b>id: %s</b></br>",
-                              "r_t: %s min</br>",
+    tooltip_content <- paste0("<div id='app-tooltip'>",
+                              "<div><b>id: %s</b></br>",
+                              "%s, %s</div>",
+                              "<hr id='tooltip-hr'>",
+                              "<div>r_t_avg: %s min</br>",
+                              "m_t_avg: %s min</br>",
+                              "sl_t_avg: %s min</div>",
+                              "<hr id='tooltip-hr'>",
+                              "<div>r_t: %s min</br>",
                               "m_t: %s min</br>",
-                              "sl_t: %s min</div>")
+                              "sl_t: %s min</div>",
+                              "</div>")
     
     g <- ggplot(data = result2) + 
       geom_polygon_interactive(
@@ -257,7 +273,9 @@ server <- function(input, output, session) {
         size = 0.2,
         aes_string("long", "lat", 
                    group = "group",
-                   tooltip = substitute(sprintf(tooltip_content, YKR_ID,
+                   tooltip = substitute(sprintf(tooltip_content, YKR_ID, 
+                                                zipcode, nimi, car_r_t_avg, 
+                                                car_m_t_avg, car_sl_t_avg,
                                                 car_r_t, car_m_t, car_sl_t)),
                    fill = input$fill_column)) +
       
@@ -336,7 +354,16 @@ ui <- shinyUI(
                      "fill_column", 
                      HTML("Select map fill"),
                      c("carrt_equal", "carmt_equal", "carslt_equal"),
+                     # TODO: add originals and averages above!
                    ),
+                   
+                   sliderInput(
+                     "classIntervals_n",
+                     "Amount of classes",
+                     min = 2, 
+                     max = 11, 
+                     value = 11),
+                   
                    HTML(paste("<p id='version-info'>Travel time comparison app version", 
                                app_v, "</p>")),
                    width = 1),
