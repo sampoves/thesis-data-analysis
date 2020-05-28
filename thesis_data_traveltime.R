@@ -30,7 +30,7 @@ library(shinyWidgets)
 
 
 # App version
-app_v <- "0009 (28.5.2020)"
+app_v <- "0010 (28.5.2020)"
 
 
 # Working directory
@@ -185,6 +185,7 @@ print(time.taken)
 
 #### 3.1 Add thesis data values to the fortified data --------------------------
 
+# TODO
 
 
 
@@ -211,8 +212,6 @@ result2 <- result2 %>%
   dplyr::mutate_at(car_cols, ~dplyr::na_if(., -1))
 
 
-
-
 # -1 to NA
 # result2$car_r_t <- dplyr::na_if(result2$car_r_t, -1)
 # result2$car_m_t <- dplyr::na_if(result2$car_m_t, -1)
@@ -220,7 +219,6 @@ result2 <- result2 %>%
 # result2$car_r_t_avg <- dplyr::na_if(result2$car_r_t_avg, -1)
 # result2$car_m_t_avg <- dplyr::na_if(result2$car_m_t_avg, -1)
 # result2$car_sl_t_avg <- dplyr::na_if(result2$car_sl_t_avg, -1)
-
 
 # Insert equal breaks for mapping
 #result2 <- CreateJenksColumn2(result2, result2, "car_r_t_avg", "carrt_equal", 11)
@@ -243,6 +241,29 @@ origincell <- grid_f[grid_f["YKR_ID"] == as.numeric(origin_id), ]
 #### 4 Travel Time Comparison ShinyApp -----------------------------------------
 server <- function(input, output, session) {
 
+  #### 4.1 Reactive elements ---------------------------------------------------
+  # numbers <- reactive({
+  #   validate(
+  #     need(is.numeric(input$ykrid), "Please input a number"),
+  #     need(length(input$ykrid) == 7, "Seven digits pls")
+  #   )
+  # })
+  
+  # reactive expression
+  ykrid_reactive <- eventReactive(input$calcYkr, {
+    
+    validate(
+      need(is.numeric(input$ykrid), "Please input a number"),
+      need(nchar(input$ykrid) == 7, "Seven digits pls"),
+      need(input$ykrid <= max(result2$YKR_ID), paste("Field maximum is", max(result2$YKR_ID))),
+      need(input$ykrid >= min(result2$YKR_ID), paste("Field minimum is", min(result2$YKR_ID)))
+    )
+    
+    input$ykrid
+  })
+  
+  
+  #### 4.2 ShinyApp outputs ----------------------------------------------------
   output$gridi <- renderggiraph({
     
     # Insert equal breaks for mapping
@@ -335,6 +356,10 @@ server <- function(input, output, session) {
             width_svg = 26,
             height_svg = 19)
   })
+  
+  output$pelle <- renderPrint({ 
+    ykrid_reactive()
+  })
 }
 
 #### 4.1 ShinyApp UI elements --------------------------------------------------
@@ -350,6 +375,20 @@ ui <- shinyUI(
     sidebarLayout(
       sidebarPanel(id = "sidebar",
                    
+                   HTML("<div id='contents'>"),
+                   numericInput(
+                     "ykrid", 
+                     label = "YKR ID",
+                     max = max(result2$YKR_ID),
+                     min = min(result2$YKR_ID),
+                     value = origin_id),
+                   
+                   actionButton(
+                     "calcYkr",
+                     HTML("<i class='icon calculator'></i>Calculate new comparison with this YKR_ID")),
+                   HTML("</div>"),
+                   
+                   HTML("<div id='contents'>"),
                    selectInput(
                      "fill_column", 
                      HTML("Select map fill"),
@@ -363,13 +402,15 @@ ui <- shinyUI(
                      min = 2, 
                      max = 11, 
                      value = 11),
+                   HTML("</div>"),
                    
                    HTML(paste("<p id='version-info'>Travel time comparison app version", 
                                app_v, "</p>")),
                    width = 1),
     
       mainPanel(
-        ggiraphOutput("gridi") %>% shinycssloaders::withSpinner()
+        ggiraphOutput("gridi"),
+        textOutput("pelle")
       )
     )
   )

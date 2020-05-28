@@ -76,16 +76,16 @@ text {
 long explanations would break it otherwise
 - manually set sidebarPanel z-index to make the element always appear on top */
 form.well {
-	/*position: fixed;
+	position: fixed;
 	overflow: auto;
 	overflow-y: auto;
 	max-height: 95vh;
 	resize: horizontal;
-	min-width: 150px;
-	max-width: 400px;
-	width: 150px;
+	min-width: 225px;
+	max-width: 350px;
+	width: 225px;
 	z-index: 50;
-	scroll-behavior: smooth;*/
+	scroll-behavior: smooth;
 }
 #contents {
 	background: #1c1e22;
@@ -111,6 +111,13 @@ form.well {
 	margin-top: -5px;
 	background-color: rgba(0,0,0,0.3);
 	border-radius: 10px;
+}
+/* Assorted buttons */
+#calcYkr {
+	font-size: 11px;
+	width: 100%;
+	padding: 3px 0px 5px 0px;
+	white-space: normal;
 }
 
 /*-------------*/
@@ -158,6 +165,25 @@ polyline:not([title]), polyline[title=""] {
 }
 #tooltip-div {
 	padding-top: 3px;
+}
+
+/*--------------------------*/
+/* Font Awesome utilisation */
+/*----------------------------
+Common properties for Font Awesome: All of these settings are required to make icons 
+render reliably */
+.icon::before {
+    font-family: "Font Awesome 5 Free";
+    display: inline-block;
+    font-style: normal;
+    font-variant: normal;
+    text-rendering: auto;
+    -webkit-font-smoothing: antialiased;
+	font-weight: 900; /* solid */
+	font-size: 1.0em;
+}
+.calculator::before {
+    content: "\f1ec";
 }
 
 /*-------------------------*/
