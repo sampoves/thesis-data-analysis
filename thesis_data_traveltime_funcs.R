@@ -13,6 +13,18 @@
 
 
 
+
+TTM18_fetch <- function(x, col_range, origin_id) {
+
+  # This function works for the TTM18 data fetch lapply() command.
+  
+  res <- fread(x, select = col_range)
+  res <- subset(res, from_id == origin_id)
+  return(res)
+}
+
+
+
 CreateJenksColumn2 <- function(fortified, postal, datacol, newcolname, classes_n = 5) {
   
   # Use this function to create a column in fortified dataframe that can be

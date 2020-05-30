@@ -1,6 +1,6 @@
 
 # Travel time comparison test
-# 30.5.2020
+# 31.5.2020
 # Sampo Vesanen
 
 # This interactive Travel time comparison test is dependent on ggiraph 0.7.7
@@ -31,7 +31,7 @@ library(ggsn)
 
 
 # App version
-app_v <- "0013b (30.5.2020)"
+app_v <- "0014 (31.5.2020)"
 
 
 # Working directory
@@ -179,7 +179,9 @@ grid_f <-
 # Only specify origin id (from_id in TTM18). to_id remains open because we want
 # to view all of the destinations.
 origin_id <- "5985086"
+origin_id_num <- as.numeric(origin_id)
 col_range <- c(1, 2, 14, 16, 18)
+dt_grid <- as.data.table(grid_f)
 
 # Get filepaths of all of the TTM18 data. Remove metadata textfile filepath.
 all_files <- list.files(path = ttm_path, 
@@ -189,33 +191,20 @@ all_files <- list.files(path = ttm_path,
 
 all_files <- all_files[-length(all_files)]
 
-# create dt_grid so that we don't need to recalculate grid all the time. 
-# Establish an empty data.table result for the data appending.
-dt_grid <- as.data.table(grid_f)
-result <- data.table(YKR_ID = integer(), long = numeric(), lat = numeric(), 
-                     order = integer(), hole = logical(), piece = factor(), 
-                     id = character(), group = factor(), to_id = integer(), 
-                     car_r_t = integer(), car_m_t = integer(), 
-                     car_sl_t = integer())
+# Fetch all the files of TTM18, select only relevant column and per file select
+# relevant ykr_id. Use lapply() to avoid a for loop and save some time as this
+# operation is supposed to be as fast as possible. The lapply output is a list
+# of data.tables, so flatten that with rbindlist() and then merge with dt_grid,
+# a data.table version of grid to get the basic TTM18 data we need for current
+# calculation.
+# NB! This runs for about 2.5 minutes
 
 start.time <- Sys.time()
+result <- 
+  lapply(all_files, FUN = TTM18_fetch, col_range, origin_id_num) %>%
+  data.table::rbindlist(., fill = TRUE) %>%
+  data.table::merge.data.table(dt_grid, ., by.x = "YKR_ID", by.y = "to_id")
 
-# Iterate through all files in "all_files". From each file, import only relevant
-# private car columns. Then select only the column with the id of our origin.
-# Then, merge the newly found row of data with grid ykr_id, which for each
-# iteration finds the rows signifying one grid cell. Then append this data to
-# a new data.table which has all the private car columns we wanted.
-# NB! This loop runs for 4-5 minutes.
-for(thispath in all_files) {
-  thisTable <- data.table::fread(thispath, select = col_range)
-  slice <- subset(thisTable, from_id == as.numeric(origin_id))
-
-  if (nrow(slice) != 0) {
-    thisMerge <- data.table::merge.data.table(dt_grid, slice, by.x = "YKR_ID", 
-                                              by.y = "to_id")
-    result <- rbindlist(list(result, thisMerge), fill = TRUE)
-  }
-}
 end.time <- Sys.time()
 time.taken <- end.time - start.time
 print(time.taken)
