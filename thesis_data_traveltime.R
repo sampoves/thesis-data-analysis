@@ -31,7 +31,7 @@ library(ggsn)
 
 
 # App version
-app_v <- "0014 (31.5.2020)"
+app_v <- "0015 (31.5.2020)"
 
 
 # Working directory
@@ -43,6 +43,9 @@ ttm_path <- file.path(wd, "HelsinkiTravelTimeMatrix2018")
 munspath <- file.path(wd, "python/paavo/hcr_muns_clipped.shp")
 gridpath <- file.path(wd, "python/MetropAccess_YKR_grid_EurefFIN.shp")
 subdivpath <- file.path(wd, "python/suuralueet/PKS_suuralue.kml")
+
+# Thesis data
+recordspath <- file.path(wd, "records_for_r.csv")
 
 # Directives
 csspath <- file.path(wd, "python/thesis_data_traveltime_style.css")
@@ -213,7 +216,20 @@ print(time.taken)
 
 #### 3.1 Add thesis data values to the fortified data --------------------------
 
-# TODO
+thesisdata <- 
+  read.csv(file = recordspath,
+           header = TRUE, 
+           sep = ",",
+           colClasses = c(timestamp = "POSIXct", zipcode = "factor"),
+           stringsAsFactors = TRUE) %>%
+  dplyr::select(zipcode, parktime, walktime) %>%
+  dplyr::group_by(zipcode) %>%
+  dplyr::summarise(res_park_avg = mean(parktime),
+                   res_walk_avg = mean(walktime)) %>%
+  dplyr::mutate_if(is.numeric, round, 2)
+
+# Join survey data to result
+result <- dplyr::inner_join(result, thesisdata, by = "zipcode") 
 
 
 
@@ -321,6 +337,8 @@ server <- function(input, output, session) {
                               "<div><b>id: %s</b></br>",
                               "%s, %s</div>",
                               "<hr id='tooltip-hr'>",
+                              "<div>Park: %s, walk: %s</div>",
+                              "<hr id='tooltip-hr'>",
                               "<div>r_t_avg: %s min</br>",
                               "m_t_avg: %s min</br>",
                               "sl_t_avg: %s min</div>",
@@ -337,7 +355,8 @@ server <- function(input, output, session) {
         aes_string("long", "lat", 
                    group = "group",
                    tooltip = substitute(sprintf(tooltip_content, YKR_ID, 
-                                                zipcode, nimi, car_r_t_avg, 
+                                                zipcode, nimi, res_park_avg, 
+                                                res_walk_avg, car_r_t_avg, 
                                                 car_m_t_avg, car_sl_t_avg,
                                                 car_r_t, car_m_t, car_sl_t)),
                    fill = input$fill_column)) +
