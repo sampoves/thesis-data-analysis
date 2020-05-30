@@ -26,11 +26,12 @@ library(data.table)
 library(rgeos)
 library(sf)
 library(shinyWidgets)
+library(ggsn)
 
 
 
 # App version
-app_v <- "0011 (30.5.2020)"
+app_v <- "0012 (30.5.2020)"
 
 
 # Working directory
@@ -378,6 +379,19 @@ server <- function(input, output, session) {
                    color = alpha("purple", 0.5), 
                    fill = "purple",
                    size = 0.6) +
+      
+      # Scale bar and north arrow
+      ggsn::scalebar(result2, 
+                     dist_unit = "km",
+                     dist = 2,
+                     st.dist = 0.01,
+                     st.size = 4, 
+                     height = 0.01, 
+                     transform = FALSE) +
+      ggsn::north(result2, 
+                  location = "topright", 
+                  scale = 0.04, 
+                  symbol = 10) +
       
       # Legend settings
       theme(legend.title = element_text(size = 15),
