@@ -1,6 +1,6 @@
 
 # Travel time comparison test
-# 28.5.2020
+# 30.5.2020
 # Sampo Vesanen
 
 # This interactive Travel time comparison test is dependent on ggiraph 0.7.7
@@ -30,7 +30,7 @@ library(shinyWidgets)
 
 
 # App version
-app_v <- "0010 (28.5.2020)"
+app_v <- "0011 (30.5.2020)"
 
 
 # Working directory
@@ -41,9 +41,11 @@ postal_path <- file.path(wd, "postal_for_r.csv")
 ttm_path <- file.path(wd, "HelsinkiTravelTimeMatrix2018")
 munspath <- file.path(wd, "python/paavo/hcr_muns_clipped.shp")
 gridpath <- file.path(wd, "python/MetropAccess_YKR_grid_EurefFIN.shp")
+subdivpath <- file.path(wd, "python/suuralueet/PKS_suuralue.kml")
 
 # Directives
 csspath <- file.path(wd, "python/thesis_data_traveltime_style.css")
+jspath <- file.path(wd, "python/thesis_data_traveltime_script.js")
 
 # Source functions and postal code variables
 source(file.path(wd, "python/thesis_data_traveltime_funcs.R"))
@@ -83,6 +85,7 @@ muns_f <-
 
 
 #### 2.3 Postal code areas -----------------------------------------------------
+
 postal <- 
   read.csv(file = postal_path,
            header = TRUE, 
@@ -109,6 +112,40 @@ postal_f <-
                     as.data.frame(.) %>%
                       dplyr::mutate(id = as.character(zipcode)),
                     by = "id")}
+
+
+
+### 2.4 Subdivisions -----------------------------------------------------------
+
+subdiv_f <- 
+  rgdal::readOGR(subdivpath, 
+                 use_iconv = TRUE, 
+                 encoding = "UTF-8", 
+                 stringsAsFactors = TRUE) %>%
+  sp::spTransform(., app_crs) %>%
+  
+  {dplyr::left_join(ggplot2::fortify(.),
+                    as.data.frame(.) %>%
+                      dplyr::mutate(id = as.character(dplyr::row_number() - 1)))} %>%
+  
+  dplyr::select(-Description) %>%
+  dplyr::mutate(Name = factor(Name, labels =
+                                c("Vantaa Aviapolis", "Helsinki Southern", 
+                                  "Vantaa Hakunila", "Helsinki Eastern", 
+                                  "Helsinki Southeastern", "Kauniainen",
+                                  "Helsinki Central", "Vantaa Kivistö", 
+                                  "Helsinki Northeastern", "Vantaa Koivukylä", 
+                                  "Vantaa Korso", "Helsinki Western",
+                                  "Vantaa Myyrmäki", "Helsinki Northern", 
+                                  "Espoo Pohjois-Espoo", "Espoo Suur-Espoonlahti", 
+                                  "Espoo Suur-Kauklahti", "Espoo Suur-Leppävaara", 
+                                  "Espoo Suur-Matinkylä", "Espoo Suur-Tapiola", 
+                                  "Vantaa Tikkurila", "Espoo Vanha-Espoo",
+                                  "Helsinki Östersundom"))) %>%
+  
+  dplyr::mutate(Name = factor(Name, levels = sort(levels(Name))))
+
+subdiv_f <- subdiv_f[order(subdiv_f$Name), ]
 
 
 
@@ -231,10 +268,14 @@ result2 <- result2 %>%
 
 # Create labels for zipcodes
 zipcode_lbl <- GetCentroids(postal_f, "zipcode", "zipcode")
+muns_lbl <- GetCentroids(muns_f, "nimi", "nimi")
+subdiv_lbl <- GetCentroids(subdiv_f, "Name", "Name")
 
 # Get an origin cell for mapping
 origincell <- grid_f[grid_f["YKR_ID"] == as.numeric(origin_id), ]
 
+# Get all unique ykr_id values
+unique_ykr <- unique(result2$YKR_ID)
 
 
 
@@ -242,38 +283,56 @@ origincell <- grid_f[grid_f["YKR_ID"] == as.numeric(origin_id), ]
 server <- function(input, output, session) {
 
   #### 4.1 Reactive elements ---------------------------------------------------
-  # numbers <- reactive({
-  #   validate(
-  #     need(is.numeric(input$ykrid), "Please input a number"),
-  #     need(length(input$ykrid) == 7, "Seven digits pls")
-  #   )
-  # })
-  
+
   # reactive expression
-  ykrid_reactive <- eventReactive(input$calcYkr, {
+  validate_ykrid <- eventReactive(input$calcYkr, {
     
+    # %then% allows only one error message at a time
     validate(
-      need(is.numeric(input$ykrid), "Please input a number"),
-      need(nchar(input$ykrid) == 7, "Seven digits pls"),
-      need(input$ykrid <= max(result2$YKR_ID), paste("Field maximum is", max(result2$YKR_ID))),
-      need(input$ykrid >= min(result2$YKR_ID), paste("Field minimum is", min(result2$YKR_ID)))
+      need(is.numeric(input$ykrid), "Not an integer") %then%
+      need(nchar(input$ykrid) == 7, "Seven digits pls") %then%
+      need(input$ykrid <= max(result2$YKR_ID), 
+           paste("Value maximum is", max(result2$YKR_ID))) %then%
+      need(input$ykrid >= min(result2$YKR_ID), 
+           paste("Value minimum is", min(result2$YKR_ID))) %then%
+      need(input$ykrid %in% unique_ykr, "Value not a valid YKR_ID")
     )
-    
     input$ykrid
+  })
+  
+  helper_output_ykrid <- reactive({
+    
+    # if input from validate_ykrid() is numeric, display useful information
+    # to the user
+    if(is.numeric(validate_ykrid())) {
+      
+      thisVal <- result2[result2$YKR_ID == validate_ykrid(), ][1, ]
+      help_output <- paste(
+        "<p style='margin: 0 0 0px;'>",
+        "<b>YKR_ID: ", validate_ykrid(), "</b>,<br>",
+        thisVal[["zipcode"]], " ", thisVal[["nimi"]], 
+        "</p>", sep = "")
+    }
+    help_output
   })
   
   
   #### 4.2 ShinyApp outputs ----------------------------------------------------
-  output$gridi <- renderggiraph({
+  output$grid <- renderggiraph({
     
     # Insert equal breaks for mapping
     result2 <- CreateJenksColumn2(result2, result2, "car_r_t_avg", "carrt_equal", input$classIntervals_n)
     result2 <- CreateJenksColumn2(result2, result2, "car_m_t_avg", "carmt_equal", input$classIntervals_n)
     result2 <- CreateJenksColumn2(result2, result2, "car_sl_t_avg", "carslt_equal", input$classIntervals_n)
     
-    # Format map labels. Remove [, ], (, and ). Also add list dash
+    # Format map labels (Equal breaks classes). Remove [, ], (, and ). Also add 
+    # list dash
     labels <- gsub("(])|(\\()|(\\[)", "", levels(result2[, input$fill_column]))
     labels <- gsub(",", " \U2012 ", labels)
+    
+    # current_subdiv is created so that values can be removed when necessary
+    # but they can also be returned into view.
+    current_subdiv_lbl <- data.frame(subdiv_lbl)
     
     tooltip_content <- paste0("<div id='app-tooltip'>",
                               "<div><b>id: %s</b></br>",
@@ -312,22 +371,6 @@ server <- function(input, output, session) {
       coord_fixed(xlim = c(min(result2$lon) + 200, max(result2$lon) - 1200),
                   ylim = c(min(result2$lat) + 600, max(result2$lat) - 600)) +
       
-      # Municipality boundaries
-      geom_polygon(data = muns_f,
-                   aes(long, lat, group = group),
-                   linetype = "solid",
-                   color = alpha("black", 0.9), 
-                   fill = "NA",
-                   size = 1.0) +
-      
-      # Postal code area boundaries
-      geom_polygon(data = postal_f,
-                   aes(long, lat, group = group),
-                   linetype = "solid",
-                   color = "black", 
-                   fill = "NA",
-                   size = 0.2) +
-      
       # Map starting position
       geom_polygon(data = origincell,
                    aes(long, lat, group = group),
@@ -336,56 +379,156 @@ server <- function(input, output, session) {
                    fill = "purple",
                    size = 0.6) +
       
-      # Add zipcode labels
-      with(zipcode_lbl,
-           annotate(geom = "label", 
-                    x = long, 
-                    y = lat, 
-                    label = label, 
-                    label.size = NA,
-                    fill = alpha("white", 0.5),
-                    size = 4)) +
-      
       # Legend settings
       theme(legend.title = element_text(size = 15),
             legend.text = element_text(size = 14))
     
     
+    #### On-off switch if statements 
+    
+    # Plot municipality boundaries on the map
+    if(input$show_muns == TRUE) {
+      
+      # Municipality boundaries
+      g <- g + geom_polygon(data = muns_f,
+                   aes(long, lat, group = group),
+                   linetype = "solid",
+                   color = alpha("black", 0.9), 
+                   fill = "NA",
+                   size = 1.0)
+    }
+    
+    if(input$show_subdiv == TRUE) {
+      
+      # Municipality boundaries
+      g <- g + geom_polygon(data = subdiv_f,
+                            aes(long, lat, group = group),
+                            linetype = "solid",
+                            color = alpha("black", 0.6), 
+                            fill = "NA",
+                            size = 0.6)
+    }
+    
+    # Plot postal code area boundaries on the map
+    if(input$show_postal == TRUE) {
+      
+      # Postal code area boundaries
+      g <- g + geom_polygon(data = postal_f,
+                   aes(long, lat, group = group),
+                   linetype = "solid",
+                   color = "black", 
+                   fill = "NA",
+                   size = 0.2)
+    }
+
+    # Plot postal code area labels
+    if(input$show_postal_labels == TRUE) {
+      
+      # Add zipcode labels
+      g <- g + with(zipcode_lbl,
+                    annotate(geom = "label", 
+                             x = long, 
+                             y = lat, 
+                             label = label, 
+                             label.size = NA,
+                             fill = alpha("white", 0.5),
+                             size = 4))
+    }
+    
+    # Plot postal code area labels
+    if(input$show_muns_labels == TRUE) {
+      
+      
+      # Disable Kauniainen label on subdiv when muns labels visible
+      if(input$show_subdiv_labels == TRUE) {
+        current_subdiv_lbl["Kauniainen", "label"] <- NA
+      }
+      # Add zipcode labels
+      g <- g + with(muns_lbl,
+                    annotate(geom = "label", 
+                             x = long, 
+                             y = lat, 
+                             label = label, 
+                             label.size = NA,
+                             fill = alpha("white", 0.5),
+                             size = 6,
+                             fontface = 2))
+    }
+    
+    # Plot postal code area labels
+    if(input$show_subdiv_labels == TRUE) {
+      
+      # Disable Kauniainen label on subdiv when muns labels visible
+      if(input$show_muns_labels == TRUE) {
+        current_subdiv_lbl["Kauniainen", "label"] <- NA
+      }
+      # Add zipcode labels
+      g <- g + with(current_subdiv_lbl,
+                    annotate(geom = "label", 
+                             x = long, 
+                             y = lat, 
+                             label = label, 
+                             label.size = NA,
+                             fill = alpha("white", 0.5),
+                             size = 5))
+    }
+
+
     # Render interactive map
     ggiraph(code = print(g),
             width_svg = 26,
             height_svg = 19)
   })
   
-  output$pelle <- renderPrint({ 
-    ykrid_reactive()
+  output$ykr_validator <- renderText({ 
+    validate_ykrid()
+  })
+  
+  # Helps user understand where their ykrid is located
+  output$ykr_helper <- renderText({
+    helper_output_ykrid()
   })
 }
 
-#### 4.1 ShinyApp UI elements --------------------------------------------------
+
+#### 4.1 ShinyApp UI -----------------------------------------------------------
 ui <- shinyUI(
   fluidPage(
     useShinyjs(),
     theme = shinytheme("slate"),
     
-    #### 4.2 ShinyApp header ---------------------------------------------------
-    tags$head(htmltools::includeCSS(csspath)),
     
+    #### 4.2 ShinyApp header ---------------------------------------------------
+    tags$head(tags$link(rel = "stylesheet", 
+                        type = "text/css", 
+                        href = "https://use.fontawesome.com/releases/v5.13.0/css/all.css"),
+              htmltools::includeCSS(csspath)),
+    htmltools::includeScript(path = jspath),
+
+        
+    ### 4.3 Sidebar layout -----------------------------------------------------
     titlePanel(NULL, windowTitle = "Travel time comparison ShinyApp"),
     sidebarLayout(
       sidebarPanel(id = "sidebar",
                    
-                   HTML("<div id='contents'>"),
+                   HTML("<div id='contents'>",
+                        "<div id='ykr-flash'>"),
                    numericInput(
                      "ykrid", 
-                     label = "YKR ID",
+                     label = "Origin YKR ID",
                      max = max(result2$YKR_ID),
                      min = min(result2$YKR_ID),
                      value = origin_id),
+                   HTML("</div>"),
                    
                    actionButton(
                      "calcYkr",
-                     HTML("<i class='icon calculator'></i>Calculate new comparison with this YKR_ID")),
+                     HTML("<i class='icon calculator'></i>Calculate a new comparison with this YKR_ID")),
+                   
+                   HTML("<p id='smalltext'><b>Current origin YKR_ID</b></p>",
+                        "<div id='contents'>"),
+                   htmlOutput("ykr_helper"),
+                   HTML("</div>"),
                    HTML("</div>"),
                    
                    HTML("<div id='contents'>"),
@@ -404,13 +547,62 @@ ui <- shinyUI(
                      value = 11),
                    HTML("</div>"),
                    
+                   # Layer options: on-off switches
+                   HTML("<label class='control-label'>Layer options</label>",
+                        "<div id='contents'>",
+                        "<div class='onoff-container'>",
+                        "<div class='onoff-div'><b>Postal code areas</b><br>"),
+                   # Switch for interactive map labels
+                   HTML("<label class='control-label onoff-label' for='show_postal'>Boundaries</label>"),
+                   shinyWidgets::switchInput(
+                     inputId = "show_postal", 
+                     size = "mini",
+                     value = TRUE),
+                   HTML("<label class='control-label onoff-label' for='show_postal_labels'>Labels</label>"),
+                   shinyWidgets::switchInput(
+                     inputId = "show_postal_labels", 
+                     size = "mini",
+                     value = FALSE),
+                   HTML("</div>"),
+                   
+                   # Switches for muns
+                   HTML("<div class='onoff-div'><b>Municipalities</b><br>",
+                        "<label class='control-label onoff-label' for='show_muns'>Boundaries</label>"),
+                   shinyWidgets::switchInput(
+                     inputId = "show_muns", 
+                     size = "mini",
+                     value = TRUE),
+                   HTML("<label class='control-label onoff-label' for='show_muns_labels'>Labels</label>"),
+                   shinyWidgets::switchInput(
+                     inputId = "show_muns_labels", 
+                     size = "mini",
+                     value = FALSE),
+                   HTML("</div>"),
+                   
+                   # Switches for subdivisions
+                   HTML("<div class='onoff-div'><b>Subdivisions</b><br>",
+                        "<label class='control-label onoff-label' for='show_subdiv'>Boundaries</label>"),
+                   shinyWidgets::switchInput(
+                     inputId = "show_subdiv", 
+                     size = "mini",
+                     value = FALSE),
+                   HTML("<label class='control-label onoff-label' for='show_subdiv_labels'>Labels</label>"),
+                   shinyWidgets::switchInput(
+                     inputId = "show_subdiv_labels", 
+                     size = "mini",
+                     value = FALSE),
+                   HTML("</div>",
+                        "</div>",
+                        "</div>"),
+                   
                    HTML(paste("<p id='version-info'>Travel time comparison app version", 
                                app_v, "</p>")),
                    width = 1),
     
+      
+      ### 4.4 Mainpanel layout -------------------------------------------------
       mainPanel(
-        ggiraphOutput("gridi"),
-        textOutput("pelle")
+        ggiraphOutput("grid"),
       )
     )
   )

@@ -4,7 +4,12 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 26.5.2020
+# 29.5.2020
+
+
+
+# infix operator
+`%then%` <- shiny:::`%OR%`
 
 
 
