@@ -31,7 +31,7 @@ library(ggsn)
 
 
 # App version
-app_v <- "0012 (30.5.2020)"
+app_v <- "0013 (30.5.2020)"
 
 
 # Working directory
@@ -118,18 +118,20 @@ postal_f <-
 
 ### 2.4 Subdivisions -----------------------------------------------------------
 
-subdiv_f <- 
+subdiv <- 
   rgdal::readOGR(subdivpath, 
                  use_iconv = TRUE, 
                  encoding = "UTF-8", 
                  stringsAsFactors = TRUE) %>%
-  sp::spTransform(., app_crs) %>%
-  
+  sp::spTransform(., app_crs)
+subdiv@data <- subdiv@data %>% select(1) # remove column Description
+
+subdiv_f <- 
+  subdiv %>% 
   {dplyr::left_join(ggplot2::fortify(.),
                     as.data.frame(.) %>%
                       dplyr::mutate(id = as.character(dplyr::row_number() - 1)))} %>%
   
-  dplyr::select(-Description) %>%
   dplyr::mutate(Name = factor(Name, labels =
                                 c("Vantaa Aviapolis", "Helsinki Southern", 
                                   "Vantaa Hakunila", "Helsinki Eastern", 
@@ -152,18 +154,23 @@ subdiv_f <- subdiv_f[order(subdiv_f$Name), ]
 
 #### 2.4 Spatial join postal data to grid, fortify -----------------------------
 
-# TODO: maybe add buffer to postal so that gray border cells get recognised
+# TODO: add buffer to postal so that gray border cells get recognised
 # as part of zipcodes
 
-# First, spatjoin postal data to grid centroids. Left FALSE is inner join. Then,
-# Join centroid data back to grid polygons and convert grid to SpatialPolygons.
-# Finally, fortify for ggplot while keeping important columns.
+# First, spatjoin subdivision data to grid centroids. Secondly, spatjoin postal 
+# data to grid centroids. Left FALSE is inner join. Then, join centroid data 
+# back to grid polygons and convert grid to SpatialPolygons. Finally, fortify 
+# for ggplot while keeping important columns.
 grid_f <- 
-  sf::st_join(st_as_sf(grid_point), 
-              st_as_sf(postal), 
+  sf::st_join(sf::st_as_sf(grid_point),
+              sf::st_as_sf(subdiv),
               join = st_intersects,
               left = FALSE) %>%
-  sf::st_join(st_as_sf(grid), 
+  sf::st_join(.,
+              sf::st_as_sf(postal), 
+              join = st_intersects,
+              left = FALSE) %>%
+  sf::st_join(st_as_sf(grid),
               .,
               join = st_intersects) %>%
   as(., "Spatial") %>%
@@ -231,24 +238,40 @@ print(time.taken)
 
 # backup to for not having to run that long forloop all the time
 result2 <- data.frame(result)
-car_cols <- c("car_r_t", "car_m_t", "car_sl_t", "car_r_t_avg", "car_m_t_avg", 
-              "car_sl_t_avg")
+car_cols <- c("car_r_t", "car_m_t", "car_sl_t", "r_t_avg_zip", "m_t_avg_zip", 
+              "sl_t_avg_zip")
 
-# Get grouped means for TTM18 data for current starting point to all 
-# destinations
+# Get grouped means from TTM18 data for current starting point to all 
+# destinations per each zipcode
 result2 <- result2 %>%
-  #dplyr::mutate(zipcode = forcats::fct_explicit_na(zipcode)) %>%
   dplyr::group_by(zipcode) %>%
-  dplyr::summarise(car_r_t_avg = mean(car_r_t),
-                   car_m_t_avg = mean(car_m_t),
-                   car_sl_t_avg = mean(car_sl_t)) %>%
+  dplyr::summarise(r_t_avg_zip = mean(car_r_t),
+                   m_t_avg_zip = mean(car_m_t),
+                   sl_t_avg_zip = mean(car_sl_t)) %>%
   dplyr::mutate_if(is.numeric, round, 2) %>%
   dplyr::inner_join(result2, ., by = "zipcode") %>%
-  dplyr::mutate(car_r_t_avg = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ car_r_t_avg),
-                car_m_t_avg = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ car_m_t_avg),
-                car_sl_t_avg = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ car_sl_t_avg)) %>%
+  dplyr::mutate(r_t_avg_zip = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ r_t_avg_zip),
+                m_t_avg_zip = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ m_t_avg_zip),
+                sl_t_avg_zip = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ sl_t_avg_zip)) %>%
   dplyr::mutate_at(car_cols, ~dplyr::na_if(., -1))
 
+
+# Get grouped means from TTM18 data, per each subdivision
+subdiv_cols <- result %>%
+  dplyr::group_by(Name) %>%
+  dplyr::summarise(r_t_avg_sub = mean(car_r_t),
+                   m_t_avg_sub = mean(car_m_t),
+                   sl_t_avg_sub = mean(car_sl_t)) %>%
+  dplyr::mutate_if(is.numeric, round, 2) %>%
+  dplyr::inner_join(result, ., by = "Name") %>%
+  dplyr::mutate(r_t_avg_sub = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ r_t_avg_sub),
+                m_t_avg_sub = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ m_t_avg_sub),
+                sl_t_avg_sub = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ sl_t_avg_sub)) %>%
+  dplyr::select(c("r_t_avg_sub", "m_t_avg_sub", "sl_t_avg_sub")) %>%
+  dplyr::mutate_all(., ~dplyr::na_if(., -1))
+
+# Bind zipcode and subdiv data
+result2 <- cbind(result2, subdiv_cols)
 
 # -1 to NA
 # result2$car_r_t <- dplyr::na_if(result2$car_r_t, -1)
@@ -285,7 +308,7 @@ server <- function(input, output, session) {
 
   #### 4.1 Reactive elements ---------------------------------------------------
 
-  # reactive expression
+  # Validate ykr-id in the numeric field
   validate_ykrid <- eventReactive(input$calcYkr, {
     
     # %then% allows only one error message at a time
@@ -301,6 +324,7 @@ server <- function(input, output, session) {
     input$ykrid
   })
   
+  # Print helpful text for the user
   helper_output_ykrid <- reactive({
     
     # if input from validate_ykrid() is numeric, display useful information
@@ -322,9 +346,12 @@ server <- function(input, output, session) {
   output$grid <- renderggiraph({
     
     # Insert equal breaks for mapping
-    result2 <- CreateJenksColumn2(result2, result2, "car_r_t_avg", "carrt_equal", input$classIntervals_n)
-    result2 <- CreateJenksColumn2(result2, result2, "car_m_t_avg", "carmt_equal", input$classIntervals_n)
-    result2 <- CreateJenksColumn2(result2, result2, "car_sl_t_avg", "carslt_equal", input$classIntervals_n)
+    result2 <- CreateJenksColumn2(result2, result2, "r_t_avg_zip", "carrt_zip", input$classIntervals_n)
+    result2 <- CreateJenksColumn2(result2, result2, "m_t_avg_zip", "carmt_zip", input$classIntervals_n)
+    result2 <- CreateJenksColumn2(result2, result2, "sl_t_avg_zip", "carslt_zip", input$classIntervals_n)
+    result2 <- CreateJenksColumn2(result2, result2, "r_t_avg_sub", "carrt_sub", input$classIntervals_n)
+    result2 <- CreateJenksColumn2(result2, result2, "m_t_avg_sub", "carmt_sub", input$classIntervals_n)
+    result2 <- CreateJenksColumn2(result2, result2, "sl_t_avg_sub", "carslt_sub", input$classIntervals_n)
     
     # Format map labels (Equal breaks classes). Remove [, ], (, and ). Also add 
     # list dash
@@ -355,8 +382,8 @@ server <- function(input, output, session) {
         aes_string("long", "lat", 
                    group = "group",
                    tooltip = substitute(sprintf(tooltip_content, YKR_ID, 
-                                                zipcode, nimi, car_r_t_avg, 
-                                                car_m_t_avg, car_sl_t_avg,
+                                                zipcode, nimi, r_t_avg_zip, 
+                                                m_t_avg_zip, sl_t_avg_zip,
                                                 car_r_t, car_m_t, car_sl_t)),
                    fill = input$fill_column)) +
       
@@ -518,7 +545,10 @@ ui <- shinyUI(
                         href = "https://use.fontawesome.com/releases/v5.13.0/css/all.css"),
               htmltools::includeCSS(csspath)),
     htmltools::includeScript(path = jspath),
-
+    htmltools::htmlDependency(name = "svg.min.js", 
+                              version ="3.0.15", 
+                              src = c(href = "https://cdnjs.cloudflare.com/ajax/libs/svg.js/3.0.15/"), 
+                              script = "svg.min.js"),
         
     ### 4.3 Sidebar layout -----------------------------------------------------
     titlePanel(NULL, windowTitle = "Travel time comparison ShinyApp"),
@@ -549,7 +579,8 @@ ui <- shinyUI(
                    selectInput(
                      "fill_column", 
                      HTML("Select map fill"),
-                     c("carrt_equal", "carmt_equal", "carslt_equal"),
+                     c("carrt_zip", "carmt_zip", "carslt_zip",
+                       "carrt_sub", "carmt_sub", "carslt_sub"),
                      # TODO: add originals and averages above!
                    ),
                    
