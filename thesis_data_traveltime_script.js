@@ -44,7 +44,8 @@ $(document).ready(function() {
 // Wrap this inside a clunky timeout function because couldn't figure out another way to 
 // automatically establish these features as these elements are not finished at shiny:idle
 // or document ready.
-$(document).one('shiny:idle', function(event) {
+// Additionally, make this happen each time Shiny reports "idle" state.
+$(document).on('shiny:idle', function(event) {
 	
 	setTimeout(function() {
 		$('polygon').click(function() {
@@ -55,7 +56,7 @@ $(document).one('shiny:idle', function(event) {
 			$("#ykrid").val(clean_ykr).change();
 			
 			// Next, animate the numeric input to notify user
-			flash_elem = document.getElementById("ykr-flash");
+			var flash_elem = document.getElementById("ykr-flash");
 			flash_elem.classList.add('animate');
 		
 			//run after 0.8 seconds. 0.05 seconds longer than animation
@@ -67,7 +68,7 @@ $(document).one('shiny:idle', function(event) {
 			}
 			ticktock();
 		});
-	}, 4000);
+	}, 3000);
 });
 
 // this function only preserved integers of length 7 from the character string that is 
@@ -75,3 +76,25 @@ $(document).one('shiny:idle', function(event) {
 function clean(str) {
 	return parseInt(str.match(/\d{7}/g));
 }
+
+// The following SVG animation on click is commented because of performance reasons.
+// This SVG animation works with SVG.js, but is taxing on the performance. On click,
+// highlight clicked ykrid. The transform almost works, but is commented for now. It needs
+// front() accompanied with it, and that causes all sorts of trouble in the visuals.
+//$(document).one('shiny:idle', function(event) {
+//	
+//	setTimeout(function() {
+//		
+//		$('polygon').click(function() {
+//			var anim_elem = SVG($(this)[0]);
+//			anim_elem.animate({
+//				duration: 400,
+//				delay: 0,
+//				when: 'now',
+//				swing: true,
+//				times: 2,
+//				wait: 200
+//			}).attr({fill: '#ffffff'});//.transform({scale: 1.5});
+//		});
+//	}, 4000);
+//});

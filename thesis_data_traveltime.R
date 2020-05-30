@@ -31,7 +31,7 @@ library(ggsn)
 
 
 # App version
-app_v <- "0013 (30.5.2020)"
+app_v <- "0013b (30.5.2020)"
 
 
 # Working directory
@@ -118,20 +118,18 @@ postal_f <-
 
 ### 2.4 Subdivisions -----------------------------------------------------------
 
-subdiv <- 
+subdiv_f <- 
   rgdal::readOGR(subdivpath, 
                  use_iconv = TRUE, 
                  encoding = "UTF-8", 
                  stringsAsFactors = TRUE) %>%
-  sp::spTransform(., app_crs)
-subdiv@data <- subdiv@data %>% select(1) # remove column Description
-
-subdiv_f <- 
-  subdiv %>% 
+  sp::spTransform(., app_crs) %>%
+  
   {dplyr::left_join(ggplot2::fortify(.),
                     as.data.frame(.) %>%
                       dplyr::mutate(id = as.character(dplyr::row_number() - 1)))} %>%
   
+  dplyr::select(-Description) %>%
   dplyr::mutate(Name = factor(Name, labels =
                                 c("Vantaa Aviapolis", "Helsinki Southern", 
                                   "Vantaa Hakunila", "Helsinki Eastern", 
@@ -154,23 +152,18 @@ subdiv_f <- subdiv_f[order(subdiv_f$Name), ]
 
 #### 2.4 Spatial join postal data to grid, fortify -----------------------------
 
-# TODO: add buffer to postal so that gray border cells get recognised
+# TODO: maybe add buffer to postal so that gray border cells get recognised
 # as part of zipcodes
 
-# First, spatjoin subdivision data to grid centroids. Secondly, spatjoin postal 
-# data to grid centroids. Left FALSE is inner join. Then, join centroid data 
-# back to grid polygons and convert grid to SpatialPolygons. Finally, fortify 
-# for ggplot while keeping important columns.
+# First, spatjoin postal data to grid centroids. Left FALSE is inner join. Then,
+# Join centroid data back to grid polygons and convert grid to SpatialPolygons.
+# Finally, fortify for ggplot while keeping important columns.
 grid_f <- 
-  sf::st_join(sf::st_as_sf(grid_point),
-              sf::st_as_sf(subdiv),
+  sf::st_join(sf::st_as_sf(grid_point), 
+              sf::st_as_sf(postal),
               join = st_intersects,
               left = FALSE) %>%
-  sf::st_join(.,
-              sf::st_as_sf(postal), 
-              join = st_intersects,
-              left = FALSE) %>%
-  sf::st_join(st_as_sf(grid),
+  sf::st_join(sf::st_as_sf(grid), 
               .,
               join = st_intersects) %>%
   as(., "Spatial") %>%
@@ -189,7 +182,11 @@ origin_id <- "5985086"
 col_range <- c(1, 2, 14, 16, 18)
 
 # Get filepaths of all of the TTM18 data. Remove metadata textfile filepath.
-all_files <- list.files(path = ttm_path, pattern = ".txt$", recursive = TRUE)
+all_files <- list.files(path = ttm_path, 
+                        pattern = ".txt$", 
+                        recursive = TRUE, 
+                        full.names = TRUE)
+
 all_files <- all_files[-length(all_files)]
 
 # create dt_grid so that we don't need to recalculate grid all the time. 
@@ -210,8 +207,7 @@ start.time <- Sys.time()
 # a new data.table which has all the private car columns we wanted.
 # NB! This loop runs for 4-5 minutes.
 for(thispath in all_files) {
-  this_ttm <- file.path(ttm_path, thispath)
-  thisTable <- data.table::fread(this_ttm, select = col_range)
+  thisTable <- data.table::fread(thispath, select = col_range)
   slice <- subset(thisTable, from_id == as.numeric(origin_id))
 
   if (nrow(slice) != 0) {
@@ -226,8 +222,6 @@ print(time.taken)
 
 
 
-
-
 #### 3.1 Add thesis data values to the fortified data --------------------------
 
 # TODO
@@ -238,53 +232,22 @@ print(time.taken)
 
 # backup to for not having to run that long forloop all the time
 result2 <- data.frame(result)
-car_cols <- c("car_r_t", "car_m_t", "car_sl_t", "r_t_avg_zip", "m_t_avg_zip", 
-              "sl_t_avg_zip")
+car_cols <- c("car_r_t", "car_m_t", "car_sl_t", "car_r_t_avg", "car_m_t_avg", 
+              "car_sl_t_avg")
 
-# Get grouped means from TTM18 data for current starting point to all 
-# destinations per each zipcode
+# Get grouped means of TTM18 data for current starting point to all 
+# destinations for each postal code area
 result2 <- result2 %>%
   dplyr::group_by(zipcode) %>%
-  dplyr::summarise(r_t_avg_zip = mean(car_r_t),
-                   m_t_avg_zip = mean(car_m_t),
-                   sl_t_avg_zip = mean(car_sl_t)) %>%
+  dplyr::summarise(car_r_t_avg = mean(car_r_t),
+                   car_m_t_avg = mean(car_m_t),
+                   car_sl_t_avg = mean(car_sl_t)) %>%
   dplyr::mutate_if(is.numeric, round, 2) %>%
   dplyr::inner_join(result2, ., by = "zipcode") %>%
-  dplyr::mutate(r_t_avg_zip = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ r_t_avg_zip),
-                m_t_avg_zip = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ m_t_avg_zip),
-                sl_t_avg_zip = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ sl_t_avg_zip)) %>%
+  dplyr::mutate(car_r_t_avg = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ car_r_t_avg),
+                car_m_t_avg = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ car_m_t_avg),
+                car_sl_t_avg = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ car_sl_t_avg)) %>%
   dplyr::mutate_at(car_cols, ~dplyr::na_if(., -1))
-
-
-# Get grouped means from TTM18 data, per each subdivision
-subdiv_cols <- result %>%
-  dplyr::group_by(Name) %>%
-  dplyr::summarise(r_t_avg_sub = mean(car_r_t),
-                   m_t_avg_sub = mean(car_m_t),
-                   sl_t_avg_sub = mean(car_sl_t)) %>%
-  dplyr::mutate_if(is.numeric, round, 2) %>%
-  dplyr::inner_join(result, ., by = "Name") %>%
-  dplyr::mutate(r_t_avg_sub = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ r_t_avg_sub),
-                m_t_avg_sub = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ m_t_avg_sub),
-                sl_t_avg_sub = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ sl_t_avg_sub)) %>%
-  dplyr::select(c("r_t_avg_sub", "m_t_avg_sub", "sl_t_avg_sub")) %>%
-  dplyr::mutate_all(., ~dplyr::na_if(., -1))
-
-# Bind zipcode and subdiv data
-result2 <- cbind(result2, subdiv_cols)
-
-# -1 to NA
-# result2$car_r_t <- dplyr::na_if(result2$car_r_t, -1)
-# result2$car_m_t <- dplyr::na_if(result2$car_m_t, -1)
-# result2$car_sl_t <- dplyr::na_if(result2$car_sl_t, -1)
-# result2$car_r_t_avg <- dplyr::na_if(result2$car_r_t_avg, -1)
-# result2$car_m_t_avg <- dplyr::na_if(result2$car_m_t_avg, -1)
-# result2$car_sl_t_avg <- dplyr::na_if(result2$car_sl_t_avg, -1)
-
-# Insert equal breaks for mapping
-#result2 <- CreateJenksColumn2(result2, result2, "car_r_t_avg", "carrt_equal", 11)
-#result2 <- CreateJenksColumn2(result2, result2, "car_m_t_avg", "carmt_equal", 11)
-#result2 <- CreateJenksColumn2(result2, result2, "car_sl_t_avg", "carslt_equal", 11)
 
 
 
@@ -341,21 +304,24 @@ server <- function(input, output, session) {
     help_output
   })
   
+  # currentinput() calculates new class intervals when input change detected
+  currentinput <- reactive({
+    res <- CreateJenksColumn2(result2, result2, "car_r_t_avg", "carrt_equal", input$classIntervals_n)
+    res <- CreateJenksColumn2(res, res, "car_m_t_avg", "carmt_equal", input$classIntervals_n)
+    res <- CreateJenksColumn2(res, res, "car_sl_t_avg", "carslt_equal", input$classIntervals_n)
+    res
+  })
+  
   
   #### 4.2 ShinyApp outputs ----------------------------------------------------
   output$grid <- renderggiraph({
     
-    # Insert equal breaks for mapping
-    result2 <- CreateJenksColumn2(result2, result2, "r_t_avg_zip", "carrt_zip", input$classIntervals_n)
-    result2 <- CreateJenksColumn2(result2, result2, "m_t_avg_zip", "carmt_zip", input$classIntervals_n)
-    result2 <- CreateJenksColumn2(result2, result2, "sl_t_avg_zip", "carslt_zip", input$classIntervals_n)
-    result2 <- CreateJenksColumn2(result2, result2, "r_t_avg_sub", "carrt_sub", input$classIntervals_n)
-    result2 <- CreateJenksColumn2(result2, result2, "m_t_avg_sub", "carmt_sub", input$classIntervals_n)
-    result2 <- CreateJenksColumn2(result2, result2, "sl_t_avg_sub", "carslt_sub", input$classIntervals_n)
+    # Reactive value: Insert equal breaks for mapping.
+    inputdata <- currentinput()
     
     # Format map labels (Equal breaks classes). Remove [, ], (, and ). Also add 
     # list dash
-    labels <- gsub("(])|(\\()|(\\[)", "", levels(result2[, input$fill_column]))
+    labels <- gsub("(])|(\\()|(\\[)", "", levels(inputdata[, input$fill_column]))
     labels <- gsub(",", " \U2012 ", labels)
     
     # current_subdiv is created so that values can be removed when necessary
@@ -375,15 +341,15 @@ server <- function(input, output, session) {
                               "sl_t: %s min</div>",
                               "</div>")
     
-    g <- ggplot(data = result2) + 
+    g <- ggplot(data = inputdata) + 
       geom_polygon_interactive(
         color = "black",
         size = 0.2,
         aes_string("long", "lat", 
                    group = "group",
                    tooltip = substitute(sprintf(tooltip_content, YKR_ID, 
-                                                zipcode, nimi, r_t_avg_zip, 
-                                                m_t_avg_zip, sl_t_avg_zip,
+                                                zipcode, nimi, car_r_t_avg, 
+                                                car_m_t_avg, car_sl_t_avg,
                                                 car_r_t, car_m_t, car_sl_t)),
                    fill = input$fill_column)) +
       
@@ -396,8 +362,8 @@ server <- function(input, output, session) {
                          na.value = "darkgrey") +
       
       # Define map extent manually
-      coord_fixed(xlim = c(min(result2$lon) + 200, max(result2$lon) - 1200),
-                  ylim = c(min(result2$lat) + 600, max(result2$lat) - 600)) +
+      coord_fixed(xlim = c(min(inputdata$lon) + 200, max(inputdata$lon) - 1200),
+                  ylim = c(min(inputdata$lat) + 600, max(inputdata$lat) - 600)) +
       
       # Map starting position
       geom_polygon(data = origincell,
@@ -408,14 +374,14 @@ server <- function(input, output, session) {
                    size = 0.6) +
       
       # Scale bar and north arrow
-      ggsn::scalebar(result2, 
+      ggsn::scalebar(inputdata, 
                      dist_unit = "km",
                      dist = 2,
                      st.dist = 0.01,
                      st.size = 4, 
                      height = 0.01, 
                      transform = FALSE) +
-      ggsn::north(result2, 
+      ggsn::north(inputdata, 
                   location = "topright", 
                   scale = 0.04, 
                   symbol = 10) +
@@ -579,8 +545,7 @@ ui <- shinyUI(
                    selectInput(
                      "fill_column", 
                      HTML("Select map fill"),
-                     c("carrt_zip", "carmt_zip", "carslt_zip",
-                       "carrt_sub", "carmt_sub", "carslt_sub"),
+                     c("carrt_equal", "carmt_equal", "carslt_equal"),
                      # TODO: add originals and averages above!
                    ),
                    
