@@ -1,6 +1,8 @@
 
-# Travel time comparison test
-# 31.5.2020
+# Helsinki Region Travel Time comparison application
+# Helsinki Region Travel Time Matrix 2018 <--> My thesis survey results
+
+# 1.6.2020
 # Sampo Vesanen
 
 # This interactive Travel time comparison test is dependent on ggiraph 0.7.7
@@ -31,7 +33,7 @@ library(ggsn)
 
 
 # App version
-app_v <- "0016 (31.5.2020)"
+app_v <- "0016 (1.6.2020)"
 
 
 # Working directory
@@ -192,9 +194,6 @@ grid_f <-
 # Only specify origin id (from_id in TTM18). to_id remains open because we want
 # to view all of the destinations.
 origin_id <- "5985086"
-origin_id_num <- as.numeric(origin_id)
-col_range <- c(1, 2, 14, 16, 18)
-col_range2 <- c("from_id", "to_id", "car_r_t", "car_m_t", "car_sl_t")
 dt_grid <- as.data.table(grid_f)
 
 # Get filepaths of all of the TTM18 data. Remove metadata textfile filepath.
@@ -204,86 +203,7 @@ all_files <- list.files(path = ttm_path,
                         full.names = TRUE)
 all_files <- all_files[-length(all_files)]
 
-# Fetch all the files of TTM18, select only relevant column and per file select
-# relevant ykr_id. Use lapply() to avoid a for loop and save some time as this
-# operation is supposed to be as fast as possible. The lapply output is a list
-# of data.tables, so flatten that with rbindlist() and then merge with dt_grid,
-# a data.table version of grid to get the basic TTM18 data we need for current
-# calculation.
-
-# NB! This runs for about 2.5 minutes, depending on hardware capabilities.
-start.time <- Sys.time()
-result <- 
-  lapply(all_files, FUN = TTM18_fetch, col_range, origin_id_num) %>%
-  data.table::rbindlist(., fill = TRUE) %>%
-  data.table::merge.data.table(dt_grid, ., by.x = "YKR_ID", by.y = "to_id")
-
-end.time <- Sys.time()
-time.taken <- end.time - start.time
-print(time.taken)
-
-
-
-
-
-
-#### PARQUET TEST ###
-TTM18_to_parquet <- function(x) {
-  
-  # Generate parquet folder structure and filename
-  splt <- unlist(strsplit(x, "/"))
-  splt_len <- length(splt)
-  filename <- paste(gsub(".txt", "", splt[splt_len]), ".parquet", sep = "")
-  parquet_fp <- file.path(wd, "TTM18", splt[splt_len - 1])
-  
-  # Conditionally create folder
-  if (!dir.exists(file.path(parquet_fp))) {
-    dir.create(file.path(parquet_fp))
-  }
-  
-  # data.table::fread current file, then write into parquet using compression.
-  # Achieves about 33 % smaller file size.
-  res <- fread(x, select = c(1, 2, 14, 16, 18))
-  arrow::write_parquet(res, 
-                       file.path(parquet_fp, filename), 
-                       compression = "gzip", 
-                       compression_level = 5)
-}
-
-# Conditionally create TTM18
-if (!dir.exists(file.path(wd, "TTM18"))) {
-  dir.create(file.path(wd, "TTM18"))
-}
-# This runs for 4-5 minutes
-#lapply(all_files, FUN = TTM18_to_parquet)
-
-all_parquet <- list.files(path = file.path(wd, "TTM18"), 
-                          pattern = ".parquet$", 
-                          recursive = TRUE, 
-                          full.names = TRUE)
-
-TTM18parquet_fetch <- function(x, origin_id) {
-  res <- arrow::read_parquet(x)
-  res <- subset(res, from_id == origin_id)
-  return(res)
-}
-start.time <- Sys.time()
-result <- 
-  lapply(all_parquet, FUN = TTM18parquet_fetch, origin_id_num) %>%
-  data.table::rbindlist(., fill = TRUE) %>%
-  data.table::merge.data.table(dt_grid, ., by.x = "YKR_ID", by.y = "to_id")
-end.time <- Sys.time()
-time.taken <- end.time - start.time
-print(time.taken)
-
-
-
-
-
-
-
-
-### FST TEST
+### FST TEST, THIS WORKS
 #library(fst)
 
 TTM18_to_fst <- function(x) {
@@ -308,10 +228,10 @@ TTM18_to_fst <- function(x) {
 if (!dir.exists(file.path(wd, "TTM18"))) {
   dir.create(file.path(wd, "TTM18"))
 }
-# This runs for 5-10 minutes because of maximum compression
+# This runs for 5-10 minutes because of the maximum compression
 #lapply(all_files, FUN = TTM18_to_fst)
 
-# read all fst files
+# Save all of the fst filepaths
 all_fst <- list.files(path = file.path(wd, "TTM18"), 
                       pattern = ".fst$", 
                       recursive = TRUE, 
@@ -321,9 +241,9 @@ TTM18fst_fetch <- function(x, pos) {
   fst::read_fst(x, from = pos, to = pos, as.data.table = TRUE)
 }
 
-# get the position of current origin
+# Get the position of current origin
 ykr_ids <- read.csv(all_files[1], sep = ";")[, 1]
-pos <- match(origin_id_num, ykr_ids) # get index of current id
+pos <- match(as.numeric(origin_id), ykr_ids) # get index of current id
 
 start.time <- Sys.time()
 result <- 
@@ -333,52 +253,6 @@ result <-
 end.time <- Sys.time()
 time.taken <- end.time - start.time
 print(time.taken)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# ARE THEY ALWAYS AT SAME POSITION??
-# THIS WORKS IN SHINY, AT LEAST WITH  ORIGIN_ID DEFAULT!!
-# try with parquet or vroom later!!
-ykr_ids <- read.csv(all_files[1], sep = ";")[, 1]
-pos <- match(origin_id_num, ykr_ids) # get index of current id
-
-# read only specific columns and one row, our row
-TTM18_fetch33 <- function(x, pos) {
-  data.table::fread(x, select = c(1, 2, 14, 16, 18), nrows = 1, skip = pos)
-}
-
-# reading only one row per file removes colnames. Seems to work pretty good?? 1.2 min??
-start.time <- Sys.time()
-result <- 
-  lapply(all_files, FUN = TTM18_fetch33, pos) %>%
-  data.table::rbindlist(., fill = TRUE) %>%
-  data.table::merge.data.table(dt_grid, ., by.x = "YKR_ID", by.y = "V2") #V2 = "to_id"
-
-end.time <- Sys.time()
-time.taken <- end.time - start.time
-print(time.taken)
-
-# joined rename columns
-colnames(result)[colnames(result) == "V1"] <- "from_id"
-colnames(result)[colnames(result) == "V14"] <- "car_r_t"
-colnames(result)[colnames(result) == "V16"] <- "car_m_t"
-colnames(result)[colnames(result) == "V18"] <- "car_sl_t"
-
-
-
-
-
 
 
 
