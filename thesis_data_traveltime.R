@@ -31,7 +31,7 @@ library(ggsn)
 
 
 # App version
-app_v <- "0015 (31.5.2020)"
+app_v <- "0016 (31.5.2020)"
 
 
 # Working directory
@@ -67,8 +67,19 @@ app_crs <- sp::CRS("+init=epsg:3067")
 grid <- rgdal::readOGR(gridpath, stringsAsFactors = TRUE) %>%
   sp::spTransform(., app_crs)
 
-# Save grid as centroids for spatial join
+# Save grid as centroids for the spatial join of data
 grid_point <- rgeos::gCentroid(grid, byid = TRUE)
+
+# TTM18 Helsinki walking center polygon. Source: Henrikki Tenkanen.
+walkingHki <- 
+  data.frame(
+    lon = c(387678.024778, 387891.53396, 383453.380944, 383239.871737, 387678.024778),
+    lat = c(6675360.99039, 6670403.35286, 6670212.21613, 6675169.85373, 6675360.99039)) %>%
+  sf::st_as_sf(coords = c("lon", "lat"), crs = 3067) %>%
+  dplyr::summarise(geometry = sf::st_combine(geometry)) %>%
+  sf::st_cast("POLYGON")
+
+
 
 
 
@@ -153,10 +164,7 @@ subdiv_f <- subdiv_f[order(subdiv_f$Name), ]
 
 
 
-#### 2.4 Spatial join postal data to grid, fortify -----------------------------
-
-# TODO: maybe add buffer to postal so that gray border cells get recognised
-# as part of zipcodes
+#### 3 Spatial join postal data to grid, fortify -----------------------------
 
 # First, spatjoin postal data to grid centroids. Left FALSE is inner join. Then,
 # Join centroid data back to grid polygons and convert grid to SpatialPolygons.
@@ -177,13 +185,16 @@ grid_f <-
 
 
 
-#### 3 Integrate TTM18 ---------------------------------------------------------
+#### 4 Integrate TTM18 ---------------------------------------------------------
+
+#### 4.1 Fetch TTM18 data ------------------------------------------------------
 
 # Only specify origin id (from_id in TTM18). to_id remains open because we want
 # to view all of the destinations.
 origin_id <- "5985086"
 origin_id_num <- as.numeric(origin_id)
 col_range <- c(1, 2, 14, 16, 18)
+col_range2 <- c("from_id", "to_id", "car_r_t", "car_m_t", "car_sl_t")
 dt_grid <- as.data.table(grid_f)
 
 # Get filepaths of all of the TTM18 data. Remove metadata textfile filepath.
@@ -191,7 +202,6 @@ all_files <- list.files(path = ttm_path,
                         pattern = ".txt$", 
                         recursive = TRUE, 
                         full.names = TRUE)
-
 all_files <- all_files[-length(all_files)]
 
 # Fetch all the files of TTM18, select only relevant column and per file select
@@ -200,8 +210,8 @@ all_files <- all_files[-length(all_files)]
 # of data.tables, so flatten that with rbindlist() and then merge with dt_grid,
 # a data.table version of grid to get the basic TTM18 data we need for current
 # calculation.
-# NB! This runs for about 2.5 minutes
 
+# NB! This runs for about 2.5 minutes, depending on hardware capabilities.
 start.time <- Sys.time()
 result <- 
   lapply(all_files, FUN = TTM18_fetch, col_range, origin_id_num) %>%
@@ -214,7 +224,167 @@ print(time.taken)
 
 
 
-#### 3.1 Add thesis data values to the fortified data --------------------------
+
+
+
+#### PARQUET TEST ###
+TTM18_to_parquet <- function(x) {
+  
+  # Generate parquet folder structure and filename
+  splt <- unlist(strsplit(x, "/"))
+  splt_len <- length(splt)
+  filename <- paste(gsub(".txt", "", splt[splt_len]), ".parquet", sep = "")
+  parquet_fp <- file.path(wd, "TTM18", splt[splt_len - 1])
+  
+  # Conditionally create folder
+  if (!dir.exists(file.path(parquet_fp))) {
+    dir.create(file.path(parquet_fp))
+  }
+  
+  # data.table::fread current file, then write into parquet using compression.
+  # Achieves about 33 % smaller file size.
+  res <- fread(x, select = c(1, 2, 14, 16, 18))
+  arrow::write_parquet(res, 
+                       file.path(parquet_fp, filename), 
+                       compression = "gzip", 
+                       compression_level = 5)
+}
+
+# Conditionally create TTM18
+if (!dir.exists(file.path(wd, "TTM18"))) {
+  dir.create(file.path(wd, "TTM18"))
+}
+# This runs for 4-5 minutes
+#lapply(all_files, FUN = TTM18_to_parquet)
+
+all_parquet <- list.files(path = file.path(wd, "TTM18"), 
+                          pattern = ".parquet$", 
+                          recursive = TRUE, 
+                          full.names = TRUE)
+
+TTM18parquet_fetch <- function(x, origin_id) {
+  res <- arrow::read_parquet(x)
+  res <- subset(res, from_id == origin_id)
+  return(res)
+}
+start.time <- Sys.time()
+result <- 
+  lapply(all_parquet, FUN = TTM18parquet_fetch, origin_id_num) %>%
+  data.table::rbindlist(., fill = TRUE) %>%
+  data.table::merge.data.table(dt_grid, ., by.x = "YKR_ID", by.y = "to_id")
+end.time <- Sys.time()
+time.taken <- end.time - start.time
+print(time.taken)
+
+
+
+
+
+
+
+
+### FST TEST
+#library(fst)
+
+TTM18_to_fst <- function(x) {
+  
+  # Generate parquet folder structure and filename
+  splt <- unlist(strsplit(x, "/"))
+  splt_len <- length(splt)
+  filename <- paste(gsub(".txt", "", splt[splt_len]), ".fst", sep = "")
+  fst_fp <- file.path(wd, "TTM18", splt[splt_len - 1])
+  
+  # Conditionally create folder
+  if (!dir.exists(file.path(fst_fp))) {
+    dir.create(file.path(fst_fp))
+  }
+  
+  # data.table::fread current file, then write into fst
+  res <- data.table::fread(x, select = c(1, 2, 14, 16, 18))
+  fst::write_fst(res, file.path(fst_fp, filename), compress = 100)
+}
+
+# Conditionally create folder "TTM18"
+if (!dir.exists(file.path(wd, "TTM18"))) {
+  dir.create(file.path(wd, "TTM18"))
+}
+# This runs for 5-10 minutes because of maximum compression
+#lapply(all_files, FUN = TTM18_to_fst)
+
+# read all fst files
+all_fst <- list.files(path = file.path(wd, "TTM18"), 
+                      pattern = ".fst$", 
+                      recursive = TRUE, 
+                      full.names = TRUE)
+
+TTM18fst_fetch <- function(x, pos) {
+  fst::read_fst(x, from = pos, to = pos, as.data.table = TRUE)
+}
+
+# get the position of current origin
+ykr_ids <- read.csv(all_files[1], sep = ";")[, 1]
+pos <- match(origin_id_num, ykr_ids) # get index of current id
+
+start.time <- Sys.time()
+result <- 
+  lapply(all_fst, FUN = TTM18fst_fetch, pos) %>%
+  data.table::rbindlist(., fill = TRUE) %>%
+  data.table::merge.data.table(dt_grid, ., by.x = "YKR_ID", by.y = "to_id")
+end.time <- Sys.time()
+time.taken <- end.time - start.time
+print(time.taken)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# ARE THEY ALWAYS AT SAME POSITION??
+# THIS WORKS IN SHINY, AT LEAST WITH  ORIGIN_ID DEFAULT!!
+# try with parquet or vroom later!!
+ykr_ids <- read.csv(all_files[1], sep = ";")[, 1]
+pos <- match(origin_id_num, ykr_ids) # get index of current id
+
+# read only specific columns and one row, our row
+TTM18_fetch33 <- function(x, pos) {
+  data.table::fread(x, select = c(1, 2, 14, 16, 18), nrows = 1, skip = pos)
+}
+
+# reading only one row per file removes colnames. Seems to work pretty good?? 1.2 min??
+start.time <- Sys.time()
+result <- 
+  lapply(all_files, FUN = TTM18_fetch33, pos) %>%
+  data.table::rbindlist(., fill = TRUE) %>%
+  data.table::merge.data.table(dt_grid, ., by.x = "YKR_ID", by.y = "V2") #V2 = "to_id"
+
+end.time <- Sys.time()
+time.taken <- end.time - start.time
+print(time.taken)
+
+# joined rename columns
+colnames(result)[colnames(result) == "V1"] <- "from_id"
+colnames(result)[colnames(result) == "V14"] <- "car_r_t"
+colnames(result)[colnames(result) == "V16"] <- "car_m_t"
+colnames(result)[colnames(result) == "V18"] <- "car_sl_t"
+
+
+
+
+
+
+
+
+#### 4.2 Add thesis data values to the fortified data --------------------------
+
+# TODO: Take into account all times of parking just like in Python
 
 thesisdata <- 
   read.csv(file = recordspath,
@@ -233,7 +403,7 @@ result <- dplyr::inner_join(result, thesisdata, by = "zipcode")
 
 
 
-#### 3.2 Add classIntervals columns for graduated colouring --------------------
+#### 4.4 Add averaged columns --------------------------------------------------
 
 # backup to for not having to run that long forloop all the time
 result2 <- data.frame(result)
@@ -256,7 +426,7 @@ result2 <- result2 %>%
 
 
 
-#### 3.2 Labeling features -----------------------------------------------------
+#### 5 Labeling plot features --------------------------------------------------
 
 # Create labels for zipcodes
 zipcode_lbl <- GetCentroids(postal_f, "zipcode", "zipcode")
@@ -271,10 +441,10 @@ unique_ykr <- unique(result2$YKR_ID)
 
 
 
-#### 4 Travel Time Comparison ShinyApp -----------------------------------------
+#### 6 Travel Time Comparison ShinyApp -----------------------------------------
 server <- function(input, output, session) {
 
-  #### 4.1 Reactive elements ---------------------------------------------------
+  #### 6.1 Reactive elements ---------------------------------------------------
 
   # Validate ykr-id in the numeric field
   validate_ykrid <- eventReactive(input$calcYkr, {
@@ -318,7 +488,7 @@ server <- function(input, output, session) {
   })
   
   
-  #### 4.2 ShinyApp outputs ----------------------------------------------------
+  #### 6.2 ShinyApp outputs ----------------------------------------------------
   output$grid <- renderggiraph({
     
     # Reactive value: Insert equal breaks for mapping.
@@ -506,14 +676,14 @@ server <- function(input, output, session) {
 }
 
 
-#### 4.1 ShinyApp UI -----------------------------------------------------------
+#### 6.3 ShinyApp UI -----------------------------------------------------------
 ui <- shinyUI(
   fluidPage(
     useShinyjs(),
     theme = shinytheme("slate"),
     
     
-    #### 4.2 ShinyApp header ---------------------------------------------------
+    #### 6.4 ShinyApp header ---------------------------------------------------
     tags$head(tags$link(rel = "stylesheet", 
                         type = "text/css", 
                         href = "https://use.fontawesome.com/releases/v5.13.0/css/all.css"),
@@ -524,7 +694,7 @@ ui <- shinyUI(
                               src = c(href = "https://cdnjs.cloudflare.com/ajax/libs/svg.js/3.0.15/"), 
                               script = "svg.min.js"),
         
-    ### 4.3 Sidebar layout -----------------------------------------------------
+    ### 6.5 Sidebar layout -----------------------------------------------------
     titlePanel(NULL, windowTitle = "Travel time comparison ShinyApp"),
     sidebarLayout(
       sidebarPanel(id = "sidebar",
@@ -618,7 +788,7 @@ ui <- shinyUI(
                    width = 1),
     
       
-      ### 4.4 Mainpanel layout -------------------------------------------------
+      ### 6.6 Mainpanel layout -------------------------------------------------
       mainPanel(
         ggiraphOutput("grid"),
       )
