@@ -2,13 +2,13 @@
 # Helsinki Region Travel Time comparison application
 # Helsinki Region Travel Time Matrix 2018 <--> My thesis survey results
 
-# 1.6.2020
+# 2.6.2020
 # Sampo Vesanen
 
-# This interactive Travel time comparison test is dependent on ggiraph 0.7.7
-# (only available through GitHub at the time of writing). With my setup ggiraph 
-# 0.7.0 would load the map an unreasonably long time. I strongly suspected
-# some fault in the tooltip generation.
+# This interactive Travel time comparison application is dependent on ggiraph 
+# 0.7.7 (only available through GitHub at the time of writing). With my setup
+# ggiraph 0.7.0 would load the map an unreasonably long time. I strongly 
+# suspected some fault in the tooltip generation.
 
 
 
@@ -34,21 +34,21 @@ library(fst)
 
 
 # App version
-app_v <- "0018 (1.6.2020)"
+app_v <- "0019 (2.6.2020)"
 
 
 # Working directory
 wd <- "C:/Sampon/Maantiede/Master of the Universe"
 
 # Data directories
-postal_path <- file.path(wd, "postal_for_r.csv")
 ttm_path <- file.path(wd, "HelsinkiTravelTimeMatrix2018")
 munspath <- file.path(wd, "python/paavo/hcr_muns_clipped.shp")
 gridpath <- file.path(wd, "python/MetropAccess_YKR_grid_EurefFIN.shp")
 subdivpath <- file.path(wd, "python/suuralueet/PKS_suuralue.kml")
 
-# Thesis data
+# Thesis' processed data
 recordspath <- file.path(wd, "records_for_r.csv")
+postal_path <- file.path(wd, "postal_for_r.csv")
 
 # Directives
 csspath <- file.path(wd, "python/thesis_data_traveltime_style.css")
@@ -65,7 +65,7 @@ fst_filepath <- file.path(wd, "TTM18")
 
 
 
-#### 2 Import layers -----------------------------------------------------------
+#### 2 Import data layers ------------------------------------------------------
 
 #### 2.1 Grid ------------------------------------------------------------------
 
@@ -79,22 +79,30 @@ grid <- rgdal::readOGR(gridpath, stringsAsFactors = TRUE) %>%
 # Save grid as centroids for the spatial join of data
 grid_point <- rgeos::gCentroid(grid, byid = TRUE)
 
-# TTM18 Helsinki walking center polygon. Source: Henrikki Tenkanen.
+# TTM18 Helsinki walking center polygon. Source: Henrikki Tenkanen. Get YKR_IDs
+# which fit inside the walking center polygon.
 walkingHki <- 
   data.frame(
     lon = c(387678.024778, 387891.53396, 383453.380944, 383239.871737, 387678.024778),
     lat = c(6675360.99039, 6670403.35286, 6670212.21613, 6675169.85373, 6675360.99039)) %>%
-  sf::st_as_sf(coords = c("lon", "lat"), crs = 3067) %>%
+  sf::st_as_sf(coords = c("lon", "lat"), crs = app_crs) %>%
   dplyr::summarise(geometry = sf::st_combine(geometry)) %>%
   sf::st_cast("POLYGON")
 
-
+walking_ids <- 
+  sf::st_intersection(sf::st_as_sf(grid), walkingHki) %>%
+  as(., "Spatial") %>%
+  {dplyr::left_join(ggplot2::fortify(.),
+                    as.data.frame(.) %>%
+                      tibble::rownames_to_column(., var = "id"))} %>%
+  dplyr::select(YKR_ID)
+walking_ids <- walking_ids[, 1]
 
 
 
 #### 2.2 Municipality borders --------------------------------------------------
 
-# Get municipality borders. Fortify SP DataFrame for ggplot. Remove unnecessary
+# Get municipality borders. Fortify SP DataFrame for ggplot2. Remove unnecessary
 # columns to save memory.
 # Shapefile data is Regional population density 2012, Statistics Finland.
 # http://urn.fi/urn:nbn:fi:csc-kata00001000000000000226.
@@ -124,7 +132,7 @@ geometries <- lapply(postal[, "geometry"], "readWKT", p4s = app_crs)
 sp_tmp_ID <- mapply(sp::spChFIDs, geometries, as.character(postal[, 1]))
 row.names(postal) <- postal[, 1]
 
-# Preserve SpatialPolygons format for spatial join
+# Preserve SpatialPolygons version of "postal" for the spatial join
 postal <- sp::SpatialPolygonsDataFrame(
   sp::SpatialPolygons(unlist(lapply(sp_tmp_ID, function(x) x@polygons)),
                       proj4string = app_crs), data = postal)
@@ -173,7 +181,7 @@ subdiv_f <- subdiv_f[order(subdiv_f$Name), ]
 
 
 
-#### 3 Spatial join postal data to grid, fortify -----------------------------
+#### 3 Spatial join postal data to grid, fortify -------------------------------
 
 # First, spatjoin postal data to grid centroids. Left FALSE is inner join. Then,
 # Join centroid data back to grid polygons and convert grid to SpatialPolygons.
@@ -234,7 +242,6 @@ result <-
 #### 4.2 Add thesis data values to the fortified data --------------------------
 
 # TODO: Take into account all times of parking just like in Python
-
 thesisdata <- 
   read.csv(file = recordspath,
            header = TRUE, 
@@ -242,35 +249,63 @@ thesisdata <-
            colClasses = c(timestamp = "POSIXct", zipcode = "factor"),
            stringsAsFactors = TRUE) %>%
   dplyr::select(zipcode, parktime, walktime) %>%
+  dplyr::filter(parktime <= 59,
+                walktime <= 59) %>%
   dplyr::group_by(zipcode) %>%
   dplyr::summarise(res_park_avg = mean(parktime),
                    res_walk_avg = mean(walktime)) %>%
   dplyr::mutate_if(is.numeric, round, 2)
 
-# Join survey data to result
-result <- dplyr::inner_join(result, thesisdata, by = "zipcode") 
+# Join "thesisdata" to "result", the currently calculated travel times dataframe
+result <- dplyr::left_join(result, thesisdata, by = "zipcode") 
 
 
 
 #### 4.4 Add averaged columns --------------------------------------------------
 
-# backup to for not having to run that long forloop all the time
-result2 <- data.frame(result)
-car_cols <- c("car_r_t", "car_m_t", "car_sl_t", "car_r_t_avg", "car_m_t_avg", 
-              "car_sl_t_avg")
+car_cols <- c("car_r_t", "car_m_t", "car_sl_t", "ttm_r_t_avg", "ttm_m_t_avg", 
+              "ttm_sl_t_avg")
 
 # Get grouped means of TTM18 data for current starting point to all 
 # destinations for each postal code area
-result2 <- result2 %>%
+result <- result %>%
+  
+  # Add Travel Time Matrix "searching for parking" and "walk to destination" data
+  dplyr::mutate(ttm_sfp = 0.42,
+                ttm_wtd = case_when(YKR_ID %in% walking_ids ~ 2.5, TRUE ~ 2)) %>%
   dplyr::group_by(zipcode) %>%
-  dplyr::summarise(car_r_t_avg = mean(car_r_t),
-                   car_m_t_avg = mean(car_m_t),
-                   car_sl_t_avg = mean(car_sl_t)) %>%
+  dplyr::summarise(ttm_r_t_avg = mean(car_r_t),
+                   ttm_m_t_avg = mean(car_m_t),
+                   ttm_sl_t_avg = mean(car_sl_t),
+                   ttm_sfp = mean(ttm_sfp),
+                   ttm_wtd = mean(ttm_wtd)) %>%
   dplyr::mutate_if(is.numeric, round, 2) %>%
-  dplyr::inner_join(result2, ., by = "zipcode") %>%
-  dplyr::mutate(car_r_t_avg = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ car_r_t_avg),
-                car_m_t_avg = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ car_m_t_avg),
-                car_sl_t_avg = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ car_sl_t_avg)) %>%
+  
+  # Join summarised columns back to original dataframe "result"
+  dplyr::inner_join(result, ., by = "zipcode") %>%
+  
+  # Generate drivetime (min) and pct (%) columns for TTM18 data
+  dplyr::mutate(ttm_r_drivetime = ttm_r_t_avg - ttm_sfp - ttm_wtd,
+                ttm_m_drivetime = ttm_m_t_avg - ttm_sfp - ttm_wtd,
+                ttm_sl_drivetime = ttm_sl_t_avg - ttm_sfp - ttm_wtd,
+                ttm_r_pct = (ttm_sfp + ttm_wtd) / ttm_r_drivetime,
+                ttm_m_pct = (ttm_sfp + ttm_wtd) / ttm_m_drivetime,
+                ttm_sl_pct = (ttm_sfp + ttm_wtd) / ttm_sl_drivetime) %>%
+  dplyr::mutate_at(vars(ttm_r_pct, ttm_m_pct, ttm_sl_pct), ~round(., 2)) %>%
+
+  # If zipcode is NA, then convert all calculated data to NA as well
+  # TODO: make this shorter
+  dplyr::mutate(ttm_r_t_avg = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_r_t_avg),
+                ttm_m_t_avg = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_m_t_avg),
+                ttm_sl_t_avg = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_sl_t_avg),
+                ttm_sfp = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_sfp),
+                ttm_wtd = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_wtd),
+                ttm_r_drivetime = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_r_drivetime),
+                ttm_m_drivetime = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_m_drivetime),
+                ttm_sl_drivetime = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_sl_drivetime),
+                ttm_r_pct = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_r_pct),
+                ttm_m_pct = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_m_pct),
+                ttm_sl_pct = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_sl_pct),) %>%
   dplyr::mutate_at(car_cols, ~dplyr::na_if(., -1))
 
 
@@ -282,11 +317,9 @@ zipcode_lbl <- GetCentroids(postal_f, "zipcode", "zipcode")
 muns_lbl <- GetCentroids(muns_f, "nimi", "nimi")
 subdiv_lbl <- GetCentroids(subdiv_f, "Name", "Name")
 
-# Get an origin cell for mapping
-origincell <- grid_f[grid_f["YKR_ID"] == as.numeric(origin_id), ]
-
 # Get all unique ykr_id values
-unique_ykr <- unique(result2$YKR_ID)
+# TODO: ykr_ids should be the same thing
+unique_ykr <- unique(result$YKR_ID)
 
 
 
@@ -302,10 +335,10 @@ server <- function(input, output, session) {
     validate(
       need(is.numeric(input$ykrid), "Not an integer") %then%
       need(nchar(input$ykrid) == 7, "Seven digits pls") %then%
-      need(input$ykrid <= max(result2$YKR_ID), 
-           paste("Value maximum is", max(result2$YKR_ID))) %then%
-      need(input$ykrid >= min(result2$YKR_ID), 
-           paste("Value minimum is", min(result2$YKR_ID))) %then%
+      need(input$ykrid <= max(result$YKR_ID), 
+           paste("Value maximum is", max(result$YKR_ID))) %then%
+      need(input$ykrid >= min(result$YKR_ID), 
+           paste("Value minimum is", min(result$YKR_ID))) %then%
       need(input$ykrid %in% unique_ykr, "Value not a valid YKR_ID")
     )
     input$ykrid
@@ -318,7 +351,7 @@ server <- function(input, output, session) {
     # to the user
     if(is.numeric(validate_ykrid())) {
       
-      thisVal <- result2[result2$YKR_ID == validate_ykrid(), ][1, ]
+      thisVal <- result[result$YKR_ID == validate_ykrid(), ][1, ]
       help_output <- paste(
         "<p style='margin: 0 0 0px;'>",
         "<b>YKR_ID: ", validate_ykrid(), "</b>,<br>",
@@ -355,33 +388,34 @@ server <- function(input, output, session) {
     # Join survey data to result
     result <- dplyr::inner_join(result, thesisdata, by = "zipcode") 
     
-    result2 <- data.frame(result)
-    car_cols <- c("car_r_t", "car_m_t", "car_sl_t", "car_r_t_avg", "car_m_t_avg", 
-                  "car_sl_t_avg")
+    result <- data.frame(result)
+    car_cols <- c("car_r_t", "car_m_t", "car_sl_t", "ttm_r_t_avg", "ttm_m_t_avg", 
+                  "ttm_sl_t_avg")
     
     # Get grouped means of TTM18 data for current starting point to all 
     # destinations for each postal code area
-    result2 <- result2 %>%
+    result <- result %>%
       dplyr::group_by(zipcode) %>%
-      dplyr::summarise(car_r_t_avg = mean(car_r_t),
-                       car_m_t_avg = mean(car_m_t),
-                       car_sl_t_avg = mean(car_sl_t)) %>%
+      dplyr::summarise(ttm_r_t_avg = mean(car_r_t),
+                       ttm_m_t_avg = mean(car_m_t),
+                       ttm_sl_t_avg = mean(car_sl_t)) %>%
       dplyr::mutate_if(is.numeric, round, 2) %>%
-      dplyr::inner_join(result2, ., by = "zipcode") %>%
-      dplyr::mutate(car_r_t_avg = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ car_r_t_avg),
-                    car_m_t_avg = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ car_m_t_avg),
-                    car_sl_t_avg = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ car_sl_t_avg)) %>%
+      dplyr::inner_join(result, ., by = "zipcode") %>%
+      dplyr::mutate(ttm_r_t_avg = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_r_t_avg),
+                    ttm_m_t_avg = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_m_t_avg),
+                    ttm_sl_t_avg = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_sl_t_avg)) %>%
       dplyr::mutate_at(car_cols, ~dplyr::na_if(., -1))
     
-    result2
+    result
     
   })
   
   # currentinput() calculates new class intervals when input change detected
   currentinput <- reactive({
-    res <- CreateJenksColumn2(thisTTM_df(), thisTTM_df(), "car_r_t_avg", "carrt_equal", input$classIntervals_n)
-    res <- CreateJenksColumn2(res, res, "car_m_t_avg", "carmt_equal", input$classIntervals_n)
-    res <- CreateJenksColumn2(res, res, "car_sl_t_avg", "carslt_equal", input$classIntervals_n)
+    #res <- CreateJenksColumn2(thisTTM_df(), thisTTM_df(), "ttm_r_t_avg", "carrt_equal", input$classIntervals_n)
+    res <- CreateJenksColumn2(result, result, "ttm_r_t_avg", "carrt_equal", input$classIntervals_n)
+    res <- CreateJenksColumn2(res, res, "ttm_m_t_avg", "carmt_equal", input$classIntervals_n)
+    res <- CreateJenksColumn2(res, res, "ttm_sl_t_avg", "carslt_equal", input$classIntervals_n)
     res
   })
   
@@ -390,11 +424,12 @@ server <- function(input, output, session) {
   output$grid <- renderggiraph({
     
     # Reactive value: Insert equal breaks for mapping.
-    inputdata <- thisTTM_df()
+    #inputdata <- thisTTM_df()
     inputdata <- currentinput()
     
     # Get an origin cell for mapping
-    origincell <- grid_f[grid_f["YKR_ID"] == as.numeric(validate_ykrid()), ]
+    #origincell <- grid_f[grid_f["YKR_ID"] == as.numeric(validate_ykrid()), ]
+    origincell <- grid_f[grid_f["YKR_ID"] == as.numeric(origin_id), ]
     
     
     # Format map labels (Equal breaks classes). Remove [, ], (, and ). Also add 
@@ -406,20 +441,50 @@ server <- function(input, output, session) {
     # but they can also be returned into view.
     current_subdiv_lbl <- data.frame(subdiv_lbl)
     
-    tooltip_content <- paste0("<div id='app-tooltip'>",
-                              "<div><b>id: %s</b></br>",
-                              "%s, %s</div>",
-                              "<hr id='tooltip-hr'>",
-                              "<div>Park: %s, walk: %s</div>",
-                              "<hr id='tooltip-hr'>",
-                              "<div>r_t_avg: %s min</br>",
-                              "m_t_avg: %s min</br>",
-                              "sl_t_avg: %s min</div>",
-                              "<hr id='tooltip-hr'>",
-                              "<div>r_t: %s min</br>",
-                              "m_t: %s min</br>",
-                              "sl_t: %s min</div>",
-                              "</div>")
+    tooltip_content2 <- paste0("<div id='app-tooltip'>",
+                               "<div><b>YKR ID: %s</b></br>",
+                               "%s, %s</div>",
+                               "<hr id='tooltip-hr'>",
+                               "<div><b>TTM18 data</b></br>",
+                               "sfp_avg %s, wtd_avg %s</div>",
+                               
+                               "<table class='tg'>",
+                               "<thead>",
+                               "<tr>",
+                               "<th class='tg-0lax'></th>",
+                               "<th class='tg-0pky'>ttm_r</th>",
+                               "<th class='tg-0pky'>ttm_m</th>",
+                               "<th class='tg-0pky'>ttm_s</th>",
+                               "</tr>",
+                               "</thead>",
+                               "<tbody>",
+                               "<tr>",
+                               "<td class='tg-0pky'>avg</td>",
+                               "<td class='tg-0pky'>%s</td>",
+                               "<td class='tg-0pky'>%s</td>",
+                               "<td class='tg-0pky'>%s</td>",
+                               "</tr>",
+                               "<tr>",
+                               "<td class='tg-0pky'>drivetime</td>",
+                               "<td class='tg-0pky'>%s</td>",
+                               "<td class='tg-0pky'>%s</td>",
+                               "<td class='tg-0pky'>%s</td>",
+                               "</tr>",
+                               "<tr>",
+                               "<td class='tg-0pky'>pct</td>",
+                               "<td class='tg-0pky'>%s</td>",
+                               "<td class='tg-0pky'>%s</td>",
+                               "<td class='tg-0pky'>%s</td>",
+                               "</tr>",
+                               "</tbody>",
+                               "</table>",
+                               
+                               "<hr id='tooltip-hr'>",
+                               "<div>r_t: %s min</br>",
+                               "m_t: %s min</br>",
+                               "sl_t: %s min</div>",
+                               "</div>")
+    
     
     g <- ggplot(data = inputdata) + 
       geom_polygon_interactive(
@@ -427,17 +492,20 @@ server <- function(input, output, session) {
         size = 0.2,
         aes_string("long", "lat", 
                    group = "group",
-                   tooltip = substitute(sprintf(tooltip_content, YKR_ID, 
-                                                zipcode, nimi, res_park_avg, 
-                                                res_walk_avg, car_r_t_avg, 
-                                                car_m_t_avg, car_sl_t_avg,
-                                                car_r_t, car_m_t, car_sl_t)),
+                   tooltip = substitute(
+                     sprintf(tooltip_content2, YKR_ID, zipcode, nimi,
+                             ttm_sfp, ttm_wtd,
+                             ttm_r_t_avg, ttm_m_t_avg, ttm_sl_t_avg,
+                             ttm_r_drivetime, ttm_m_drivetime, ttm_sl_drivetime,
+                             ttm_r_pct, ttm_m_pct, ttm_sl_pct,
+                             car_r_t, car_m_t, car_sl_t)),
                    fill = input$fill_column)) +
       
       # Jenks classes colouring and labels
       scale_fill_brewer(palette = "RdYlGn",
                          direction = -1,
-                         name = paste("Distance from\n", validate_ykrid(), ", (min)", 
+                         #name = paste("Distance from\n", validate_ykrid(), ", (min)",
+                         name = paste("Distance from\n", origin_id, ", (min)", 
                                       sep = ""),
                          labels = labels,
                          na.value = "darkgrey") +
@@ -607,8 +675,8 @@ ui <- shinyUI(
                    numericInput(
                      "ykrid", 
                      label = "Origin YKR ID",
-                     max = max(result2$YKR_ID),
-                     min = min(result2$YKR_ID),
+                     max = max(result$YKR_ID),
+                     min = min(result$YKR_ID),
                      value = origin_id),
                    HTML("</div>"),
                    

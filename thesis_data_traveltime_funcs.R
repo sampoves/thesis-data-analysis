@@ -8,7 +8,7 @@
 
 
 
-# infix operator
+# infix operator for sequential validation of input$ykrid
 `%then%` <- shiny:::`%OR%`
 
 
