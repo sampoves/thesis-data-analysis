@@ -29,11 +29,12 @@ library(rgeos)
 library(sf)
 library(shinyWidgets)
 library(ggsn)
+library(fst)
 
 
 
 # App version
-app_v <- "0016 (1.6.2020)"
+app_v <- "0017 (1.6.2020)"
 
 
 # Working directory
@@ -55,6 +56,12 @@ jspath <- file.path(wd, "python/thesis_data_traveltime_script.js")
 
 # Source functions and postal code variables
 source(file.path(wd, "python/thesis_data_traveltime_funcs.R"))
+
+# Convert Helsinki Region Travel Time Matrix 2018 into fst. This is a required
+# step to be able to run the comparison application. It is only needed to be
+# executed once. "fst_filepath" is the location of TTM18 converted to fst.
+fst_filepath <- file.path(wd, "TTM18")
+#source(file.path(wd, "python/thesis_data_traveltime_conv.R"))
 
 
 
@@ -189,70 +196,38 @@ grid_f <-
 
 #### 4 Integrate TTM18 ---------------------------------------------------------
 
+# NB! The execution of this code will fail at this point if TTM18 data is not 
+# converted to fst. Please make sure you have run "thesis_data_traveltime_conv.R".
+
+
+
 #### 4.1 Fetch TTM18 data ------------------------------------------------------
 
-# Only specify origin id (from_id in TTM18). to_id remains open because we want
-# to view all of the destinations.
+# Only specify an origin id (from_id in TTM18). to_id remains open because we 
+# want to view all possible destinations.
 origin_id <- "5985086"
 dt_grid <- as.data.table(grid_f)
 
-# Get filepaths of all of the TTM18 data. Remove metadata textfile filepath.
-all_files <- list.files(path = ttm_path, 
-                        pattern = ".txt$", 
-                        recursive = TRUE, 
-                        full.names = TRUE)
-all_files <- all_files[-length(all_files)]
-
-### FST TEST, THIS WORKS
-#library(fst)
-
-TTM18_to_fst <- function(x) {
-  
-  # Generate parquet folder structure and filename
-  splt <- unlist(strsplit(x, "/"))
-  splt_len <- length(splt)
-  filename <- paste(gsub(".txt", "", splt[splt_len]), ".fst", sep = "")
-  fst_fp <- file.path(wd, "TTM18", splt[splt_len - 1])
-  
-  # Conditionally create folder
-  if (!dir.exists(file.path(fst_fp))) {
-    dir.create(file.path(fst_fp))
-  }
-  
-  # data.table::fread current file, then write into fst
-  res <- data.table::fread(x, select = c(1, 2, 14, 16, 18))
-  fst::write_fst(res, file.path(fst_fp, filename), compress = 100)
-}
-
-# Conditionally create folder "TTM18"
-if (!dir.exists(file.path(wd, "TTM18"))) {
-  dir.create(file.path(wd, "TTM18"))
-}
-# This runs for 5-10 minutes because of the maximum compression
-#lapply(all_files, FUN = TTM18_to_fst)
-
-# Save all of the fst filepaths
-all_fst <- list.files(path = file.path(wd, "TTM18"), 
-                      pattern = ".fst$", 
-                      recursive = TRUE, 
+# Get all of the fst filepaths
+all_fst <- list.files(path = fst_filepath,
+                      pattern = ".fst$",
+                      recursive = TRUE,
                       full.names = TRUE)
 
-TTM18fst_fetch <- function(x, pos) {
-  fst::read_fst(x, from = pos, to = pos, as.data.table = TRUE)
-}
-
-# Get the position of current origin
-ykr_ids <- read.csv(all_files[1], sep = ";")[, 1]
+# Get the position of the current origin. In TTM data, origin ykr_ids are always
+# in the same position. We will use this to get the order to the ykr_ids once,
+# and then, when needed, find out the location queried ykr_id from the vector
+# of all the ykr_ids.
+ykrid_source <- file.path(ttm_path, "/5785xxx/travel_times_to_ 5785640.txt")
+ykr_ids <- read.csv(ykrid_source, sep = ";")[, 1]
 pos <- match(as.numeric(origin_id), ykr_ids) # get index of current id
 
-start.time <- Sys.time()
+# Fetch fst format TTM18 and process the dataframe with the YKR_ID "origin_id"
+# as the starting point.
 result <- 
   lapply(all_fst, FUN = TTM18fst_fetch, pos) %>%
   data.table::rbindlist(., fill = TRUE) %>%
   data.table::merge.data.table(dt_grid, ., by.x = "YKR_ID", by.y = "to_id")
-end.time <- Sys.time()
-time.taken <- end.time - start.time
-print(time.taken)
 
 
 

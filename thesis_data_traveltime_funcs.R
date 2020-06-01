@@ -1,10 +1,10 @@
 
-# Sampo Vesanen's Master's thesis statistical tests and visualisation
-# Travel time comparison functions
+# Sampo Vesanen's Master's thesis
+# Helsinki Region Travel Time comparison application functions
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 29.5.2020
+# 1.6.2020
 
 
 
@@ -13,14 +13,9 @@
 
 
 
-
-TTM18_fetch <- function(x, col_range, origin_id) {
-
-  # This function works for the TTM18 data fetch lapply() command.
-  
-  res <- fread(x, select = col_range)
-  res <- subset(res, from_id == origin_id)
-  return(res)
+# Fetch function for fst format Travel Time Matrix 2018 data
+TTM18fst_fetch <- function(x, pos) {
+  fst::read_fst(x, from = pos, to = pos, as.data.table = TRUE)
 }
 
 
