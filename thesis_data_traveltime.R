@@ -34,7 +34,7 @@ library(fst)
 
 
 # App version
-app_v <- "0017 (1.6.2020)"
+app_v <- "0018 (1.6.2020)"
 
 
 # Working directory
@@ -328,9 +328,58 @@ server <- function(input, output, session) {
     help_output
   })
   
+  # this is the reactively built Travel Time Matrix for the origin id inserted
+  # by the user. User's chosen YKR_ID value is validate_ykrid().
+  thisTTM_df <- reactive({
+    
+    origin_id <- validate_ykrid()
+    pos <- match(as.numeric(origin_id), ykr_ids)
+    
+    result <- 
+      lapply(all_fst, FUN = TTM18fst_fetch, pos) %>%
+      data.table::rbindlist(., fill = TRUE) %>%
+      data.table::merge.data.table(dt_grid, ., by.x = "YKR_ID", by.y = "to_id")
+    
+    thesisdata <- 
+      read.csv(file = recordspath,
+               header = TRUE, 
+               sep = ",",
+               colClasses = c(timestamp = "POSIXct", zipcode = "factor"),
+               stringsAsFactors = TRUE) %>%
+      dplyr::select(zipcode, parktime, walktime) %>%
+      dplyr::group_by(zipcode) %>%
+      dplyr::summarise(res_park_avg = mean(parktime),
+                       res_walk_avg = mean(walktime)) %>%
+      dplyr::mutate_if(is.numeric, round, 2)
+    
+    # Join survey data to result
+    result <- dplyr::inner_join(result, thesisdata, by = "zipcode") 
+    
+    result2 <- data.frame(result)
+    car_cols <- c("car_r_t", "car_m_t", "car_sl_t", "car_r_t_avg", "car_m_t_avg", 
+                  "car_sl_t_avg")
+    
+    # Get grouped means of TTM18 data for current starting point to all 
+    # destinations for each postal code area
+    result2 <- result2 %>%
+      dplyr::group_by(zipcode) %>%
+      dplyr::summarise(car_r_t_avg = mean(car_r_t),
+                       car_m_t_avg = mean(car_m_t),
+                       car_sl_t_avg = mean(car_sl_t)) %>%
+      dplyr::mutate_if(is.numeric, round, 2) %>%
+      dplyr::inner_join(result2, ., by = "zipcode") %>%
+      dplyr::mutate(car_r_t_avg = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ car_r_t_avg),
+                    car_m_t_avg = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ car_m_t_avg),
+                    car_sl_t_avg = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ car_sl_t_avg)) %>%
+      dplyr::mutate_at(car_cols, ~dplyr::na_if(., -1))
+    
+    result2
+    
+  })
+  
   # currentinput() calculates new class intervals when input change detected
   currentinput <- reactive({
-    res <- CreateJenksColumn2(result2, result2, "car_r_t_avg", "carrt_equal", input$classIntervals_n)
+    res <- CreateJenksColumn2(thisTTM_df(), thisTTM_df(), "car_r_t_avg", "carrt_equal", input$classIntervals_n)
     res <- CreateJenksColumn2(res, res, "car_m_t_avg", "carmt_equal", input$classIntervals_n)
     res <- CreateJenksColumn2(res, res, "car_sl_t_avg", "carslt_equal", input$classIntervals_n)
     res
@@ -341,7 +390,12 @@ server <- function(input, output, session) {
   output$grid <- renderggiraph({
     
     # Reactive value: Insert equal breaks for mapping.
+    inputdata <- thisTTM_df()
     inputdata <- currentinput()
+    
+    # Get an origin cell for mapping
+    origincell <- grid_f[grid_f["YKR_ID"] == as.numeric(validate_ykrid()), ]
+    
     
     # Format map labels (Equal breaks classes). Remove [, ], (, and ). Also add 
     # list dash
@@ -383,7 +437,7 @@ server <- function(input, output, session) {
       # Jenks classes colouring and labels
       scale_fill_brewer(palette = "RdYlGn",
                          direction = -1,
-                         name = paste("Distance from\n", origin_id, ", (min)", 
+                         name = paste("Distance from\n", validate_ykrid(), ", (min)", 
                                       sep = ""),
                          labels = labels,
                          na.value = "darkgrey") +
