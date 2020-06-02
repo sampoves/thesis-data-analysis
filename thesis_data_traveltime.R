@@ -2,7 +2,7 @@
 # Helsinki Region Travel Time comparison application
 # Helsinki Region Travel Time Matrix 2018 <--> My thesis survey results
 
-# 2.6.2020
+# 3.6.2020
 # Sampo Vesanen
 
 # This interactive Travel time comparison application is dependent on ggiraph 
@@ -10,6 +10,7 @@
 # ggiraph 0.7.0 would load the map an unreasonably long time. I strongly 
 # suspected some fault in the tooltip generation.
 
+# TODO: add download data and image functionality
 
 
 #### 1 Initialise --------------------------------------------------------------
@@ -34,7 +35,7 @@ library(fst)
 
 
 # App version
-app_v <- "0019 (2.6.2020)"
+app_v <- "0020 (3.6.2020)"
 
 
 # Working directory
@@ -53,6 +54,7 @@ postal_path <- file.path(wd, "postal_for_r.csv")
 # Directives
 csspath <- file.path(wd, "python/thesis_data_traveltime_style.css")
 jspath <- file.path(wd, "python/thesis_data_traveltime_script.js")
+tooltip_path <- file.path(wd, "python/thesis_data_traveltime_tooltip.html")
 
 # Source functions and postal code variables
 source(file.path(wd, "python/thesis_data_traveltime_funcs.R"))
@@ -248,13 +250,34 @@ thesisdata <-
            sep = ",",
            colClasses = c(timestamp = "POSIXct", zipcode = "factor"),
            stringsAsFactors = TRUE) %>%
-  dplyr::select(zipcode, parktime, walktime) %>%
+  dplyr::select(zipcode, parktime, walktime, timeofday) %>%
   dplyr::filter(parktime <= 59,
                 walktime <= 59) %>%
   dplyr::group_by(zipcode) %>%
-  dplyr::summarise(res_park_avg = mean(parktime),
-                   res_walk_avg = mean(walktime)) %>%
+  
+  # Select timings for thesis_ columns
+  # TODO: Double check equality with TTM data
+  dplyr::mutate(r_sfp = case_when(timeofday == 1 ~ parktime, TRUE ~ NA_integer_),
+                m_sfp = case_when(timeofday == 2 ~ parktime, TRUE ~ NA_integer_),
+                sl_sfp = case_when(timeofday == 4 ~ parktime, TRUE ~ NA_integer_),
+                r_wtd = case_when(timeofday == 1 ~ walktime, TRUE ~ NA_integer_),
+                m_wtd = case_when(timeofday == 2 ~ walktime, TRUE ~ NA_integer_),
+                sl_wtd = case_when(timeofday == 4 ~ walktime, TRUE ~ NA_integer_)) %>%
+  
+  # Calculate summaries by zipcode, then round to two decimals
+  dplyr::summarise(thesis_r_sfp = mean(r_sfp, na.rm = TRUE),
+                   thesis_m_sfp = mean(m_sfp, na.rm = TRUE),
+                   thesis_sl_sfp = mean(sl_sfp, na.rm = TRUE),
+                   thesis_r_wtd = mean(r_wtd, na.rm = TRUE),
+                   thesis_m_wtd = mean(m_wtd, na.rm = TRUE),
+                   thesis_sl_wtd = mean(sl_wtd, na.rm = TRUE),
+                   vals_in_zip = length(zipcode)) %>%
   dplyr::mutate_if(is.numeric, round, 2)
+
+# NaNs are introduced in calculation of mean. Change to NA. Do not apply changes
+# to column zipcode
+thesisdata[, -1] <- data.frame(
+  sapply(thesisdata[, -1], function(x) ifelse(is.nan(x), NA, x)))
 
 # Join "thesisdata" to "result", the currently calculated travel times dataframe
 result <- dplyr::left_join(result, thesisdata, by = "zipcode") 
@@ -263,8 +286,8 @@ result <- dplyr::left_join(result, thesisdata, by = "zipcode")
 
 #### 4.4 Add averaged columns --------------------------------------------------
 
-car_cols <- c("car_r_t", "car_m_t", "car_sl_t", "ttm_r_t_avg", "ttm_m_t_avg", 
-              "ttm_sl_t_avg")
+car_cols <- c("car_r_t", "car_m_t", "car_sl_t", "ttm_r_avg", "ttm_m_avg", 
+              "ttm_sl_avg")
 
 # Get grouped means of TTM18 data for current starting point to all 
 # destinations for each postal code area
@@ -274,9 +297,9 @@ result <- result %>%
   dplyr::mutate(ttm_sfp = 0.42,
                 ttm_wtd = case_when(YKR_ID %in% walking_ids ~ 2.5, TRUE ~ 2)) %>%
   dplyr::group_by(zipcode) %>%
-  dplyr::summarise(ttm_r_t_avg = mean(car_r_t),
-                   ttm_m_t_avg = mean(car_m_t),
-                   ttm_sl_t_avg = mean(car_sl_t),
+  dplyr::summarise(ttm_r_avg = mean(car_r_t),
+                   ttm_m_avg = mean(car_m_t),
+                   ttm_sl_avg = mean(car_sl_t),
                    ttm_sfp = mean(ttm_sfp),
                    ttm_wtd = mean(ttm_wtd)) %>%
   dplyr::mutate_if(is.numeric, round, 2) %>%
@@ -285,9 +308,9 @@ result <- result %>%
   dplyr::inner_join(result, ., by = "zipcode") %>%
   
   # Generate drivetime (min) and pct (%) columns for TTM18 data
-  dplyr::mutate(ttm_r_drivetime = ttm_r_t_avg - ttm_sfp - ttm_wtd,
-                ttm_m_drivetime = ttm_m_t_avg - ttm_sfp - ttm_wtd,
-                ttm_sl_drivetime = ttm_sl_t_avg - ttm_sfp - ttm_wtd,
+  dplyr::mutate(ttm_r_drivetime = ttm_r_avg - ttm_sfp - ttm_wtd,
+                ttm_m_drivetime = ttm_m_avg - ttm_sfp - ttm_wtd,
+                ttm_sl_drivetime = ttm_sl_avg - ttm_sfp - ttm_wtd,
                 ttm_r_pct = (ttm_sfp + ttm_wtd) / ttm_r_drivetime,
                 ttm_m_pct = (ttm_sfp + ttm_wtd) / ttm_m_drivetime,
                 ttm_sl_pct = (ttm_sfp + ttm_wtd) / ttm_sl_drivetime) %>%
@@ -295,9 +318,9 @@ result <- result %>%
 
   # If zipcode is NA, then convert all calculated data to NA as well
   # TODO: make this shorter
-  dplyr::mutate(ttm_r_t_avg = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_r_t_avg),
-                ttm_m_t_avg = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_m_t_avg),
-                ttm_sl_t_avg = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_sl_t_avg),
+  dplyr::mutate(ttm_r_avg = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_r_avg),
+                ttm_m_avg = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_m_avg),
+                ttm_sl_avg = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_sl_avg),
                 ttm_sfp = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_sfp),
                 ttm_wtd = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_wtd),
                 ttm_r_drivetime = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_r_drivetime),
@@ -306,7 +329,26 @@ result <- result %>%
                 ttm_r_pct = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_r_pct),
                 ttm_m_pct = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_m_pct),
                 ttm_sl_pct = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_sl_pct),) %>%
-  dplyr::mutate_at(car_cols, ~dplyr::na_if(., -1))
+  dplyr::mutate_at(car_cols, ~dplyr::na_if(., -1)) %>%
+  
+  # Add the rest of thesis_ columns. with if_else change possible NA's to zeros
+  # so that calculations are not rendered NA
+  dplyr::mutate(thesis_r_drivetime = ttm_r_avg - 
+                  if_else(is.na(thesis_r_sfp), 0, thesis_r_sfp) - 
+                  if_else(is.na(thesis_r_wtd), 0, thesis_r_wtd),
+                thesis_m_drivetime = ttm_m_avg - 
+                  if_else(is.na(thesis_m_sfp), 0, thesis_m_sfp) - 
+                  if_else(is.na(thesis_m_wtd), 0, thesis_m_wtd),
+                thesis_sl_drivetime = ttm_sl_avg - 
+                  if_else(is.na(thesis_sl_sfp), 0, thesis_sl_sfp) - 
+                  if_else(is.na(thesis_sl_wtd), 0, thesis_sl_wtd),
+                thesis_r_pct = (if_else(is.na(thesis_r_sfp), 0, thesis_r_sfp) + 
+                                  if_else(is.na(thesis_r_wtd), 0, thesis_r_wtd)) / ttm_r_avg,
+                thesis_m_pct = (if_else(is.na(thesis_m_sfp), 0, thesis_m_sfp) + 
+                                  if_else(is.na(thesis_m_wtd), 0, thesis_m_wtd)) / ttm_m_avg,
+                thesis_sl_pct = (if_else(is.na(thesis_sl_sfp), 0, thesis_sl_sfp) + 
+                                   if_else(is.na(thesis_sl_wtd), 0, thesis_sl_wtd)) / ttm_sl_avg) %>%
+  dplyr::mutate_at(vars(thesis_r_pct, thesis_m_pct, thesis_sl_pct), ~round(., 2))
 
 
 
@@ -413,9 +455,9 @@ server <- function(input, output, session) {
   # currentinput() calculates new class intervals when input change detected
   currentinput <- reactive({
     #res <- CreateJenksColumn2(thisTTM_df(), thisTTM_df(), "ttm_r_t_avg", "carrt_equal", input$classIntervals_n)
-    res <- CreateJenksColumn2(result, result, "ttm_r_t_avg", "carrt_equal", input$classIntervals_n)
-    res <- CreateJenksColumn2(res, res, "ttm_m_t_avg", "carmt_equal", input$classIntervals_n)
-    res <- CreateJenksColumn2(res, res, "ttm_sl_t_avg", "carslt_equal", input$classIntervals_n)
+    res <- CreateJenksColumn2(result, result, "ttm_r_avg", "carrt_equal", input$classIntervals_n)
+    res <- CreateJenksColumn2(res, res, "ttm_m_avg", "carmt_equal", input$classIntervals_n)
+    res <- CreateJenksColumn2(res, res, "ttm_sl_avg", "carslt_equal", input$classIntervals_n)
     res
   })
   
@@ -441,51 +483,11 @@ server <- function(input, output, session) {
     # but they can also be returned into view.
     current_subdiv_lbl <- data.frame(subdiv_lbl)
     
-    tooltip_content2 <- paste0("<div id='app-tooltip'>",
-                               "<div><b>YKR ID: %s</b></br>",
-                               "%s, %s</div>",
-                               "<hr id='tooltip-hr'>",
-                               "<div><b>TTM18 data</b></br>",
-                               "sfp_avg %s, wtd_avg %s</div>",
-                               
-                               "<table class='tg'>",
-                               "<thead>",
-                               "<tr>",
-                               "<th class='tg-0lax'></th>",
-                               "<th class='tg-0pky'>ttm_r</th>",
-                               "<th class='tg-0pky'>ttm_m</th>",
-                               "<th class='tg-0pky'>ttm_s</th>",
-                               "</tr>",
-                               "</thead>",
-                               "<tbody>",
-                               "<tr>",
-                               "<td class='tg-0pky'>avg</td>",
-                               "<td class='tg-0pky'>%s</td>",
-                               "<td class='tg-0pky'>%s</td>",
-                               "<td class='tg-0pky'>%s</td>",
-                               "</tr>",
-                               "<tr>",
-                               "<td class='tg-0pky'>drivetime</td>",
-                               "<td class='tg-0pky'>%s</td>",
-                               "<td class='tg-0pky'>%s</td>",
-                               "<td class='tg-0pky'>%s</td>",
-                               "</tr>",
-                               "<tr>",
-                               "<td class='tg-0pky'>pct</td>",
-                               "<td class='tg-0pky'>%s</td>",
-                               "<td class='tg-0pky'>%s</td>",
-                               "<td class='tg-0pky'>%s</td>",
-                               "</tr>",
-                               "</tbody>",
-                               "</table>",
-                               
-                               "<hr id='tooltip-hr'>",
-                               "<div>r_t: %s min</br>",
-                               "m_t: %s min</br>",
-                               "sl_t: %s min</div>",
-                               "</div>")
-    
-    
+    # TODO: väritä se sarake joka on värityksessä aktiivisena, jotenkin
+    tooltip_content <-
+      paste(readLines(tooltip_path), collapse = "") %>%
+      gsub("[\t]", "", .)
+
     g <- ggplot(data = inputdata) + 
       geom_polygon_interactive(
         color = "black",
@@ -493,11 +495,18 @@ server <- function(input, output, session) {
         aes_string("long", "lat", 
                    group = "group",
                    tooltip = substitute(
-                     sprintf(tooltip_content2, YKR_ID, zipcode, nimi,
-                             ttm_sfp, ttm_wtd,
-                             ttm_r_t_avg, ttm_m_t_avg, ttm_sl_t_avg,
+                     sprintf(tooltip_content, YKR_ID, 
+                             zipcode, nimi,
+                             ttm_sfp, ttm_sfp, ttm_sfp,
+                             ttm_wtd, ttm_wtd, ttm_wtd,
+                             ttm_r_avg, ttm_m_avg, ttm_sl_avg,
                              ttm_r_drivetime, ttm_m_drivetime, ttm_sl_drivetime,
                              ttm_r_pct, ttm_m_pct, ttm_sl_pct,
+                             vals_in_zip,
+                             thesis_r_sfp, thesis_m_sfp, thesis_sl_sfp,
+                             thesis_r_wtd, thesis_m_wtd, thesis_sl_wtd,
+                             thesis_r_drivetime, thesis_m_drivetime, thesis_sl_drivetime,
+                             thesis_r_pct, thesis_m_pct, thesis_sl_pct,
                              car_r_t, car_m_t, car_sl_t)),
                    fill = input$fill_column)) +
       
