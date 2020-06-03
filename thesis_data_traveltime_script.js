@@ -2,8 +2,17 @@
 // JavaScript for the travel time comparison app of my thesis results
 
 // "Parking of private cars and spatial accessibility in Helsinki Capital Region" 
-// by Sampo Vesanen, 30.5.2020
+// by Sampo Vesanen, 4.6.2020
 
+
+// use this counter to hopefully detect flow of code
+function Counter() {
+	this.n = 0,
+	this.add = function() {
+		this.n++; 
+	}
+}
+columnChangerCount = new Counter();
 
 
 // Insert sidebar hide/show button to col-sm-3, the div that contains the sidebar. Add
@@ -38,6 +47,12 @@ $(document).ready(function() {
 		onoff[i].style.marginBottom = "6px";
 	};
 });
+
+
+
+// ------------------------------------------------- //
+// Send YKR_ID information to numeric input on click //
+// ------------------------------------------------- //
 
 // Add click listener for all ids that contain "svg_". Then retrieve the tooltip contents
 // and fetch the current ykr_id. Send that to YKR_ID number input field. 
@@ -76,6 +91,83 @@ $(document).on('shiny:idle', function(event) {
 function clean(str) {
 	return parseInt(str.match(/\d{7}/g));
 }
+
+
+// --------------------------------- //
+// Colorise active column in tooltip //
+// --------------------------------- //
+
+// This is carried out in a rather complicated manner. First, define two functions
+// which carry out the actual CSS property changes. Then, define a function that
+// runs the CSS property changes according to the current value in input$ykrid.
+// Finally, we have a document listening function that checks from the object
+// columnChangerCount if this is the first time the map is opened. Then it either
+// runs the first time option or any other time option.
+
+// Highlight table column that is currently active in map fill
+// With the help from: https://stackoverflow.com/a/18487765/9455395
+$.fn.colorColumn = function(column) {
+	return this.find('tr').map(function() {
+		return $(this).find('td').eq(column).css({
+			'font-weight': 'bold',
+			'background-color': '#008a27'
+		});
+    }).get();
+};
+// Revert selected column CSS to default
+$.fn.revertColumn = function(column) {
+	return this.find('tr').map(function() {
+		return $(this).find('td').eq(column).removeAttr('style');
+    }).get();
+};
+
+function columnColorize() {
+	// Revert column css before assigning new css properties
+	var i;
+	for (i = 0; i <= 3; i++) {
+		$('table').revertColumn(i);
+	}
+	
+	// Allow a small time window for revertColumn() to finish before 
+	// running colorColumn()
+	setTimeout(function() {
+		// Find current drop-down menu value
+		var attr_val = $('.item').attr('data-value');
+		
+		// Apply CSS to correct table columns
+		$('[id^="svg_"]').hover(function() {
+			if(attr_val === "carrt_equal") {
+				$('table').colorColumn(1);
+			} else if (attr_val === "carmt_equal") {
+				$('table').colorColumn(2);
+			} else {
+				$('table').colorColumn(3);
+			}
+		});
+	}, 250);
+}
+
+// Listen to the state of the app and run columnColorize() according
+// to that
+$(document).ready(function() {
+	if (columnChangerCount.n === 0) {
+		$(document).on('shiny:idle', function(event) {
+			setTimeout(function() {
+				columnColorize();
+				columnChangerCount.add();
+			}, 3000);
+		});
+	} else {
+		$('#grid').on('shiny:value', function(event) {
+			columnColorize();
+		});
+	}
+});
+
+
+// ------------------------------------ //
+// Attempt to make SVG animation happen //
+// ----------------------------------- -//
 
 // The following SVG animation on click is commented because of performance reasons.
 // This SVG animation works with SVG.js, but is taxing on the performance. On click,

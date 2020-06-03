@@ -187,17 +187,20 @@ polyline:not([title]), polyline[title=""] {
 #app-tooltip {
 	font-size: 13px;
 }
-#tooltip-hr {
-	margin-top: 2px; 
-	margin-bottom: 4px;
+.tooltip-hr {
+	margin-top: 1px; 
+	margin-bottom: 3px;
 }
 #tooltip-div {
 	padding-top: 3px;
 }
-/* table */
+/* tooltip tables */
 .tg {
 	border-collapse: collapse;
 	border-spacing: 0;
+	margin-bottom: 4px;
+	table-layout: fixed;
+	width: 165px;
 }
 .tg td {
 	border-color: black;
@@ -216,10 +219,17 @@ polyline:not([title]), polyline[title=""] {
 	padding: 2px 1px;
 	word-break: normal;
 }
-.tg .tg-0pky {
+.tg .tg-cell {
 	text-align: left;
 	vertical-align: top;
 }
+/* Together with .tg table-layout and width, set column widths
+It is discussed here https://stackoverflow.com/a/19316337/9455395 
+that this is a bad performance solution */
+.tg tr > *:nth-child(1) { width:34%; }
+.tg tr > *:nth-child(2) { width:22%; }
+.tg tr > *:nth-child(3) { width:22%; }
+.tg tr > *:nth-child(4) { width:22%; }
 
 /*--------------------------*/
 /* Font Awesome utilisation */

@@ -35,7 +35,7 @@ library(fst)
 
 
 # App version
-app_v <- "0020 (3.6.2020)"
+app_v <- "0021 (4.6.2020)"
 
 
 # Working directory
@@ -129,7 +129,7 @@ postal <-
   dplyr::select(c(2, 3, 6, 108))
 
 # "postal" geometries are in well-known text format. Some processing is needed 
-# to utilise these polygons in R. readWKT() uses rgeos
+# to utilise these polygons in R. readWKT() uses rgeos.
 geometries <- lapply(postal[, "geometry"], "readWKT", p4s = app_crs)
 sp_tmp_ID <- mapply(sp::spChFIDs, geometries, as.character(postal[, 1]))
 row.names(postal) <- postal[, 1]
@@ -311,9 +311,9 @@ result <- result %>%
   dplyr::mutate(ttm_r_drivetime = ttm_r_avg - ttm_sfp - ttm_wtd,
                 ttm_m_drivetime = ttm_m_avg - ttm_sfp - ttm_wtd,
                 ttm_sl_drivetime = ttm_sl_avg - ttm_sfp - ttm_wtd,
-                ttm_r_pct = (ttm_sfp + ttm_wtd) / ttm_r_drivetime,
-                ttm_m_pct = (ttm_sfp + ttm_wtd) / ttm_m_drivetime,
-                ttm_sl_pct = (ttm_sfp + ttm_wtd) / ttm_sl_drivetime) %>%
+                ttm_r_pct = (ttm_sfp + ttm_wtd) / ttm_r_drivetime * 100,
+                ttm_m_pct = (ttm_sfp + ttm_wtd) / ttm_m_drivetime * 100,
+                ttm_sl_pct = (ttm_sfp + ttm_wtd) / ttm_sl_drivetime * 100) %>%
   dplyr::mutate_at(vars(ttm_r_pct, ttm_m_pct, ttm_sl_pct), ~round(., 2)) %>%
 
   # If zipcode is NA, then convert all calculated data to NA as well
@@ -328,7 +328,7 @@ result <- result %>%
                 ttm_sl_drivetime = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_sl_drivetime),
                 ttm_r_pct = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_r_pct),
                 ttm_m_pct = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_m_pct),
-                ttm_sl_pct = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_sl_pct),) %>%
+                ttm_sl_pct = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_sl_pct)) %>%
   dplyr::mutate_at(car_cols, ~dplyr::na_if(., -1)) %>%
   
   # Add the rest of thesis_ columns. with if_else change possible NA's to zeros
@@ -342,12 +342,15 @@ result <- result %>%
                 thesis_sl_drivetime = ttm_sl_avg - 
                   if_else(is.na(thesis_sl_sfp), 0, thesis_sl_sfp) - 
                   if_else(is.na(thesis_sl_wtd), 0, thesis_sl_wtd),
-                thesis_r_pct = (if_else(is.na(thesis_r_sfp), 0, thesis_r_sfp) + 
-                                  if_else(is.na(thesis_r_wtd), 0, thesis_r_wtd)) / ttm_r_avg,
-                thesis_m_pct = (if_else(is.na(thesis_m_sfp), 0, thesis_m_sfp) + 
-                                  if_else(is.na(thesis_m_wtd), 0, thesis_m_wtd)) / ttm_m_avg,
-                thesis_sl_pct = (if_else(is.na(thesis_sl_sfp), 0, thesis_sl_sfp) + 
-                                   if_else(is.na(thesis_sl_wtd), 0, thesis_sl_wtd)) / ttm_sl_avg) %>%
+                thesis_r_pct = (
+                  if_else(is.na(thesis_r_sfp), 0, thesis_r_sfp) + 
+                  if_else(is.na(thesis_r_wtd), 0, thesis_r_wtd)) / ttm_r_avg * 100,
+                thesis_m_pct = (
+                  if_else(is.na(thesis_m_sfp), 0, thesis_m_sfp) + 
+                  if_else(is.na(thesis_m_wtd), 0, thesis_m_wtd)) / ttm_m_avg * 100,
+                thesis_sl_pct = (
+                  if_else(is.na(thesis_sl_sfp), 0, thesis_sl_sfp) + 
+                  if_else(is.na(thesis_sl_wtd), 0, thesis_sl_wtd)) / ttm_sl_avg * 100) %>%
   dplyr::mutate_at(vars(thesis_r_pct, thesis_m_pct, thesis_sl_pct), ~round(., 2))
 
 
@@ -484,9 +487,12 @@ server <- function(input, output, session) {
     current_subdiv_lbl <- data.frame(subdiv_lbl)
     
     # TODO: väritä se sarake joka on värityksessä aktiivisena, jotenkin
+    # Get the tooltip from a separate HTML file. Get rid of indentation and 
+    # HTML comments.
     tooltip_content <-
       paste(readLines(tooltip_path), collapse = "") %>%
-      gsub("[\t]", "", .)
+      gsub("[\t]", "", .) %>%
+      gsub(" <!--(.*?)-->", "", .)
 
     g <- ggplot(data = inputdata) + 
       geom_polygon_interactive(
