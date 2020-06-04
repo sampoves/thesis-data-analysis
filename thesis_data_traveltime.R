@@ -35,7 +35,7 @@ library(fst)
 
 
 # App version
-app_v <- "0021 (4.6.2020)"
+app_v <- "0022 (4.6.2020)"
 
 
 # Working directory
@@ -363,7 +363,7 @@ muns_lbl <- GetCentroids(muns_f, "nimi", "nimi")
 subdiv_lbl <- GetCentroids(subdiv_f, "Name", "Name")
 
 # Get all unique ykr_id values
-# TODO: ykr_ids should be the same thing
+# TODO: ykr_ids should be the same thing as this
 unique_ykr <- unique(result$YKR_ID)
 
 
@@ -466,7 +466,7 @@ server <- function(input, output, session) {
   
   
   #### 6.2 ShinyApp outputs ----------------------------------------------------
-  output$grid <- renderggiraph({
+  output$grid <- renderGirafe({
     
     # Reactive value: Insert equal breaks for mapping.
     #inputdata <- thisTTM_df()
@@ -646,9 +646,15 @@ server <- function(input, output, session) {
 
 
     # Render interactive map
-    ggiraph(code = print(g),
-            width_svg = 26,
-            height_svg = 19)
+    #ggiraph(code = print(g),
+    #        width_svg = 26,
+    #        height_svg = 19)
+    girafe(ggobj = g,
+           width = 27,
+           height = 18,
+           options = list(opts_zoom(min = 1, max = 3),
+                          opts_sizing(rescale = TRUE, width = 1),
+                          opts_toolbar(position = "topright", saveaspng = FALSE)))
   })
   
   output$ykr_validator <- renderText({ 
@@ -685,7 +691,8 @@ ui <- shinyUI(
     sidebarLayout(
       sidebarPanel(id = "sidebar",
                    
-                   HTML("<div id='contents'>",
+                   HTML("<label class='control-label'>Origin YKR ID</label>",
+                        "<div id='contents'>",
                         "<div id='ykr-flash'>"),
                    numericInput(
                      "ykrid", 
@@ -705,7 +712,8 @@ ui <- shinyUI(
                    HTML("</div>"),
                    HTML("</div>"),
                    
-                   HTML("<div id='contents'>"),
+                   HTML("<label class='control-label'>Symbology options</label>",
+                        "<div id='contents'>"),
                    selectInput(
                      "fill_column", 
                      HTML("Select map fill"),
@@ -719,6 +727,14 @@ ui <- shinyUI(
                      min = 2, 
                      max = 11, 
                      value = 11),
+                   HTML("</div>"),
+                   
+                   HTML("<div id='contents'>"),
+                   checkboxGroupInput(
+                     "kunta",
+                     HTML("Active municipalities"),
+                     choiceNames = c("Helsinki", "Vantaa", "Espoo", "Kauniainen"),
+                     choiceValues = c("091", "092", "049", "235")),
                    HTML("</div>"),
                    
                    # Layer options: on-off switches
@@ -776,7 +792,7 @@ ui <- shinyUI(
       
       ### 6.6 Mainpanel layout -------------------------------------------------
       mainPanel(
-        ggiraphOutput("grid"),
+        girafeOutput("grid"), width = 9,
       )
     )
   )
