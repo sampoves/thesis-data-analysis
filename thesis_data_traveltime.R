@@ -2,7 +2,7 @@
 # Helsinki Region Travel Time comparison application
 # Helsinki Region Travel Time Matrix 2018 <--> My thesis survey results
 
-# 3.6.2020
+# 5.6.2020
 # Sampo Vesanen
 
 # This interactive Travel time comparison application is dependent on ggiraph 
@@ -31,11 +31,11 @@ library(sf)
 library(shinyWidgets)
 library(ggsn)
 library(fst)
-
+library(OpenStreetMap)
 
 
 # App version
-app_v <- "0022 (4.6.2020)"
+app_v <- "0023 (5.6.2020)"
 
 
 # Working directory
@@ -478,15 +478,18 @@ server <- function(input, output, session) {
     
     
     # Format map labels (Equal breaks classes). Remove [, ], (, and ). Also add 
-    # list dash
-    labels <- gsub("(])|(\\()|(\\[)", "", levels(inputdata[, input$fill_column]))
-    labels <- gsub(",", " \U2012 ", labels)
+    # list dash. Create named vector for origin cell legend entry
+    l_labels <- gsub("(])|(\\()|(\\[)", "", levels(inputdata[, input$fill_column]))
+    l_labels <- gsub(",", " \U2012 ", l_labels)
+    o_label <- setNames("purple", 
+                        origincell[, "nimi"] %>% 
+                          unique() %>% 
+                          as.character())
     
     # current_subdiv is created so that values can be removed when necessary
     # but they can also be returned into view.
     current_subdiv_lbl <- data.frame(subdiv_lbl)
     
-    # TODO: väritä se sarake joka on värityksessä aktiivisena, jotenkin
     # Get the tooltip from a separate HTML file. Get rid of indentation and 
     # HTML comments.
     tooltip_content <-
@@ -518,25 +521,32 @@ server <- function(input, output, session) {
       
       # Jenks classes colouring and labels
       scale_fill_brewer(palette = "RdYlGn",
-                         direction = -1,
-                         #name = paste("Distance from\n", validate_ykrid(), ", (min)",
-                         name = paste("Distance from\n", origin_id, ", (min)", 
-                                      sep = ""),
-                         labels = labels,
-                         na.value = "darkgrey") +
+                        #name = paste("Distance from\n", validate_ykrid(), ", (min)",
+                        name = paste("Distance from\n", origin_id, ", (min)", 
+                                     sep = ""),
+                        direction = -1,
+                        labels = l_labels,
+                        na.value = "darkgrey") +
       
       # Define map extent manually
       coord_fixed(xlim = c(min(inputdata$lon) + 200, max(inputdata$lon) - 1200),
                   ylim = c(min(inputdata$lat) + 600, max(inputdata$lat) - 600)) +
       
+      # ggnewscale makes it possible to map additional legends with same 
+      # properties, in this case a new scale_fill. 
+      ggnewscale::new_scale_fill() +
+      
       # Map starting position
       geom_polygon(data = origincell,
-                   aes(long, lat, group = group),
+                   aes(long, lat, fill = nimi),
                    linetype = "solid",
-                   color = alpha("purple", 0.5), 
-                   fill = "purple",
                    size = 0.6) +
       
+      # Get a legend entry for origin ykr id
+      scale_fill_manual(name = "Origin YKR ID", 
+                        values = o_label,
+                        labels = names(o_label)) +
+    
       # Scale bar and north arrow
       ggsn::scalebar(inputdata, 
                      dist_unit = "km",
@@ -553,7 +563,7 @@ server <- function(input, output, session) {
       # Legend settings
       theme(legend.title = element_text(size = 15),
             legend.text = element_text(size = 14))
-    
+
     
     #### On-off switch if statements 
     
@@ -646,9 +656,6 @@ server <- function(input, output, session) {
 
 
     # Render interactive map
-    #ggiraph(code = print(g),
-    #        width_svg = 26,
-    #        height_svg = 19)
     girafe(ggobj = g,
            width = 27,
            height = 18,
