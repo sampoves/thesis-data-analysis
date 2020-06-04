@@ -1238,10 +1238,6 @@ server <- function(input, output, session){
             axis.title = element_text(size = 16))
     
     # Render interactive map
-    #ggiraph(code = print(g),
-    #        width_svg = 16.7,
-    #        height_svg = 14.7)
-    # Render interactive map
     girafe(ggobj = g,
            width = 16.7,
            height = 14.7,
@@ -1574,7 +1570,7 @@ ui <- shinyUI(fluidPage(
       downloadLink("dl_boxplot",
                    label = HTML("<i class='icon file' title='Download hi-res version of this plot (png)'></i>")),
       HTML("</h3>"),
-      girafeOutput("boxplot", height = "500px"),
+      ggiraphOutput("boxplot", height = "500px"),
       HTML("</div>"),
       hr(),
       
@@ -1643,7 +1639,7 @@ ui <- shinyUI(fluidPage(
       downloadLink("dl_interactive",
                    label = HTML("<i class='icon file' title='Download hi-res version of this figure (png)'></i>")),
       HTML("</h3>"),
-      ggiraphOutput("interactive"),
+      girafeOutput("interactive"),
       HTML("</div>"),
       hr(),
       
