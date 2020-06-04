@@ -4,7 +4,7 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 23.5.2020
+# 5.6.2020
 #
 # This is an interactive tool for analysing the results of my research survey.
 
@@ -55,6 +55,7 @@ gc()
 #install.packages("rlang")
 #install.packages("shinyWidgets")
 #install.packages("grid")
+#install.packages("ggsn")
 
 # Libraries
 library(onewaytests)
@@ -78,6 +79,8 @@ library(widgetframe)
 library(rgeos)
 library(shinyWidgets)
 library(grid)
+library(ggsn)
+
 
 # Working directory
 wd <- "C:/Sampon/Maantiede/Master of the Universe"
@@ -1014,7 +1017,7 @@ server <- function(input, output, session){
   
   
   ### 5.9 Interactive map -----------------------------------------------------
-  output$interactive <- renderggiraph({
+  output$interactive <- renderGirafe({
 
     # Use reactive data_f and postal
     # Only select municipalities selected by user. Do the same for "postal",
@@ -1123,7 +1126,20 @@ server <- function(input, output, session){
                         direction = -1,
                         name = legendname,
                         labels = labels,
-                        na.value = "#ebebeb")
+                        na.value = "#ebebeb") +
+      
+      # Scale bar and north arrow
+      ggsn::scalebar(inputdata, 
+                     dist_unit = "km",
+                     dist = 2,
+                     st.dist = 0.01,
+                     st.size = 4, 
+                     height = 0.01, 
+                     transform = FALSE) +
+      ggsn::north(inputdata, 
+                  location = "topright", 
+                  scale = 0.04, 
+                  symbol = 10)
     
     # Plot municipality boundaries on the interactive map
     if(input$show_muns == TRUE) {
@@ -1222,9 +1238,16 @@ server <- function(input, output, session){
             axis.title = element_text(size = 16))
     
     # Render interactive map
-    ggiraph(code = print(g),
-            width_svg = 16.7,
-            height_svg = 14.7)
+    #ggiraph(code = print(g),
+    #        width_svg = 16.7,
+    #        height_svg = 14.7)
+    # Render interactive map
+    girafe(ggobj = g,
+           width = 16.7,
+           height = 14.7,
+           options = list(opts_zoom(min = 1, max = 3),
+                          opts_sizing(rescale = TRUE, width = 1),
+                          opts_toolbar(position = "topright", saveaspng = FALSE)))
   })
   
   
@@ -1477,7 +1500,7 @@ ui <- shinyUI(fluidPage(
            "</div>",
            "</div>",
            "</div>",
-           "<p id='version-info'>Analysis app version 23.5.2020</p>"),
+           "<p id='version-info'>Analysis app version 5.6.2020</p>"),
       
       width = 3
     ),
@@ -1551,7 +1574,7 @@ ui <- shinyUI(fluidPage(
       downloadLink("dl_boxplot",
                    label = HTML("<i class='icon file' title='Download hi-res version of this plot (png)'></i>")),
       HTML("</h3>"),
-      ggiraphOutput("boxplot", height = "500px"),
+      girafeOutput("boxplot", height = "500px"),
       HTML("</div>"),
       hr(),
       
