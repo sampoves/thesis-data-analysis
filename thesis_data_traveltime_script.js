@@ -127,6 +127,7 @@ function columnColorize() {
 	for (i = 0; i <= 3; i++) {
 		$('table').revertColumn(i);
 	}
+	$('.selected').removeClass('selected');
 	
 	// Allow a small time window for revertColumn() to finish before 
 	// running colorColumn()
@@ -136,11 +137,12 @@ function columnColorize() {
 		
 		// Apply CSS to correct table columns
 		$('[id^="svg_"]').hover(function() {
-			if(attr_val === "carrt_equal") {
+			if("ttm18_r_avg;ttm18_r_t".includes(attr_val)) {
 				$('table').colorColumn(1);
-			} else if (attr_val === "carmt_equal") {
+				$('#haa').addClass("selected");
+			} else if ("ttm18_m_avg;ttm18_m_t".includes(attr_val)) {
 				$('table').colorColumn(2);
-			} else {
+			} else if ("ttm18_sl_avg;ttm18_sl_t".includes(attr_val)) {
 				$('table').colorColumn(3);
 			}
 		});

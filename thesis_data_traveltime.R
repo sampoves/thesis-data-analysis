@@ -10,7 +10,9 @@
 # ggiraph 0.7.0 would load the map an unreasonably long time. I strongly 
 # suspected some fault in the tooltip generation.
 
-# TODO: add download data and image functionality
+# TODO: add download data functionality
+# TODO: add all sorts of column options in map fill
+# TODO: Remember arbitrary selection of timeofday in thesisdata! Triplecheck it
 
 
 #### 1 Initialise --------------------------------------------------------------
@@ -35,7 +37,7 @@ library(ggnewscale)
 
 
 # App version
-app_v <- "0024 (5.6.2020)"
+app_v <- "0025 (5.6.2020)"
 
 
 # Working directory
@@ -243,7 +245,6 @@ result <-
 
 #### 4.2 Add thesis data values to the fortified data --------------------------
 
-# TODO: Take into account all times of parking just like in Python
 thesisdata <- 
   read.csv(file = recordspath,
            header = TRUE, 
@@ -459,9 +460,12 @@ server <- function(input, output, session) {
   # currentinput() calculates new class intervals when input change detected
   currentinput <- reactive({
     #res <- CreateJenksColumn2(thisTTM_df(), thisTTM_df(), "ttm_r_t_avg", "carrt_equal", input$classIntervals_n)
-    res <- CreateJenksColumn2(result, result, "ttm_r_avg", "carrt_equal", input$classIntervals_n)
-    res <- CreateJenksColumn2(res, res, "ttm_m_avg", "carmt_equal", input$classIntervals_n)
-    res <- CreateJenksColumn2(res, res, "ttm_sl_avg", "carslt_equal", input$classIntervals_n)
+    res <- CreateJenksColumn2(result, result, "ttm_r_avg", "ttm18_r_avg", input$classIntervals_n)
+    res <- CreateJenksColumn2(res, res, "ttm_m_avg", "ttm18_m_avg", input$classIntervals_n)
+    res <- CreateJenksColumn2(res, res, "ttm_sl_avg", "ttm18_sl_avg", input$classIntervals_n)
+    res <- CreateJenksColumn2(res, res, "car_r_t", "ttm18_r_t", input$classIntervals_n)
+    res <- CreateJenksColumn2(res, res, "car_m_t", "ttm18_m_t", input$classIntervals_n)
+    res <- CreateJenksColumn2(res, res, "car_sl_t", "ttm18_sl_t", input$classIntervals_n)
     res
   })
   
@@ -506,6 +510,7 @@ server <- function(input, output, session) {
                    tooltip = substitute(
                      sprintf(tooltip_content, YKR_ID, 
                              zipcode, nimi,
+                             car_r_t, car_m_t, car_sl_t,
                              ttm_sfp, ttm_sfp, ttm_sfp,
                              ttm_wtd, ttm_wtd, ttm_wtd,
                              ttm_r_avg, ttm_m_avg, ttm_sl_avg,
@@ -515,8 +520,7 @@ server <- function(input, output, session) {
                              thesis_r_sfp, thesis_m_sfp, thesis_sl_sfp,
                              thesis_r_wtd, thesis_m_wtd, thesis_sl_wtd,
                              thesis_r_drivetime, thesis_m_drivetime, thesis_sl_drivetime,
-                             thesis_r_pct, thesis_m_pct, thesis_sl_pct,
-                             car_r_t, car_m_t, car_sl_t)),
+                             thesis_r_pct, thesis_m_pct, thesis_sl_pct)),
                    fill = input$fill_column)) +
       
       # Jenks classes colouring and labels
@@ -747,9 +751,9 @@ ui <- shinyUI(
                         "<div id='contents'>"),
                    selectInput(
                      "fill_column", 
-                     HTML("Select map fill"),
-                     c("carrt_equal", "carmt_equal", "carslt_equal"),
-                     # TODO: add originals and averages above!
+                     HTML("Visualise data (equal interval)"),
+                     c("ttm18_r_avg", "ttm18_m_avg", "ttm18_sl_avg", "ttm18_r_t", 
+                       "ttm18_m_t", "ttm18_sl_t"),
                    ),
                    
                    sliderInput(

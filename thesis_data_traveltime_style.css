@@ -72,8 +72,6 @@ form.well {
 	overflow: auto;
 	overflow-y: auto;
 	max-height: 95vh;
-	min-width: 235px;
-	max-width: 350px;
 	width: 235px;
 	z-index: 50;
 	scroll-behavior: smooth;
@@ -220,6 +218,11 @@ polyline:not([title]), polyline[title=""] {
 	text-align: left;
 	vertical-align: top;
 }
+.selected td {
+	font-weight: bold;
+	color: green;
+}
+
 /* Together with .tg table-layout and width, set column widths
 It is discussed here https://stackoverflow.com/a/19316337/9455395 
 that this is a bad performance solution */
