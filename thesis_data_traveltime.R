@@ -31,11 +31,11 @@ library(sf)
 library(shinyWidgets)
 library(ggsn)
 library(fst)
-library(OpenStreetMap)
+library(ggnewscale)
 
 
 # App version
-app_v <- "0023 (5.6.2020)"
+app_v <- "0024 (5.6.2020)"
 
 
 # Working directory
@@ -455,6 +455,7 @@ server <- function(input, output, session) {
     
   })
   
+  # TODO: maybe only calculate one new column at a time
   # currentinput() calculates new class intervals when input change detected
   currentinput <- reactive({
     #res <- CreateJenksColumn2(thisTTM_df(), thisTTM_df(), "ttm_r_t_avg", "carrt_equal", input$classIntervals_n)
@@ -476,9 +477,8 @@ server <- function(input, output, session) {
     #origincell <- grid_f[grid_f["YKR_ID"] == as.numeric(validate_ykrid()), ]
     origincell <- grid_f[grid_f["YKR_ID"] == as.numeric(origin_id), ]
     
-    
     # Format map labels (Equal breaks classes). Remove [, ], (, and ). Also add 
-    # list dash. Create named vector for origin cell legend entry
+    # list dash. Create named vector for the origin cell legend entry
     l_labels <- gsub("(])|(\\()|(\\[)", "", levels(inputdata[, input$fill_column]))
     l_labels <- gsub(",", " \U2012 ", l_labels)
     o_label <- setNames("purple", 
@@ -653,8 +653,16 @@ server <- function(input, output, session) {
                              fill = alpha("white", 0.5),
                              size = 5))
     }
-
-
+    
+    # Prepare the downloadable interactive map. "interactive_out" is brought 
+    # to global environment for download. Use larger fonts.
+    compare_out <<- g + 
+      theme(legend.title = element_text(size = 17),
+            legend.text = element_text(size = 16),
+            axis.text = element_text(size = 14),
+            axis.title = element_text(size = 16))
+    
+    
     # Render interactive map
     girafe(ggobj = g,
            width = 27,
@@ -664,6 +672,22 @@ server <- function(input, output, session) {
                           opts_toolbar(position = "topright", saveaspng = FALSE)))
   })
   
+  
+  #### 6.2.1 Download interactive map ----
+  output$dl_compare <- downloadHandler(
+    filename = paste("ttm18-thesis-compare_",
+                     "mapfill-", input$fill_column, "_fromid-", input$ykrid, "_",
+                     format(Sys.time(), "%d-%m-%Y"), 
+                     ".png",
+                     sep = ""),
+    
+    content = function(file) {
+      ggsave(plot = compare_out, file, width = 21, height = 14, dpi = 175)
+    }
+  )
+  
+  
+  #### 6.3 Other outputs -------------------------------------------------------
   output$ykr_validator <- renderText({ 
     validate_ykrid()
   })
@@ -736,14 +760,6 @@ ui <- shinyUI(
                      value = 11),
                    HTML("</div>"),
                    
-                   HTML("<div id='contents'>"),
-                   checkboxGroupInput(
-                     "kunta",
-                     HTML("Active municipalities"),
-                     choiceNames = c("Helsinki", "Vantaa", "Espoo", "Kauniainen"),
-                     choiceValues = c("091", "092", "049", "235")),
-                   HTML("</div>"),
-                   
                    # Layer options: on-off switches
                    HTML("<label class='control-label'>Layer options</label>",
                         "<div id='contents'>",
@@ -799,6 +815,9 @@ ui <- shinyUI(
       
       ### 6.6 Mainpanel layout -------------------------------------------------
       mainPanel(
+        downloadLink(
+          "dl_compare",
+          label = HTML("<i class='icon file' title='Download hi-res version of this figure (png)'></i>")),
         girafeOutput("grid"), width = 9,
       )
     )

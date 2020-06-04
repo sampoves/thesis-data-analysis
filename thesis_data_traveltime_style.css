@@ -2,7 +2,7 @@
 /* CSS style sheet of for the Travel time comparison app of my thesis results
 
 "Parking of private cars and spatial accessibility in Helsinki Capital Region" 
-by Sampo Vesanen, 4.6.2020 */
+by Sampo Vesanen, 5.6.2020 */
 
 html, body {
 	height: 100%;
@@ -60,14 +60,6 @@ text {
 #sidebar::-webkit-scrollbar-track {
 	background-color: #15171d;
 }
-::-webkit-resizer {
-	width: 0;
-	height: 0;
-	border-top: 7px solid #1c1e22;
-	border-left: 12px solid #515c69;
-	border-bottom: 7px solid #1c1e22;
-	background-color: #1c1e22;
-}
 
 /*----------------*/
 /* sidebarPanel() */
@@ -80,7 +72,6 @@ form.well {
 	overflow: auto;
 	overflow-y: auto;
 	max-height: 95vh;
-	resize: horizontal;
 	min-width: 235px;
 	max-width: 350px;
 	width: 235px;
@@ -145,27 +136,18 @@ form.well {
 .shiny-output-error-validation {
 	color: red;
 }
-/* Checkbox customisation:
-- strikethrough for checked boxes
-- achieve coloured checkboxes with filter property */
-.checkbox input[type=checkbox] {
-	-webkit-filter: grayscale(100%) brightness(40%) sepia(100%) hue-rotate(60deg) saturate(1000%) contrast(0.9);
-	filter: grayscale(100%) brightness(40%) sepia(100%) hue-rotate(60deg) saturate(1000%) contrast(0.9);
-}
-.checkbox input[type=checkbox]:checked {	
-	-webkit-filter: grayscale(100%) brightness(40%) sepia(100%) hue-rotate(-50deg) saturate(600%) contrast(0.9);
-	filter: grayscale(100%) brightness(40%) sepia(100%) hue-rotate(-50deg) saturate(600%) contrast(0.9);
-}
-.checkbox input[type=checkbox]:checked + span {
-	text-decoration: line-through;
-	color: dimgray;
-}
 
 /*-------------*/
 /* mainPanel() */
 /*---------------
 - noselect makes selecting ggiraph elements not possible
 - :last-child pseudo-selector makes last row of descriptive statistics bold */
+#dl_compare {
+	position: fixed;
+	z-index: 1000;
+	margin-left: 15px;
+	margin-top: 1px;
+}
 #showhidebutton {
 	float: right;
 	background: none;
@@ -272,6 +254,11 @@ render reliably */
 .eye::before {
 	content: "\f06e";
 	color: white;
+}
+.file::before {
+	content: "\f56d";
+	color: black;
+	font-size: 1.3em;
 }
 
 /*---------------------------------*/
