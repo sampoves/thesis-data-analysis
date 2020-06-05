@@ -4,7 +4,7 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 1.6.2020
+# 5.6.2020
 
 
 
@@ -40,13 +40,6 @@ CreateJenksColumn2 <- function(fortified, postal, datacol, newcolname, classes_n
     dplyr::mutate(!!newcolname := cut(!!rlang::sym(datacol), 
                                       unique(classes$brks), 
                                       include.lowest = T))
-  
-  # Reverse column values to enable rising values from bottom to top in ggplot.
-  # In ggplot, use scale_fill_brewer(direction = -1) with this operation to flip
-  # the legend.
-  #result[, newcolname] = factor(result[, newcolname], 
-  #                              levels = rev(levels(result[, newcolname])))
-  
   return(result)
 }
 

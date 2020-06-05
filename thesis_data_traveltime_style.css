@@ -140,14 +140,14 @@ form.well {
 /*---------------
 - noselect makes selecting ggiraph elements not possible
 - :last-child pseudo-selector makes last row of descriptive statistics bold */
-#dl_compare {
+.rightside-toolbar {
 	position: fixed;
-	z-index: 1000;
 	margin-left: 15px;
 	margin-top: 1px;
 	background-color: rgba(255,255,255,0.3);
 	border-radius: 5px;
 	padding: 0px 7px 2px 7px;
+	z-index: 100;
 }
 #showhidebutton {
 	float: right;
@@ -266,6 +266,13 @@ render reliably */
 	content: "\f56d";
 	color: #069;
 	font-size: 1.3em;
+	margin: 0px 5px 0px 5px;
+}
+.info::before {
+	content: "\f129";
+	color: #069;
+	font-size: 1.3em;
+	margin: 0px 8px 0px 8px;
 }
 .database::before {
 	content: "\f1c0";

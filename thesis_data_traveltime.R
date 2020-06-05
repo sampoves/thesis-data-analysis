@@ -11,10 +11,12 @@
 # suspected some fault in the tooltip generation.
 
 # TODO: add download data functionality
-# TODO: add all sorts of column options in map fill
 # TODO: colouring of tooltip table cells to assist conclusion drawing
 # TODO: Remember arbitrary selection of timeofday in thesisdata! Triplecheck it
 # TODO: unique_ykr and ykr_ids should be the same thing, remove unique_ykr
+# TODO: Some of the compare map fills have NA color grey for other purposes.
+# Check out what's with that
+# TODO: row and column colouring not complete for new map fill options
 
 
 #### 1 Initialise --------------------------------------------------------------
@@ -39,7 +41,7 @@ library(ggnewscale)
 
 
 # App version
-app_v <- "0026 (6.6.2020)"
+app_v <- "0028 (6.6.2020)"
 
 
 # Working directory
@@ -435,6 +437,22 @@ server <- function(input, output, session) {
 
   #### 6.1 Reactive elements ---------------------------------------------------
 
+  # Launch tooltip legend jQuery UI dialog
+  observeEvent(input$info_dialog_btn, {
+    
+    # the div id='abbr-info' is located in 6.4 ShinyApp header 
+    runjs("$('#abbr-info').dialog({
+            show: {
+              effect: 'fade',
+              duration: 300
+            },
+            hide: {
+              effect: 'fade',
+              duration: 300
+            }
+          });")
+  })
+  
   # Validate ykr-id in the numeric field
   validate_ykrid <- eventReactive(input$calcYkr, {
     
@@ -780,131 +798,149 @@ ui <- shinyUI(
     tags$head(tags$link(rel = "stylesheet", 
                         type = "text/css", 
                         href = "https://use.fontawesome.com/releases/v5.13.0/css/all.css"),
+              tags$script(src = "https://code.jquery.com/ui/1.12.1/jquery-ui.js"),
+              tags$link(rel = "stylesheet", 
+                        type = "text/css", 
+                        href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css"),
               htmltools::includeCSS(csspath)),
     htmltools::includeScript(path = jspath),
-    htmltools::htmlDependency(name = "svg.min.js", 
-                              version ="3.0.15", 
-                              src = c(href = "https://cdnjs.cloudflare.com/ajax/libs/svg.js/3.0.15/"), 
-                              script = "svg.min.js"),
+    
+    # jQuery UI dialog content
+    tags$html(
+      HTML("<div id='abbr-info' title='Tooltip legend' style='display:none;'>",
+           "<p>This is the default dialog which is useful for displaying information.",
+           "The dialog window can be moved, resized and closed with the 'x' icon.</p>",
+           "</div>")),
     
     
     ### 6.5 Sidebar layout -----------------------------------------------------
     titlePanel(NULL, windowTitle = "Travel time comparison ShinyApp"),
     sidebarLayout(
-      sidebarPanel(id = "sidebar",
+      sidebarPanel(
+        id = "sidebar",
+        
+        HTML("<label class='control-label'>Origin YKR ID</label>",
+             "<div id='contents'>",
+             "<div id='ykr-flash'>"),
+        numericInput(
+          inputId = "ykrid", 
+          label = "Origin YKR ID",
+          max = max(result$YKR_ID),
+          min = min(result$YKR_ID),
+          value = origin_id),
+        HTML("</div>"),
                    
-                   HTML("<label class='control-label'>Origin YKR ID</label>",
-                        "<div id='contents'>",
-                        "<div id='ykr-flash'>"),
-                   numericInput(
-                     inputId = "ykrid", 
-                     label = "Origin YKR ID",
-                     max = max(result$YKR_ID),
-                     min = min(result$YKR_ID),
-                     value = origin_id),
-                   HTML("</div>"),
+        actionButton(
+          inputId = "calcYkr",
+          label = HTML("<i class='icon calculator'></i>Calculate a new comparison with this YKR_ID")),
+        
+        HTML("<p id='smalltext'><b>Current origin YKR_ID</b></p>",
+             "<div id='contents'>"),
+        htmlOutput("ykr_helper"),
+        HTML("</div>",
+             "</div>"),
+        
+        HTML("<label class='control-label'>Symbology options</label>",
+             "<div id='contents'>"),
+        selectInput(
+          inputId = "fill_column",
+          label = "Visualise data (equal interval)",
+          selected = "ttm18_r_avg",
+          choices = list(
+            `Travel Time Matrix 2018` = 
+              c("ttm18_r_t", "ttm18_m_t", "ttm18_sl_t", 
+                "ttm18_r_avg", "ttm18_m_avg", "ttm18_sl_avg",
+                "ttm18_r_drivetime", "ttm18_m_drivetime", "ttm18_sl_drivetime",
+                "ttm18_r_pct", "ttm18_m_pct", "ttm18_sl_pct"),
+            
+            `Thesis survey results` = 
+              c("msc_r_sfp", "msc_m_sfp", "msc_sl_sfp",
+                "msc_r_wtd", "msc_m_wtd", "msc_sl_wtd",
+                "msc_r_drivetime", "msc_m_drivetime", "msc_sl_drivetime",
+                "msc_r_pct", "msc_m_pct", "msc_sl_pct"),
+            
+            `Compare TTM18 and thesis results` = 
+              c("compare_r_sfp", "compare_m_sfp", "compare_sl_sfp",
+                "compare_r_wtd", "compare_m_wtd", "compare_sl_wtd",
+                "compare_r_drivetime", "compare_m_drivetime", "compare_sl_drivetime",
+                "compare_r_pct", "compare_m_pct", "compare_sl_pct"))),
+        
+        sliderInput(
+          inputId = "classIntervals_n",
+          label = "Amount of classes",
+          min = 2, 
+          max = 11, 
+          value = 11),
+        HTML("</div>"),
+        
+        # Layer options: on-off switches
+        HTML("<label class='control-label'>Layer options</label>",
+             "<div id='contents'>",
+             "<div class='onoff-container'>",
+             "<div class='onoff-div'><b>Postal code areas</b><br>"),
+        # Switch for interactive map labels
+        HTML("<label class='control-label onoff-label' for='show_postal'>Boundaries</label>"),
+        shinyWidgets::switchInput(
+          inputId = "show_postal",
+          size = "mini",
+          value = TRUE),
+        HTML("<label class='control-label onoff-label' for='show_postal_labels'>Labels</label>"),
+        shinyWidgets::switchInput(
+          inputId = "show_postal_labels", 
+          size = "mini",
+          value = FALSE),
+        HTML("</div>"),
                    
-                   actionButton(
-                     inputId = "calcYkr",
-                     label = HTML("<i class='icon calculator'></i>Calculate a new comparison with this YKR_ID")),
+        # Switches for muns
+        HTML("<div class='onoff-div'><b>Municipalities</b><br>",
+             "<label class='control-label onoff-label' for='show_muns'>Boundaries</label>"),
+        shinyWidgets::switchInput(
+          inputId = "show_muns", 
+          size = "mini",
+          value = TRUE),
                    
-                   HTML("<p id='smalltext'><b>Current origin YKR_ID</b></p>",
-                        "<div id='contents'>"),
-                   htmlOutput("ykr_helper"),
-                   HTML("</div>",
-                        "</div>"),
-                   
-                   HTML("<label class='control-label'>Symbology options</label>",
-                        "<div id='contents'>"),
-                   selectInput(
-                     inputId = "fill_column",
-                     label = "Visualise data (equal interval)",
-                     selected = "ttm18_r_avg",
-                     choices = 
-                       c("ttm18_r_t", "ttm18_m_t", "ttm18_sl_t", 
-                         "ttm18_r_avg", "ttm18_m_avg", "ttm18_sl_avg",
-                         "ttm18_r_drivetime", "ttm18_m_drivetime", "ttm18_sl_drivetime",
-                         "ttm18_r_pct", "ttm18_m_pct", "ttm18_sl_pct",
-                         
-                         "msc_r_sfp", "msc_m_sfp", "msc_sl_sfp",
-                         "msc_r_wtd", "msc_m_wtd", "msc_sl_wtd",
-                         "msc_r_drivetime", "msc_m_drivetime", "msc_sl_drivetime",
-                         "msc_r_pct", "msc_m_pct", "msc_sl_pct",
-                         
-                         "compare_r_sfp", "compare_m_sfp", "compare_sl_sfp",
-                         "compare_r_wtd", "compare_m_wtd", "compare_sl_wtd",
-                         "compare_r_drivetime", "compare_m_drivetime", "compare_sl_drivetime",
-                         "compare_r_pct", "compare_m_pct", "compare_sl_pct")),
-                   
-                   sliderInput(
-                     inputId = "classIntervals_n",
-                     label = "Amount of classes",
-                     min = 2, 
-                     max = 11, 
-                     value = 11),
-                   HTML("</div>"),
-                   
-                   # Layer options: on-off switches
-                   HTML("<label class='control-label'>Layer options</label>",
-                        "<div id='contents'>",
-                        "<div class='onoff-container'>",
-                        "<div class='onoff-div'><b>Postal code areas</b><br>"),
-                   # Switch for interactive map labels
-                   HTML("<label class='control-label onoff-label' for='show_postal'>Boundaries</label>"),
-                   shinyWidgets::switchInput(
-                     inputId = "show_postal",
-                     size = "mini",
-                     value = TRUE),
-                   HTML("<label class='control-label onoff-label' for='show_postal_labels'>Labels</label>"),
-                   shinyWidgets::switchInput(
-                     inputId = "show_postal_labels", 
-                     size = "mini",
-                     value = FALSE),
-                   HTML("</div>"),
-                   
-                   # Switches for muns
-                   HTML("<div class='onoff-div'><b>Municipalities</b><br>",
-                        "<label class='control-label onoff-label' for='show_muns'>Boundaries</label>"),
-                   shinyWidgets::switchInput(
-                     inputId = "show_muns", 
-                     size = "mini",
-                     value = TRUE),
-                   
-                   HTML("<label class='control-label onoff-label' for='show_muns_labels'>Labels</label>"),
-                   shinyWidgets::switchInput(
-                     inputId = "show_muns_labels", 
-                     size = "mini",
-                     value = FALSE),
-                   HTML("</div>"),
-                   
-                   # Switches for subdivisions
-                   HTML("<div class='onoff-div'><b>Subdivisions</b><br>",
-                        "<label class='control-label onoff-label' for='show_subdiv'>Boundaries</label>"),
-                   shinyWidgets::switchInput(
-                     inputId = "show_subdiv", 
-                     size = "mini",
-                     value = FALSE),
-                   
-                   HTML("<label class='control-label onoff-label' for='show_subdiv_labels'>Labels</label>"),
-                   shinyWidgets::switchInput(
-                     inputId = "show_subdiv_labels", 
-                     size = "mini",
-                     value = FALSE),
-                   HTML("</div>",
-                        "</div>",
-                        "</div>"),
-                   
-                   HTML(paste("<p id='version-info'>Travel time comparison app version", 
-                               app_v, "</p>")),
-                   width = 1),
-    
+        HTML("<label class='control-label onoff-label' for='show_muns_labels'>Labels</label>"),
+        shinyWidgets::switchInput(
+          inputId = "show_muns_labels", 
+          size = "mini",
+          value = FALSE),
+        HTML("</div>"),
+        
+        # Switches for subdivisions
+        HTML("<div class='onoff-div'><b>Subdivisions</b><br>",
+             "<label class='control-label onoff-label' for='show_subdiv'>Boundaries</label>"),
+        shinyWidgets::switchInput(
+          inputId = "show_subdiv", 
+          size = "mini",
+          value = FALSE),
+        
+        HTML("<label class='control-label onoff-label' for='show_subdiv_labels'>Labels</label>"),
+        shinyWidgets::switchInput(
+          inputId = "show_subdiv_labels", 
+          size = "mini",
+          value = FALSE),
+        HTML("</div>",
+             "</div>",
+             "</div>"),
+        
+        HTML(paste("<p id='version-info'>Travel time comparison app version", 
+                   app_v, "</p>")),
+        width = 1),
+      
       
       ### 6.6 Mainpanel layout -------------------------------------------------
       mainPanel(
+        HTML("<div class='rightside-toolbar'>"),
         downloadLink(
-          "dl_compare",
+          outputId = "dl_compare",
           label = HTML("<i class='icon file' title='Download hi-res version of this figure (png)'></i>")),
-        girafeOutput("grid"), width = 9,
+        actionLink(
+          inputId = "info_dialog_btn",
+          label = HTML("<i class='icon info' title='Open tooltip abbreviations legend dialog'></i>")),
+        HTML("</div>"),
+        girafeOutput("grid"), 
+        
+        width = 9
       )
     )
   )

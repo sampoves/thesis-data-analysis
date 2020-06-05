@@ -2,7 +2,7 @@
 // JavaScript for the travel time comparison app of my thesis results
 
 // "Parking of private cars and spatial accessibility in Helsinki Capital Region" 
-// by Sampo Vesanen, 4.6.2020
+// by Sampo Vesanen, 6.6.2020
 
 
 // use this counter to hopefully detect flow of code
@@ -176,30 +176,3 @@ $(document).ready(function() {
 		});
 	}
 });
-
-
-// ------------------------------------ //
-// Attempt to make SVG animation happen //
-// ----------------------------------- -//
-
-// The following SVG animation on click is commented because of performance reasons.
-// This SVG animation works with SVG.js, but is taxing on the performance. On click,
-// highlight clicked ykrid. The transform almost works, but is commented for now. It needs
-// front() accompanied with it, and that causes all sorts of trouble in the visuals.
-//$(document).one('shiny:idle', function(event) {
-//	
-//	setTimeout(function() {
-//		
-//		$('polygon').click(function() {
-//			var anim_elem = SVG($(this)[0]);
-//			anim_elem.animate({
-//				duration: 400,
-//				delay: 0,
-//				when: 'now',
-//				swing: true,
-//				times: 2,
-//				wait: 200
-//			}).attr({fill: '#ffffff'});//.transform({scale: 1.5});
-//		});
-//	}, 4000);
-//});
