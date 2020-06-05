@@ -2,7 +2,7 @@
 # Helsinki Region Travel Time comparison application
 # Helsinki Region Travel Time Matrix 2018 <--> My thesis survey results
 
-# 5.6.2020
+# 6.6.2020
 # Sampo Vesanen
 
 # This interactive Travel time comparison application is dependent on ggiraph 
@@ -12,7 +12,9 @@
 
 # TODO: add download data functionality
 # TODO: add all sorts of column options in map fill
+# TODO: colouring of tooltip table cells to assist conclusion drawing
 # TODO: Remember arbitrary selection of timeofday in thesisdata! Triplecheck it
+# TODO: unique_ykr and ykr_ids should be the same thing, remove unique_ykr
 
 
 #### 1 Initialise --------------------------------------------------------------
@@ -37,7 +39,7 @@ library(ggnewscale)
 
 
 # App version
-app_v <- "0026 (5.6.2020)"
+app_v <- "0026 (6.6.2020)"
 
 
 # Working directory
@@ -140,7 +142,7 @@ row.names(postal) <- postal[, 1]
 postal <- sp::SpatialPolygonsDataFrame(
   sp::SpatialPolygons(unlist(lapply(sp_tmp_ID, function(x) x@polygons)),
                       proj4string = app_crs), data = postal)
-  
+
 # Fortify and preserve Polygon attribute data
 postal_f <- 
   postal %>%
@@ -285,7 +287,7 @@ result <- dplyr::left_join(result, thesisdata, by = "zipcode")
 
 
 
-#### 4.4 Add averaged columns --------------------------------------------------
+#### 4.3 Add averaged columns --------------------------------------------------
 
 car_cols <- c("car_r_t", "car_m_t", "car_sl_t", "ttm_r_avg", "ttm_m_avg", 
               "ttm_sl_avg")
@@ -366,7 +368,11 @@ result <- result %>%
                 comp_sl_drivetime = thesis_sl_drivetime / ttm_sl_drivetime,
                 comp_r_pct = thesis_r_pct / ttm_r_pct,
                 comp_m_pct = thesis_m_pct / ttm_m_pct,
-                comp_sl_pct = thesis_sl_pct / ttm_sl_pct)
+                comp_sl_pct = thesis_sl_pct / ttm_sl_pct) %>%
+  dplyr::mutate_at(vars(comp_r_sfp, comp_m_sfp, comp_sl_sfp, comp_r_wtd,
+                        comp_m_wtd, comp_sl_wtd, comp_r_drivetime, 
+                        comp_m_drivetime, comp_sl_drivetime, comp_r_pct,
+                        comp_m_pct, comp_sl_pct), ~round(., 2))
 
 
 
@@ -378,8 +384,49 @@ muns_lbl <- GetCentroids(muns_f, "nimi", "nimi")
 subdiv_lbl <- GetCentroids(subdiv_f, "Name", "Name")
 
 # Get all unique ykr_id values
-# TODO: ykr_ids should be the same thing as this
 unique_ykr <- unique(result$YKR_ID)
+
+# In this named vector the first part is the name of the new, classified
+# column. Second part is the original column from where the classification
+# was calculated from.
+vis_cols <- c("ttm18_r_t" = "car_r_t",
+              "ttm18_m_t" = "car_m_t",
+              "ttm18_sl_t" = "car_sl_t",
+              "ttm18_r_avg" = "ttm_r_avg",
+              "ttm18_m_avg" = "ttm_m_avg",
+              "ttm18_sl_avg" = "ttm_sl_avg",
+              "ttm18_r_drivetime" = "ttm_r_drivetime",
+              "ttm18_m_drivetime" = "ttm_m_drivetime",
+              "ttm18_sl_drivetime" = "ttm_sl_drivetime",
+              "ttm18_r_pct" = "ttm_r_pct",
+              "ttm18_m_pct" = "ttm_m_pct",
+              "ttm18_sl_pct" = "ttm_sl_pct",
+              
+              "msc_r_sfp" = "thesis_r_sfp",
+              "msc_m_sfp" = "thesis_m_sfp",
+              "msc_sl_sfp" = "thesis_sl_sfp",
+              "msc_r_wtd" = "thesis_r_wtd",
+              "msc_m_wtd" = "thesis_m_wtd",
+              "msc_sl_wtd" = "thesis_sl_wtd",
+              "msc_r_drivetime" = "thesis_r_drivetime",
+              "msc_m_drivetime" = "thesis_m_drivetime",
+              "msc_sl_drivetime" = "thesis_sl_drivetime",
+              "msc_r_pct" = "thesis_r_pct",
+              "msc_m_pct" = "thesis_m_pct",
+              "msc_sl_pct" = "thesis_sl_pct",
+              
+              "compare_r_sfp" = "comp_r_sfp",
+              "compare_m_sfp" = "comp_m_sfp",
+              "compare_sl_sfp" = "comp_sl_sfp",
+              "compare_r_wtd" = "comp_r_wtd",
+              "compare_m_wtd" = "comp_m_wtd",
+              "compare_sl_wtd" = "comp_sl_wtd",
+              "compare_r_drivetime" = "comp_r_drivetime",
+              "compare_m_drivetime" = "comp_m_drivetime",
+              "compare_sl_drivetime" = "comp_sl_drivetime",
+              "compare_r_pct" = "comp_r_pct",
+              "compare_m_pct" = "comp_m_pct",
+              "compare_sl_pct" = "comp_sl_pct")
 
 
 
@@ -470,16 +517,14 @@ server <- function(input, output, session) {
     
   })
   
-  # TODO: maybe only calculate one new column at a time
-  # currentinput() calculates new class intervals when input change detected
-  currentinput <- reactive({
-    #res <- CreateJenksColumn2(thisTTM_df(), thisTTM_df(), "ttm_r_t_avg", "carrt_equal", input$classIntervals_n)
-    res <- CreateJenksColumn2(result, result, "ttm_r_avg", "ttm18_r_avg", input$classIntervals_n)
-    res <- CreateJenksColumn2(res, res, "ttm_m_avg", "ttm18_m_avg", input$classIntervals_n)
-    res <- CreateJenksColumn2(res, res, "ttm_sl_avg", "ttm18_sl_avg", input$classIntervals_n)
-    res <- CreateJenksColumn2(res, res, "car_r_t", "ttm18_r_t", input$classIntervals_n)
-    res <- CreateJenksColumn2(res, res, "car_m_t", "ttm18_m_t", input$classIntervals_n)
-    res <- CreateJenksColumn2(res, res, "car_sl_t", "ttm18_sl_t", input$classIntervals_n)
+  
+  # equalBreaksColumn() calculates new class intervals when an input change is
+  # detected on input$fill_column. Use the named vector "vis_cols".
+  # TODO: could this be forgotten and just move the function to renderGirafe()?
+  equalBreaksColumn <- reactive({
+    
+    res <- CreateJenksColumn2(result, result, vis_cols[[input$fill_column]], 
+                              input$fill_column, input$classIntervals_n)
     res
   })
   
@@ -489,7 +534,7 @@ server <- function(input, output, session) {
     
     # Reactive value: Insert equal breaks for mapping.
     #inputdata <- thisTTM_df()
-    inputdata <- currentinput()
+    inputdata <- equalBreaksColumn()
     
     # Get an origin cell for mapping
     #origincell <- grid_f[grid_f["YKR_ID"] == as.numeric(validate_ykrid()), ]
@@ -698,7 +743,7 @@ server <- function(input, output, session) {
   })
   
   
-  #### 6.2.1 Download interactive map ----
+  #### 6.2.1 Download comparison map ----
   output$dl_compare <- downloadHandler(
     filename = paste("ttm18-thesis-compare_",
                      "mapfill-", input$fill_column, "_fromid-", input$ykrid, "_",
@@ -712,7 +757,7 @@ server <- function(input, output, session) {
   )
   
   
-  #### 6.3 Other outputs -------------------------------------------------------
+  #### 6.2.2 Other outputs -------------------------------------------------------
   output$ykr_validator <- renderText({ 
     validate_ykrid()
   })
@@ -741,7 +786,8 @@ ui <- shinyUI(
                               version ="3.0.15", 
                               src = c(href = "https://cdnjs.cloudflare.com/ajax/libs/svg.js/3.0.15/"), 
                               script = "svg.min.js"),
-        
+    
+    
     ### 6.5 Sidebar layout -----------------------------------------------------
     titlePanel(NULL, windowTitle = "Travel time comparison ShinyApp"),
     sidebarLayout(
@@ -751,7 +797,7 @@ ui <- shinyUI(
                         "<div id='contents'>",
                         "<div id='ykr-flash'>"),
                    numericInput(
-                     "ykrid", 
+                     inputId = "ykrid", 
                      label = "Origin YKR ID",
                      max = max(result$YKR_ID),
                      min = min(result$YKR_ID),
@@ -759,27 +805,40 @@ ui <- shinyUI(
                    HTML("</div>"),
                    
                    actionButton(
-                     "calcYkr",
-                     HTML("<i class='icon calculator'></i>Calculate a new comparison with this YKR_ID")),
+                     inputId = "calcYkr",
+                     label = HTML("<i class='icon calculator'></i>Calculate a new comparison with this YKR_ID")),
                    
                    HTML("<p id='smalltext'><b>Current origin YKR_ID</b></p>",
                         "<div id='contents'>"),
                    htmlOutput("ykr_helper"),
-                   HTML("</div>"),
-                   HTML("</div>"),
+                   HTML("</div>",
+                        "</div>"),
                    
                    HTML("<label class='control-label'>Symbology options</label>",
                         "<div id='contents'>"),
                    selectInput(
-                     "fill_column", 
-                     HTML("Visualise data (equal interval)"),
-                     c("ttm18_r_avg", "ttm18_m_avg", "ttm18_sl_avg", "ttm18_r_t", 
-                       "ttm18_m_t", "ttm18_sl_t"),
-                   ),
+                     inputId = "fill_column",
+                     label = "Visualise data (equal interval)",
+                     selected = "ttm18_r_avg",
+                     choices = 
+                       c("ttm18_r_t", "ttm18_m_t", "ttm18_sl_t", 
+                         "ttm18_r_avg", "ttm18_m_avg", "ttm18_sl_avg",
+                         "ttm18_r_drivetime", "ttm18_m_drivetime", "ttm18_sl_drivetime",
+                         "ttm18_r_pct", "ttm18_m_pct", "ttm18_sl_pct",
+                         
+                         "msc_r_sfp", "msc_m_sfp", "msc_sl_sfp",
+                         "msc_r_wtd", "msc_m_wtd", "msc_sl_wtd",
+                         "msc_r_drivetime", "msc_m_drivetime", "msc_sl_drivetime",
+                         "msc_r_pct", "msc_m_pct", "msc_sl_pct",
+                         
+                         "compare_r_sfp", "compare_m_sfp", "compare_sl_sfp",
+                         "compare_r_wtd", "compare_m_wtd", "compare_sl_wtd",
+                         "compare_r_drivetime", "compare_m_drivetime", "compare_sl_drivetime",
+                         "compare_r_pct", "compare_m_pct", "compare_sl_pct")),
                    
                    sliderInput(
-                     "classIntervals_n",
-                     "Amount of classes",
+                     inputId = "classIntervals_n",
+                     label = "Amount of classes",
                      min = 2, 
                      max = 11, 
                      value = 11),
@@ -793,7 +852,7 @@ ui <- shinyUI(
                    # Switch for interactive map labels
                    HTML("<label class='control-label onoff-label' for='show_postal'>Boundaries</label>"),
                    shinyWidgets::switchInput(
-                     inputId = "show_postal", 
+                     inputId = "show_postal",
                      size = "mini",
                      value = TRUE),
                    HTML("<label class='control-label onoff-label' for='show_postal_labels'>Labels</label>"),
@@ -810,6 +869,7 @@ ui <- shinyUI(
                      inputId = "show_muns", 
                      size = "mini",
                      value = TRUE),
+                   
                    HTML("<label class='control-label onoff-label' for='show_muns_labels'>Labels</label>"),
                    shinyWidgets::switchInput(
                      inputId = "show_muns_labels", 
@@ -824,6 +884,7 @@ ui <- shinyUI(
                      inputId = "show_subdiv", 
                      size = "mini",
                      value = FALSE),
+                   
                    HTML("<label class='control-label onoff-label' for='show_subdiv_labels'>Labels</label>"),
                    shinyWidgets::switchInput(
                      inputId = "show_subdiv_labels", 

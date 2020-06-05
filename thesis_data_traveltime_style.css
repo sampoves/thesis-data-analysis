@@ -2,7 +2,7 @@
 /* CSS style sheet of for the Travel time comparison app of my thesis results
 
 "Parking of private cars and spatial accessibility in Helsinki Capital Region" 
-by Sampo Vesanen, 5.6.2020 */
+by Sampo Vesanen, 6.6.2020 */
 
 html, body {
 	height: 100%;
@@ -266,6 +266,21 @@ render reliably */
 	content: "\f56d";
 	color: #069;
 	font-size: 1.3em;
+}
+.database::before {
+	content: "\f1c0";
+	color: white;
+	margin: 0px 4px 0px 2px;
+}
+.poll::before {
+	content: "\f681";
+	color: white;
+	margin: 0px 4px 0px 2px;
+}
+.exchange-alt::before {
+	content: "\f362";
+	color: white;
+	margin: 0px 4px 0px 2px;
 }
 
 /*---------------------------------*/

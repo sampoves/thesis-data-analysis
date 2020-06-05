@@ -1,13 +1,14 @@
  <!-- This is the HTML code for the travel time comparison app -->
- <!-- for Sampo Vesanen's MSc thesis. 3.6.2020. -->
+ <!-- for Sampo Vesanen's MSc thesis. 6.6.2020. -->
 <div id='app-tooltip'>
 	<div>
-		<b>YKR ID: %s</b></br> <!-- YKR_ID -->
+		<b>YKR ID %s</b></br> <!-- YKR_ID -->
 		%s, %s <!-- zipcode, nimi -->
 	</div>
 	<hr class='tooltip-hr'>
 	 <!-- TTM18 data -->
 	<div>
+		<i class='icon database'></i>
 		<b>TTM18</b>
 	</div>
 	 <!-- Individual YKR_IDs -->
@@ -32,13 +33,13 @@
 	<!-- TTM18 zipcode averages -->
 	<table class='tg'>
 		<tbody>
-			<tr>
+			<tr id='ttm-sfp'>
 				<td class='tg-cell'>sfp</td>
 				<td class='tg-cell'>%s</td> <!-- ttm_sfp -->
 				<td class='tg-cell'>%s</td> <!-- ttm_sfp -->
 				<td class='tg-cell'>%s</td> <!-- ttm_sfp -->
 			</tr>
-			<tr>
+			<tr id='ttm-wtd'>
 				<td class='tg-cell'>wtd_avg</td>
 				<td class='tg-cell'>%s</td> <!-- ttm_wtd -->
 				<td class='tg-cell'>%s</td> <!-- ttm_wtd -->
@@ -71,6 +72,7 @@
 	<hr class='tooltip-hr'>
 	 <!-- Thesis results data -->
 	<div>
+		<i class='icon poll'></i>
 		<b>Thesis data</b>, values: %s <!-- vals_in_zip -->
 	</div>
 	<table class='tg'>
@@ -83,13 +85,13 @@
 			</tr>
 		</thead>
 		<tbody>
-			<tr>
+			<tr id='thesis-sfp'>
 				<td class='tg-cell'>sfp_avg</td>
 				<td class='tg-cell'>%s</td> <!-- thesis_r_sfp -->
 				<td class='tg-cell'>%s</td> <!-- thesis_m_sfp -->
 				<td class='tg-cell'>%s</td> <!-- thesis_sl_sfp -->
 			</tr>
-			<tr>
+			<tr id='thesis-wtd'>
 				<td class='tg-cell'>wtd_avg</td>
 				<td class='tg-cell'>%s</td> <!-- thesis_r_wtd -->
 				<td class='tg-cell'>%s</td> <!-- thesis_m_wtd -->
@@ -99,13 +101,13 @@
 	</table>
 	<table class='tg'>
 		<tbody>
-			<tr>
+			<tr id='thesis-drivetime'>
 				<td class='tg-cell'>drivetime</td>
 				<td class='tg-cell'>%s</td> <!-- thesis_r_drivetime -->
 				<td class='tg-cell'>%s</td> <!-- thesis_m_drivetime -->
 				<td class='tg-cell'>%s</td> <!-- thesis_sl_drivetime -->
 			</tr>
-			<tr>
+			<tr id='thesis-pct'>
 				<td class='tg-cell'>pct</td>
 				<td class='tg-cell'>%s</td> <!-- thesis_r_pct -->
 				<td class='tg-cell'>%s</td> <!-- thesis_m_pct -->
@@ -116,8 +118,9 @@
 	<hr class='tooltip-hr'>
 	 <!-- Compare TTM18 and thesis data -->
 	<div>
-		<b>Comparison of TTM18 and<br>
-		thesis data</b>
+		<i class='icon exchange-alt'></i>
+		<b>Comparison of TTM18<br>
+		and thesis data</b>
 	</div>
 	<table class='tg'>
 		<thead>
@@ -129,25 +132,25 @@
 			</tr>
 		</thead>
 		<tbody>
-			<tr>
+			<tr id='compare-sfp'>
 				<td class='tg-cell'>sfp</td>
 				<td class='tg-cell'>%s</td> <!-- comp_r_sfp -->
 				<td class='tg-cell'>%s</td> <!-- comp_m_sfp -->
 				<td class='tg-cell'>%s</td> <!-- comp_sl_sfp -->
 			</tr>
-			<tr>
+			<tr id='compare-wtd'>
 				<td class='tg-cell'>wtd</td>
 				<td class='tg-cell'>%s</td> <!-- comp_r_wtd -->
 				<td class='tg-cell'>%s</td> <!-- comp_m_wtd -->
 				<td class='tg-cell'>%s</td> <!-- comp_sl_wtd -->
 			</tr>
-			<tr>
+			<tr id='compare-drivetime'>
 				<td class='tg-cell'>drivetime</td>
 				<td class='tg-cell'>%s</td> <!-- comp_r_drivetime -->
 				<td class='tg-cell'>%s</td> <!-- comp_m_drivetime -->
 				<td class='tg-cell'>%s</td> <!-- comp_sl_drivetime -->
 			</tr>
-			<tr>
+			<tr id='compare-pct'>
 				<td class='tg-cell'>pct</td>
 				<td class='tg-cell'>%s</td> <!-- comp_r_pct -->
 				<td class='tg-cell'>%s</td> <!-- comp_m_pct -->
