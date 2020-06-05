@@ -37,7 +37,7 @@ library(ggnewscale)
 
 
 # App version
-app_v <- "0025 (5.6.2020)"
+app_v <- "0026 (5.6.2020)"
 
 
 # Working directory
@@ -312,9 +312,9 @@ result <- result %>%
   dplyr::mutate(ttm_r_drivetime = ttm_r_avg - ttm_sfp - ttm_wtd,
                 ttm_m_drivetime = ttm_m_avg - ttm_sfp - ttm_wtd,
                 ttm_sl_drivetime = ttm_sl_avg - ttm_sfp - ttm_wtd,
-                ttm_r_pct = (ttm_sfp + ttm_wtd) / ttm_r_drivetime * 100,
-                ttm_m_pct = (ttm_sfp + ttm_wtd) / ttm_m_drivetime * 100,
-                ttm_sl_pct = (ttm_sfp + ttm_wtd) / ttm_sl_drivetime * 100) %>%
+                ttm_r_pct = (ttm_sfp + ttm_wtd) / ttm_r_drivetime,
+                ttm_m_pct = (ttm_sfp + ttm_wtd) / ttm_m_drivetime,
+                ttm_sl_pct = (ttm_sfp + ttm_wtd) / ttm_sl_drivetime) %>%
   dplyr::mutate_at(vars(ttm_r_pct, ttm_m_pct, ttm_sl_pct), ~round(., 2)) %>%
 
   # If zipcode is NA, then convert all calculated data to NA as well
@@ -345,14 +345,28 @@ result <- result %>%
                   if_else(is.na(thesis_sl_wtd), 0, thesis_sl_wtd),
                 thesis_r_pct = (
                   if_else(is.na(thesis_r_sfp), 0, thesis_r_sfp) + 
-                  if_else(is.na(thesis_r_wtd), 0, thesis_r_wtd)) / ttm_r_avg * 100,
+                  if_else(is.na(thesis_r_wtd), 0, thesis_r_wtd)) / ttm_r_avg,
                 thesis_m_pct = (
                   if_else(is.na(thesis_m_sfp), 0, thesis_m_sfp) + 
-                  if_else(is.na(thesis_m_wtd), 0, thesis_m_wtd)) / ttm_m_avg * 100,
+                  if_else(is.na(thesis_m_wtd), 0, thesis_m_wtd)) / ttm_m_avg,
                 thesis_sl_pct = (
                   if_else(is.na(thesis_sl_sfp), 0, thesis_sl_sfp) + 
-                  if_else(is.na(thesis_sl_wtd), 0, thesis_sl_wtd)) / ttm_sl_avg * 100) %>%
-  dplyr::mutate_at(vars(thesis_r_pct, thesis_m_pct, thesis_sl_pct), ~round(., 2))
+                  if_else(is.na(thesis_sl_wtd), 0, thesis_sl_wtd)) / ttm_sl_avg) %>%
+  dplyr::mutate_at(vars(thesis_r_pct, thesis_m_pct, thesis_sl_pct), ~round(., 2)) %>%
+  
+  # Add TTM18/thesis comparison columns
+  dplyr::mutate(comp_r_sfp = thesis_r_sfp / ttm_sfp,
+                comp_m_sfp = thesis_m_sfp / ttm_sfp,
+                comp_sl_sfp = thesis_sl_sfp / ttm_sfp,
+                comp_r_wtd = thesis_r_wtd / ttm_wtd,
+                comp_m_wtd = thesis_m_wtd / ttm_wtd,
+                comp_sl_wtd = thesis_sl_wtd / ttm_wtd,
+                comp_r_drivetime = thesis_r_drivetime / ttm_r_drivetime,
+                comp_m_drivetime = thesis_m_drivetime / ttm_m_drivetime,
+                comp_sl_drivetime = thesis_sl_drivetime / ttm_sl_drivetime,
+                comp_r_pct = thesis_r_pct / ttm_r_pct,
+                comp_m_pct = thesis_m_pct / ttm_m_pct,
+                comp_sl_pct = thesis_sl_pct / ttm_sl_pct)
 
 
 
@@ -507,21 +521,28 @@ server <- function(input, output, session) {
         size = 0.2,
         aes_string("long", "lat", 
                    group = "group",
+                   fill = input$fill_column,
                    tooltip = substitute(
                      sprintf(tooltip_content, YKR_ID, 
                              zipcode, nimi,
+                             
                              car_r_t, car_m_t, car_sl_t,
                              ttm_sfp, ttm_sfp, ttm_sfp,
                              ttm_wtd, ttm_wtd, ttm_wtd,
                              ttm_r_avg, ttm_m_avg, ttm_sl_avg,
                              ttm_r_drivetime, ttm_m_drivetime, ttm_sl_drivetime,
                              ttm_r_pct, ttm_m_pct, ttm_sl_pct,
+                             
                              vals_in_zip,
                              thesis_r_sfp, thesis_m_sfp, thesis_sl_sfp,
                              thesis_r_wtd, thesis_m_wtd, thesis_sl_wtd,
                              thesis_r_drivetime, thesis_m_drivetime, thesis_sl_drivetime,
-                             thesis_r_pct, thesis_m_pct, thesis_sl_pct)),
-                   fill = input$fill_column)) +
+                             thesis_r_pct, thesis_m_pct, thesis_sl_pct,
+                             
+                             comp_r_sfp, comp_m_sfp, comp_sl_sfp,
+                             comp_r_wtd, comp_m_wtd, comp_sl_wtd,
+                             comp_r_drivetime, comp_m_drivetime, comp_sl_drivetime,
+                             comp_r_pct, comp_m_pct, comp_sl_pct)))) +
       
       # Jenks classes colouring and labels
       scale_fill_brewer(palette = "RdYlGn",
@@ -667,7 +688,7 @@ server <- function(input, output, session) {
             axis.title = element_text(size = 16))
     
     
-    # Render interactive map
+    # Render comparison map
     girafe(ggobj = g,
            width = 27,
            height = 18,

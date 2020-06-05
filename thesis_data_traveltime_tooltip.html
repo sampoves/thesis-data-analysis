@@ -21,7 +21,7 @@
 			</tr>
 		</thead>
 		<tbody>
-			<tr>
+			<tr id='ttm-car'>
 				<td class='tg-cell'>This cell</td>
 				<td class='tg-cell'>%s</td> <!-- car_r_t -->
 				<td class='tg-cell'>%s</td> <!-- car_m_t -->
@@ -48,19 +48,19 @@
 	</table>
 	<table class='tg'>
 		<tbody>
-			<tr>
+			<tr id='ttm-avg'>
 				<td class='tg-cell'>avg</td>
 				<td class='tg-cell'>%s</td> <!-- ttm_r_avg -->
 				<td class='tg-cell'>%s</td> <!-- ttm_m_avg -->
 				<td class='tg-cell'>%s</td> <!-- ttm_sl_avg -->
 			</tr>
-			<tr id='haa'>
+			<tr id='ttm-drivetime'>
 				<td class='tg-cell'>drivetime</td>
 				<td class='tg-cell'>%s</td> <!-- ttm_r_drivetime -->
 				<td class='tg-cell'>%s</td> <!-- ttm_m_drivetime -->
 				<td class='tg-cell'>%s</td> <!-- ttm_sl_drivetime -->
 			</tr>
-			<tr>
+			<tr id='ttm-pct'>
 				<td class='tg-cell'>pct</td>
 				<td class='tg-cell'>%s</td> <!-- ttm_r_pct -->
 				<td class='tg-cell'>%s</td> <!-- ttm_m_pct -->
@@ -71,7 +71,7 @@
 	<hr class='tooltip-hr'>
 	 <!-- Thesis results data -->
 	<div>
-		<b>Thesis data</b> vals: %s <!-- vals_in_zip -->
+		<b>Thesis data</b>, values: %s <!-- vals_in_zip -->
 	</div>
 	<table class='tg'>
 		<thead>
@@ -110,6 +110,48 @@
 				<td class='tg-cell'>%s</td> <!-- thesis_r_pct -->
 				<td class='tg-cell'>%s</td> <!-- thesis_m_pct -->
 				<td class='tg-cell'>%s</td> <!-- thesis_sl_pct -->
+			</tr>
+		</tbody>
+	</table>
+	<hr class='tooltip-hr'>
+	 <!-- Compare TTM18 and thesis data -->
+	<div>
+		<b>Comparison of TTM18 and<br>
+		thesis data</b>
+	</div>
+	<table class='tg'>
+		<thead>
+			<tr>
+				<th class='tg-cell'></th>
+				<th class='tg-cell'>r</th>
+				<th class='tg-cell'>m</th>
+				<th class='tg-cell'>sl</th>
+			</tr>
+		</thead>
+		<tbody>
+			<tr>
+				<td class='tg-cell'>sfp</td>
+				<td class='tg-cell'>%s</td> <!-- comp_r_sfp -->
+				<td class='tg-cell'>%s</td> <!-- comp_m_sfp -->
+				<td class='tg-cell'>%s</td> <!-- comp_sl_sfp -->
+			</tr>
+			<tr>
+				<td class='tg-cell'>wtd</td>
+				<td class='tg-cell'>%s</td> <!-- comp_r_wtd -->
+				<td class='tg-cell'>%s</td> <!-- comp_m_wtd -->
+				<td class='tg-cell'>%s</td> <!-- comp_sl_wtd -->
+			</tr>
+			<tr>
+				<td class='tg-cell'>drivetime</td>
+				<td class='tg-cell'>%s</td> <!-- comp_r_drivetime -->
+				<td class='tg-cell'>%s</td> <!-- comp_m_drivetime -->
+				<td class='tg-cell'>%s</td> <!-- comp_sl_drivetime -->
+			</tr>
+			<tr>
+				<td class='tg-cell'>pct</td>
+				<td class='tg-cell'>%s</td> <!-- comp_r_pct -->
+				<td class='tg-cell'>%s</td> <!-- comp_m_pct -->
+				<td class='tg-cell'>%s</td> <!-- comp_sl_pct -->
 			</tr>
 		</tbody>
 	</table>

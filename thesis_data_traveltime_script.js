@@ -137,13 +137,24 @@ function columnColorize() {
 		
 		// Apply CSS to correct table columns
 		$('[id^="svg_"]').hover(function() {
-			if("ttm18_r_avg;ttm18_r_t".includes(attr_val)) {
+			if(attr_val === "ttm18_r_avg") {
 				$('table').colorColumn(1);
-				$('#haa').addClass("selected");
-			} else if ("ttm18_m_avg;ttm18_m_t".includes(attr_val)) {
+				$('#ttm-avg').addClass("selected");
+			} else if (attr_val === "ttm18_m_avg") {
 				$('table').colorColumn(2);
-			} else if ("ttm18_sl_avg;ttm18_sl_t".includes(attr_val)) {
+				$('#ttm-avg').addClass("selected");
+			} else if (attr_val === "ttm18_sl_avg") {
 				$('table').colorColumn(3);
+				$('#ttm-avg').addClass("selected");
+			} else if (attr_val === "ttm18_r_t") {
+				$('table').colorColumn(1);
+				$('#ttm-car').addClass("selected");
+			} else if (attr_val === "ttm18_m_t") {
+				$('table').colorColumn(2);
+				$('#ttm-car').addClass("selected");
+			} else if (attr_val === "ttm18_sl_t") {
+				$('table').colorColumn(3);
+				$('#ttm-car').addClass("selected");
 			}
 		});
 	}, 250);
