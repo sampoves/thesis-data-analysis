@@ -1,7 +1,87 @@
  <!-- This is the HTML code for the travel time comparison information dialog -->
  <!-- for Sampo Vesanen's MSc thesis. 6.6.2020. -->
 <div id='abbr-info' title='Travel time comparison app' style='display:none;'>
-	<h1>Abbreviations</h1>
+	<h2>Abbreviations</h2>
 	<p>This is the default dialog which is useful for displaying information. The dialog window can be moved, resized and closed with the 'x' icon.</p>
-	<h1>Calculation formulae</h1>
+	
+	<h4>Tooltip column names</h4>
+	<table class='legend-table'>
+		<tr>
+			<th>Abbreviation</th>
+			<th colspan='2'>Meaning</th>
+		</tr>
+		<tr>
+			<td class='legend-td'>r</td>
+			<td class='legend-td'>Rush hour (09:00&ndash;11.00, 15.00&ndash;17.00)</td>
+		</tr>
+		<tr>
+			<td class='legend-td'>m</td>
+			<td class='legend-td'>Midday tarkista yksityiskohdat!!</td>
+		</tr>
+		<tr>
+			<td class='legend-td'>sl</td>
+			<td class='legend-td'>Speed limits</td>
+		</tr>
+	</table>
+	
+	<h4>Tooltip TTM18 row names</h4>
+	<table class='legend-table'>
+		<tr>
+			<th>Row name</th>
+			<th colspan='2'>Contents</th>
+		</tr>
+		<tr>
+			<td class='legend-td'>sfp</td>
+			<td class='legend-td'>Time consumed in searching for parking. Averaged per postal code area.</td>
+		</tr>
+		<tr>
+			<td class='legend-td'>wtd_avg</td>
+			<td class='legend-td'>Walking time to the final destination. Averaged per postal code area.</td>
+		</tr>
+	</table>
+	<table class='legend-table'>
+		<tr>
+			<td class='legend-td'>avg</td>
+			<td class='legend-td'>The complete travel time from origin YKR ID to the destination YKR ID, <code>sfp</code> and <code>wtd</code> included, averaged for the current postal code area. Value in minutes.</td>
+		</tr>
+		<tr>
+			<td class='legend-td'>drivetime</td>
+			<td class='legend-td'>The driving part of the complete travel time from origin YKR ID to the destination YKR ID. <code>sfp</code> and <code>wtd</code> are substracted from the total travel time. Value in minutes.</td>
+		</tr>
+		<tr>
+			<td class='legend-td'>pct</td>
+			<td class='legend-td'>How much does <code>sfp</code> and <code>wtd</code> constitute of the total travel time. A percentage value.</td>
+		</tr>
+	</table>
+	
+	<h4>Thesis data row names</h4>
+	<p>All values are rounded to two decimal places.</p>
+	<table class='legend-table'>
+		<tr>
+			<th>Row name</th>
+			<th colspan='2'>Contents</th>
+		</tr>
+		<tr>
+			<td class='legend-td'>sfp_avg</td>
+			<td class='legend-td'>A fixed 0.42 minutes for all YKR IDs in the entirety of Helsinki Capital Region (Toivonen et al. 2014)</td>
+		</tr>
+		<tr>
+			<td class='legend-td'>wtd_avg</td>
+			<td class='legend-td'>A fixed 2.0 minutes for all YKR IDs in the entirety of Helsinki Capital Region, except in a square defined over the central Helsinki, where this value is a fixed 2.5 minutes for an YKR ID (Toivonen et al. 2014).</td>
+		</tr>
+	</table>
+	<table class='legend-table'>
+		<tr>
+			<td class='legend-td'>TTM18 avg</td>
+			<td class='legend-td'>rush</td>
+		</tr>
+		<tr>
+			<td class='legend-td'>TTM18 drivetime</td>
+			<td class='legend-td'><code>middyu</code></td>
+		</tr>
+		<tr>
+			<td class='legend-td'>TTM18 pct</td>
+			<td class='legend-td'>jotis</td>
+		</tr>
+	</table>
 </div>

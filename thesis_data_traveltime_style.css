@@ -17,6 +17,11 @@ html, body {
 hr {
 	margin-left: 0px;
 }
+/* code tag adjustments to fit the app */
+code {
+	color: white;
+	background-color: #222324;
+}
 /* Specifying font-family is important in shinyapps.io to prohibit the use of ugly
 default fonts in ggiraph (svg) objects. Property "pointer-events" here makes the zipcode 
 labels in Interactive map invisible to the cursor. */
@@ -207,6 +212,7 @@ polyline:not([title]), polyline[title=""] {
 .tg {
 	border-collapse: collapse;
 	border-spacing: 0;
+	border-radius: 5px;
 	margin-bottom: 4px;
 	table-layout: fixed;
 	width: 165px;
@@ -241,15 +247,18 @@ polyline:not([title]), polyline[title=""] {
 /* Together with .tg table-layout and width, set column widths
 It is discussed here https://stackoverflow.com/a/19316337/9455395 
 that this is a bad performance solution */
-.tg tr > *:nth-child(1) { width:34%; }
-.tg tr > *:nth-child(2) { width:22%; }
-.tg tr > *:nth-child(3) { width:22%; }
-.tg tr > *:nth-child(4) { width:22%; }
+.tg tr > *:nth-child(1) { width: 34%; }
+.tg tr > *:nth-child(2) { width: 22%; }
+.tg tr > *:nth-child(3) { width: 22%; }
+.tg tr > *:nth-child(4) { width: 22%; }
 
 
 /*-------------------------*/
 /* jQuery UI dialog window */
 /*-------------------------*/
+#abbr-info {
+	max-height: 600px;
+}
 .ui-front { /* dialog window in front to svg tooltip */
 	z-index: 1001;
 }
@@ -287,6 +296,25 @@ https://stackoverflow.com/q/31584544/9455395 */
 	-webkit-box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.6);  
 	-moz-box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.6); 
 	box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.6);
+}
+.legend-table {
+	border-collapse: collapse;
+	border-radius: 5px;
+	width: 100%;
+	margin-bottom: 4px;
+}
+.legend-table th, 
+.legend-table td {
+  padding: 4px;
+  text-align: left;
+  border-bottom: 1px solid #222324;
+}
+.legend-table tr > *:nth-child(1) {
+	width: 25%;
+}
+/* no horizontal line for the last row of table */
+.legend-table tbody > tr:last-child > td {
+  border-bottom: 0;
 }
 
 /*--------------------------*/

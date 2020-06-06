@@ -35,7 +35,6 @@ ReadAndClean <- function(fp) {
 
 
 
-
 CreateJenksColumn2 <- function(fortified, postal, datacol, newcolname, classes_n = 5) {
   
   # Use this function to create a column in fortified dataframe that can be

@@ -41,7 +41,7 @@ library(ggnewscale)
 
 
 # App version
-app_v <- "0029 (6.6.2020)"
+app_v <- "0030 (6.6.2020)"
 
 
 # Working directory
@@ -445,6 +445,8 @@ server <- function(input, output, session) {
     # the separate html file indicated in variable "info_path"
     runjs("$('#abbr-info').dialog({
             dialogClass: 'dialog-dropshadow',
+            maxWidth:500,
+            maxHeight:800,
             show: {
               effect: 'fade',
               duration: 300

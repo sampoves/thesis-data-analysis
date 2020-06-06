@@ -106,9 +106,10 @@ function clean(str) {
 
 // Highlight table column that is currently active in map fill
 // With the help from: https://stackoverflow.com/a/18487765/9455395
+// use :not selector to exempt td's of #legend-table from this functionality
 $.fn.colorColumn = function(column) {
 	return this.find('tr').map(function() {
-		return $(this).find('td').eq(column).css({
+		return $(this).find('td:not(.legend-td)').eq(column).css({
 			'font-weight': 'bold',
 			'background-color': '#008a27'
 		});
