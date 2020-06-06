@@ -4,7 +4,7 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 5.6.2020
+# 6.6.2020
 
 
 
@@ -17,6 +17,22 @@
 TTM18fst_fetch <- function(x, pos) {
   fst::read_fst(x, from = pos, to = pos, as.data.table = TRUE)
 }
+
+
+
+ReadAndClean <- function(fp) {
+  
+  # Use this function to read a html file into R and clean it of tabulator 
+  # spaces and HTML comments.
+  
+  result <- 
+    paste(readLines(fp), collapse = "") %>%
+    gsub("[\t]", "", .) %>%
+    gsub(" <!--(.*?)-->", "", .)
+  
+  return(result)
+}
+
 
 
 

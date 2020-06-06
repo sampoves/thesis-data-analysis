@@ -60,6 +60,17 @@ text {
 #sidebar::-webkit-scrollbar-track {
 	background-color: #15171d;
 }
+/* jQuery dialog scrollbars */
+#abbr-info::-webkit-scrollbar, 
+#abbr-info::-webkit-scrollbar-corner {
+	background-color: transparent;
+}
+#abbr-info::-webkit-scrollbar-thumb {
+   background-color: #55616f;
+}
+#abbr-info::-webkit-scrollbar-thumb:hover {
+   background-color: #798797;
+}
 
 /*----------------*/
 /* sidebarPanel() */
@@ -234,6 +245,49 @@ that this is a bad performance solution */
 .tg tr > *:nth-child(2) { width:22%; }
 .tg tr > *:nth-child(3) { width:22%; }
 .tg tr > *:nth-child(4) { width:22%; }
+
+
+/*-------------------------*/
+/* jQuery UI dialog window */
+/*-------------------------*/
+.ui-front { /* dialog window in front to svg tooltip */
+	z-index: 1001;
+}
+.ui-widget.ui-widget-content {
+	border: 1px solid #131417;
+}
+/* A long standing bug in jQuery permanently shrinks the child div when resizing
+window. padding and margin properties here help with the div shrinking, but I think
+my custom toolbars can be a bit glitchy with this solution. Will accept this, though.
+https://stackoverflow.com/q/31584544/9455395 */
+.ui-dialog .ui-dialog-content  {
+    /* Fix resizing issue where content doesn't fit in the dialog anymore */
+    padding: 3.5px;
+}
+.ui-dialog .ui-dialog-titlebar  {
+    /* Adjust the titlebar so it is equal to the content fix */
+    margin: 3.5px;
+}
+.ui-widget-header {
+	border: 1px solid #1c1e22;
+	background: #28292d;
+	color: #bebebf;
+}
+.ui-widget-content {
+	background: #424952;
+	color: #bebebf;
+}
+.ui-corner-all {
+	border-top-right-radius: 5px;
+	border-top-left-radius: 5px;
+	border-bottom-right-radius: 5px;
+	border-bottom-left-radius: 5px;
+}
+.dialog-dropshadow {
+	-webkit-box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.6);  
+	-moz-box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.6); 
+	box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.6);
+}
 
 /*--------------------------*/
 /* Font Awesome utilisation */

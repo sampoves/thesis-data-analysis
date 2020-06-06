@@ -15,7 +15,7 @@
 # TODO: Remember arbitrary selection of timeofday in thesisdata! Triplecheck it
 # TODO: unique_ykr and ykr_ids should be the same thing, remove unique_ykr
 # TODO: Some of the compare map fills have NA color grey for other purposes.
-# Check out what's with that
+# Check out what's up with that
 # TODO: row and column colouring not complete for new map fill options
 
 
@@ -41,7 +41,7 @@ library(ggnewscale)
 
 
 # App version
-app_v <- "0028 (6.6.2020)"
+app_v <- "0029 (6.6.2020)"
 
 
 # Working directory
@@ -61,6 +61,7 @@ postal_path <- file.path(wd, "postal_for_r.csv")
 csspath <- file.path(wd, "python/thesis_data_traveltime_style.css")
 jspath <- file.path(wd, "python/thesis_data_traveltime_script.js")
 tooltip_path <- file.path(wd, "python/thesis_data_traveltime_tooltip.html")
+info_path <- file.path(wd, "python/thesis_data_traveltime_info.html")
 
 # Source functions and postal code variables
 source(file.path(wd, "python/thesis_data_traveltime_funcs.R"))
@@ -440,8 +441,10 @@ server <- function(input, output, session) {
   # Launch tooltip legend jQuery UI dialog
   observeEvent(input$info_dialog_btn, {
     
-    # the div id='abbr-info' is located in 6.4 ShinyApp header 
+    # the div id='abbr-info' is loaded in 6.4 ShinyApp header, div itself is
+    # the separate html file indicated in variable "info_path"
     runjs("$('#abbr-info').dialog({
+            dialogClass: 'dialog-dropshadow',
             show: {
               effect: 'fade',
               duration: 300
@@ -572,11 +575,8 @@ server <- function(input, output, session) {
     current_subdiv_lbl <- data.frame(subdiv_lbl)
     
     # Get the tooltip from a separate HTML file. Get rid of indentation and 
-    # HTML comments.
-    tooltip_content <-
-      paste(readLines(tooltip_path), collapse = "") %>%
-      gsub("[\t]", "", .) %>%
-      gsub(" <!--(.*?)-->", "", .)
+    # HTML comments in the function ReadAndClean().
+    tooltip_content <- ReadAndClean(tooltip_path)
 
     g <- ggplot(data = inputdata) + 
       geom_polygon_interactive(
@@ -806,11 +806,7 @@ ui <- shinyUI(
     htmltools::includeScript(path = jspath),
     
     # jQuery UI dialog content
-    tags$html(
-      HTML("<div id='abbr-info' title='Tooltip legend' style='display:none;'>",
-           "<p>This is the default dialog which is useful for displaying information.",
-           "The dialog window can be moved, resized and closed with the 'x' icon.</p>",
-           "</div>")),
+    tags$html(HTML(ReadAndClean(info_path))),
     
     
     ### 6.5 Sidebar layout -----------------------------------------------------
