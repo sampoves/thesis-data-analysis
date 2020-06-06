@@ -1,14 +1,14 @@
  <!-- This is the HTML code for the travel time comparison information dialog -->
- <!-- for Sampo Vesanen's MSc thesis. 6.6.2020. -->
+ <!-- for Sampo Vesanen's MSc thesis. 7.6.2020. -->
 <div id='abbr-info' title='Travel time comparison app' style='display:none;'>
-	<h2>Abbreviations</h2>
-	<p>This is the default dialog which is useful for displaying information. The dialog window can be moved, resized and closed with the 'x' icon.</p>
+	<h3>Parking of private car in Helsinki Capital Region: compare Helsinki Region Travel Time Matrix 2018 and thesis survey results of Sampo Vesanen</h3>
+	<p>Use these tables to learn about the abbreviations of the tooltip and the methodology how the values were calculated. All values presented were rounded to two decimal places.</p>
 	
 	<h4>Tooltip column names</h4>
 	<table class='legend-table'>
 		<tr>
 			<th>Abbreviation</th>
-			<th colspan='2'>Meaning</th>
+			<th>Meaning</th>
 		</tr>
 		<tr>
 			<td class='legend-td'>r</td>
@@ -16,72 +16,133 @@
 		</tr>
 		<tr>
 			<td class='legend-td'>m</td>
-			<td class='legend-td'>Midday tarkista yksityiskohdat!!</td>
+			<td class='legend-td'>Midday, check official</td>
 		</tr>
 		<tr>
 			<td class='legend-td'>sl</td>
-			<td class='legend-td'>Speed limits</td>
+			<td class='legend-td'>Speed limits, check official</td>
 		</tr>
 	</table>
 	
-	<h4>Tooltip TTM18 row names</h4>
+	<h4><i class='icon database'></i>TTM18, row names</h4>
 	<table class='legend-table'>
 		<tr>
 			<th>Row name</th>
-			<th colspan='2'>Contents</th>
+			<th>Contents</th>
 		</tr>
 		<tr>
+			<td class='legend-td'>car_x_t</td>
+			<td class='legend-td'>The the entire travel time (per YKR ID, unit minutes) from origin YKR ID to destination YKR ID. Data directly from TTM18. Source columns are <code>car_r_t</code>, <code>car_m_t</code>, or <code>car_sl_t</code> for <code>r</code>, <code>m</code>, <code>sl</code>, respectively. NA indicates an non-navigable route.</td>
+		</tr>
+	</table>
+	<table class='legend-table'>
+		<tr>
 			<td class='legend-td'>sfp</td>
-			<td class='legend-td'>Time consumed in searching for parking. Averaged per postal code area.</td>
+			<td class='legend-td'>Time consumed in searching for parking. In TTM18 data, this is 0.42 minutes for all YKR IDs in the entirety of Helsinki Capital Region (Toivonen et al. 2014).</td>
 		</tr>
 		<tr>
 			<td class='legend-td'>wtd_avg</td>
-			<td class='legend-td'>Walking time to the final destination. Averaged per postal code area.</td>
+			<td class='legend-td'>An averaged value (per postal code area, unit minutes) of walking time from one's parked private car to the final destination. This is <b>2.0 minutes</b> for all YKR IDs in the entirety of Helsinki Capital Region, except in a square defined over the center of Helsinki, where the value is <b>2.5 minutes</b> for an YKR ID (Toivonen et al. 2014).</td>
 		</tr>
 	</table>
 	<table class='legend-table'>
 		<tr>
 			<td class='legend-td'>avg</td>
-			<td class='legend-td'>The complete travel time from origin YKR ID to the destination YKR ID, <code>sfp</code> and <code>wtd</code> included, averaged for the current postal code area. Value in minutes.</td>
+			<td class='legend-td'>An averaged value (per postal code area, unit minutes) of the complete travel time with private car from origin YKR ID to all destination YKR IDs in the current postal code area.
+			<ul>
+				<li>Formula: <code>car_x_t<sub>1</sub> + car_x_t<sub>2</sub> + ... + car_x_t<sub>n</sub> / n</code>, where x is <code>r</code>, <code>m</code>, or <code>sl</code>.</li>
+			</ul>
+			</td>
 		</tr>
 		<tr>
 			<td class='legend-td'>drivetime</td>
-			<td class='legend-td'>The driving part of the complete travel time from origin YKR ID to the destination YKR ID. <code>sfp</code> and <code>wtd</code> are substracted from the total travel time. Value in minutes.</td>
+			<td class='legend-td'>The length (value per postal code area, unit minutes) of the driving part of the complete travel time from origin YKR ID to the destination YKR ID with private car without searching for parking or walking to destination.
+			<ul>
+				<li>Formula: <code>ttm18_x_avg - ttm18_sfp - ttm18_wtd_avg</code>, where x is <code>r</code>, <code>m</code>, or <code>sl</code>.</li>
+			</ul>
+			</td>
 		</tr>
 		<tr>
 			<td class='legend-td'>pct</td>
-			<td class='legend-td'>How much does <code>sfp</code> and <code>wtd</code> constitute of the total travel time. A percentage value.</td>
+			<td class='legend-td'>How much does searching for parking and walking to one's destination constitute of the total drivetime? Value per postal code area, unit percent.
+			<ul>
+				<li>Formula: <code>(ttm18_sfp + ttm18_wtd_avg) / ttm18_x_drivetime</code>, where x is <code>r</code>, <code>m</code>, or <code>sl</code>.</li>
+			</ul>
+			</td>
 		</tr>
 	</table>
 	
-	<h4>Thesis data row names</h4>
-	<p>All values are rounded to two decimal places.</p>
+	<h4><i class='icon poll'></i>Thesis data, row names</h4>
 	<table class='legend-table'>
 		<tr>
 			<th>Row name</th>
-			<th colspan='2'>Contents</th>
+			<th>Contents</th>
 		</tr>
 		<tr>
 			<td class='legend-td'>sfp_avg</td>
-			<td class='legend-td'>A fixed 0.42 minutes for all YKR IDs in the entirety of Helsinki Capital Region (Toivonen et al. 2014)</td>
+			<td class='legend-td'>hgfhgfhgf</td>
 		</tr>
 		<tr>
 			<td class='legend-td'>wtd_avg</td>
-			<td class='legend-td'>A fixed 2.0 minutes for all YKR IDs in the entirety of Helsinki Capital Region, except in a square defined over the central Helsinki, where this value is a fixed 2.5 minutes for an YKR ID (Toivonen et al. 2014).</td>
+			<td class='legend-td'>hfghfghgf</td>
 		</tr>
 	</table>
 	<table class='legend-table'>
 		<tr>
-			<td class='legend-td'>TTM18 avg</td>
-			<td class='legend-td'>rush</td>
+			<td class='legend-td'>drivetime</td>
+			<td class='legend-td'>rush
+			<ul>
+				<li>Formula: <code>sadfasdf asdfa sdf</code>, where x is <code>r</code>, <code>m</code>, or <code>sl</code>.</li>
+			</ul>
+			</td>
 		</tr>
 		<tr>
-			<td class='legend-td'>TTM18 drivetime</td>
-			<td class='legend-td'><code>middyu</code></td>
+			<td class='legend-td'>pct</td>
+			<td class='legend-td'><code>middyu</code>
+			<ul>
+				<li>Formula: <code>sadfasdf asdfa sdf</code>, where x is <code>r</code>, <code>m</code>, or <code>sl</code>.</li>
+			</ul>
+			</td>
+		</tr>
+	</table>
+	
+	<h4><i class='icon exchange-alt'></i>Comparison of TTM18 and thesis data, row names</h4>
+	<table class='legend-table'>
+		<tr>
+			<th>Row name</th>
+			<th>Contents</th>
 		</tr>
 		<tr>
-			<td class='legend-td'>TTM18 pct</td>
-			<td class='legend-td'>jotis</td>
+			<td class='legend-td'>sfp</td>
+			<td class='legend-td'>hgfhgfhgf
+			<ul>
+				<li>Formula: <code>sadfasdf asdfa sdf</code>, where x is <code>r</code>, <code>m</code>, or <code>sl</code>.</li>
+			</ul>
+			</td>
+		</tr>
+		<tr>
+			<td class='legend-td'>wtd</td>
+			<td class='legend-td'>hfghfghgf
+			<ul>
+				<li>Formula: <code>sadfasdf asdfa sdf</code>, where x is <code>r</code>, <code>m</code>, or <code>sl</code>.</li>
+			</ul>
+			</td>
+		</tr>
+		<tr>
+			<td class='legend-td'>drivetime</td>
+			<td class='legend-td'>hfghfghgf
+			<ul>
+				<li>Formula: <code>sadfasdf asdfa sdf</code>, where x is <code>r</code>, <code>m</code>, or <code>sl</code>.</li>
+			</ul>
+			</td>
+		</tr>
+		<tr>
+			<td class='legend-td'>pct</td>
+			<td class='legend-td'>hfghfghgf
+			<ul>
+				<li>Formula: <code>sadfasdf asdfa sdf</code>, where x is <code>r</code>, <code>m</code>, or <code>sl</code>.</li>
+			</ul>
+			</td>
 		</tr>
 	</table>
 </div>

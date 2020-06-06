@@ -2,7 +2,7 @@
 /* CSS style sheet of for the Travel time comparison app of my thesis results
 
 "Parking of private cars and spatial accessibility in Helsinki Capital Region" 
-by Sampo Vesanen, 6.6.2020 */
+by Sampo Vesanen, 7.6.2020 */
 
 html, body {
 	height: 100%;
@@ -310,7 +310,7 @@ https://stackoverflow.com/q/31584544/9455395 */
   border-bottom: 1px solid #222324;
 }
 .legend-table tr > *:nth-child(1) {
-	width: 25%;
+	width: 20%;
 }
 /* no horizontal line for the last row of table */
 .legend-table tbody > tr:last-child > td {

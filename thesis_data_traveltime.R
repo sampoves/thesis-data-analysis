@@ -2,7 +2,7 @@
 # Helsinki Region Travel Time comparison application
 # Helsinki Region Travel Time Matrix 2018 <--> My thesis survey results
 
-# 6.6.2020
+# 7.6.2020
 # Sampo Vesanen
 
 # This interactive Travel time comparison application is dependent on ggiraph 
@@ -17,6 +17,7 @@
 # TODO: Some of the compare map fills have NA color grey for other purposes.
 # Check out what's up with that
 # TODO: row and column colouring not complete for new map fill options
+# TODO: laskenko pct:n drivetimesta vai avg:sta?! decide!!
 
 
 #### 1 Initialise --------------------------------------------------------------
@@ -41,7 +42,7 @@ library(ggnewscale)
 
 
 # App version
-app_v <- "0030 (6.6.2020)"
+app_v <- "0031 (7.6.2020)"
 
 
 # Working directory
@@ -441,11 +442,12 @@ server <- function(input, output, session) {
   # Launch tooltip legend jQuery UI dialog
   observeEvent(input$info_dialog_btn, {
     
-    # the div id='abbr-info' is loaded in 6.4 ShinyApp header, div itself is
-    # the separate html file indicated in variable "info_path"
+    # the div id='abbr-info' is loaded in "6.4 ShinyApp header", the div itself 
+    # is the separate html file indicated in variable "info_path"
     runjs("$('#abbr-info').dialog({
             dialogClass: 'dialog-dropshadow',
-            maxWidth:500,
+            width: 550,
+            maxWidth:600,
             maxHeight:800,
             show: {
               effect: 'fade',
