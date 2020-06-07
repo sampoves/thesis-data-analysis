@@ -2,7 +2,7 @@
 # Helsinki Region Travel Time comparison application
 # Helsinki Region Travel Time Matrix 2018 <--> My thesis survey results
 
-# 7.6.2020
+# 8.6.2020
 # Sampo Vesanen
 
 # This interactive Travel time comparison application is dependent on ggiraph 
@@ -10,10 +10,8 @@
 # ggiraph 0.7.0 would load the map an unreasonably long time. I strongly 
 # suspected some fault in the tooltip generation.
 
-# TODO: add download data functionality
 # TODO: colouring of tooltip table cells to assist conclusion drawing
 # TODO: Remember arbitrary selection of timeofday in thesisdata! Triplecheck it
-# TODO: unique_ykr and ykr_ids should be the same thing, remove unique_ykr
 # TODO: Some of the compare map fills have NA color grey for other purposes.
 # Check out what's up with that
 # TODO: row and column colouring not complete for new map fill options
@@ -42,7 +40,7 @@ library(ggnewscale)
 
 
 # App version
-app_v <- "0032 (7.6.2020)"
+app_v <- "0033 (7.6.2020)"
 
 
 # Working directory
@@ -411,9 +409,6 @@ subdiv_lbl["Östersundom", "lat"] %-=% 500
 subdiv_lbl["Östersundom", "long"] %-=% 400
 subdiv_lbl["Suur-Matinkylä", "lat"] %-=% 500
 
-# Get all unique ykr_id values
-unique_ykr <- unique(result$YKR_ID)
-
 # In this named vector the first part is the name of the new, classified
 # column. Second part is the original column from where the classification
 # was calculated from.
@@ -495,7 +490,7 @@ server <- function(input, output, session) {
            paste("Value maximum is", max(result$YKR_ID))) %then%
       need(input$ykrid >= min(result$YKR_ID), 
            paste("Value minimum is", min(result$YKR_ID))) %then%
-      need(input$ykrid %in% unique_ykr, "Value not a valid YKR_ID")
+      need(input$ykrid %in% ykr_ids, "Value not a valid YKR_ID")
     )
     input$ykrid
   })
@@ -511,7 +506,7 @@ server <- function(input, output, session) {
       help_output <- paste(
         "<p style='margin: 0 0 0px;'>",
         "<b>YKR_ID: ", validate_ykrid(), "</b>,<br>",
-        thisVal[["zipcode"]], " ", thisVal[["nimi"]], 
+        thisVal[["zipcode"]], " ", thisVal[["nimi"]],
         "</p>", sep = "")
     }
     help_output
@@ -589,8 +584,8 @@ server <- function(input, output, session) {
     #origincell <- grid_f[grid_f["YKR_ID"] == as.numeric(validate_ykrid()), ]
     origincell <- grid_f[grid_f["YKR_ID"] == as.numeric(origin_id), ]
     
-    # Format map labels (Equal breaks classes). Remove [, ], (, and ). Also add 
-    # list dash. Create named vector for the origin cell legend entry
+    # Format legend labels (Equal breaks classes). Remove [, ], (, and ). Also 
+    # add list dash. Create named vector for the origin cell legend entry
     l_labels <- gsub("(])|(\\()|(\\[)", "", levels(inputdata[, input$fill_column]))
     l_labels <- gsub(",", " \U2012 ", l_labels)
     o_label <- setNames("purple", 
@@ -679,16 +674,16 @@ server <- function(input, output, session) {
       # Legend settings
       theme(legend.title = element_text(size = 15),
             legend.text = element_text(size = 14))
-
     
-    #### On-off switch if statements 
+    
+    #### On-off switch if statements ---
     
     # Plot municipality boundaries on the map
     if(input$show_muns == TRUE) {
       
       # Municipality boundaries
       g <- g + geom_polygon(data = muns_f,
-                   aes(long, lat, group = group),
+                   aes(long, lat, group = group),   
                    linetype = "solid",
                    color = alpha("black", 0.9), 
                    fill = "NA",
