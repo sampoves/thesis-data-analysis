@@ -2,25 +2,25 @@
  <!-- for Sampo Vesanen's MSc thesis. 7.6.2020. -->
 <div id='abbr-info' title='Travel time comparison app' style='display:none;'>
 	<h3>Parking of private car in Helsinki Capital Region: compare Helsinki Region Travel Time Matrix 2018 and thesis survey results of Sampo Vesanen</h3>
-	<p>Use these tables to learn about the abbreviations of the tooltip and the methodology how the values were calculated. All values presented were rounded to two decimal places.</p>
+	<p>Focusing on private cars, this application visualises the parking time differences between Helsinki Region Travel Time Matrix 2018 (Tenkanen et al. 2018) and the survey data carried out for the master's thesis of Sampo Vesanen. Use this information dialog to learn how the tooltip values were calculated.</p>
 	
 	<h4>Tooltip column names</h4>
 	<table class='legend-table'>
 		<tr>
-			<th>Abbreviation</th>
-			<th>Meaning</th>
+			<th>Column name</th>
+			<th>Description</th>
 		</tr>
 		<tr>
 			<td class='legend-td'>r</td>
-			<td class='legend-td'>Rush hour (09:00&ndash;11.00, 15.00&ndash;17.00)</td>
+			<td class='legend-td'>Rush hour traffic (09:00&ndash;11.00, 15.00&ndash;17.00)</td>
 		</tr>
 		<tr>
 			<td class='legend-td'>m</td>
-			<td class='legend-td'>Midday, check official</td>
+			<td class='legend-td'>Midday traffic (09.00&ndash;15.00)</td>
 		</tr>
 		<tr>
 			<td class='legend-td'>sl</td>
-			<td class='legend-td'>Speed limits, check official</td>
+			<td class='legend-td'>Route following speed limits without any additional impedances. <b>NB!</b> For thesis data, this consists of timeofday: weekend data.</td>
 		</tr>
 	</table>
 	
@@ -28,21 +28,21 @@
 	<table class='legend-table'>
 		<tr>
 			<th>Row name</th>
-			<th>Contents</th>
+			<th>Description</th>
 		</tr>
 		<tr>
 			<td class='legend-td'>car_x_t</td>
-			<td class='legend-td'>The the entire travel time (per YKR ID, unit minutes) from origin YKR ID to destination YKR ID. Data directly from TTM18. Source columns are <code>car_r_t</code>, <code>car_m_t</code>, or <code>car_sl_t</code> for <code>r</code>, <code>m</code>, <code>sl</code>, respectively. NA indicates an non-navigable route.</td>
+			<td class='legend-td'>Travel time from origin to destination by private car, the whole travel chain has been taken into account. This is unchanged TTM18 data. Replace <i>x</i> in the row name with <code>r</code>, <code>m</code>, <code>sl</code> to receive <code>car_r_t</code>, <code>car_m_t</code>, or <code>car_sl_t</code>, respectively. NA indicates a non-navigable route.</td>
 		</tr>
 	</table>
 	<table class='legend-table'>
 		<tr>
 			<td class='legend-td'>sfp</td>
-			<td class='legend-td'>Time consumed in searching for parking. In TTM18 data, this is 0.42 minutes for all YKR IDs in the entirety of Helsinki Capital Region (Toivonen et al. 2014).</td>
+			<td class='legend-td'>Time consumed in searching for parking. In TTM18, this is <b>0.42 minutes</b> for all YKR IDs in the entirety of Helsinki Capital Region (Toivonen et al. 2014).</td>
 		</tr>
 		<tr>
 			<td class='legend-td'>wtd_avg</td>
-			<td class='legend-td'>An averaged value (per postal code area, unit minutes) of walking time from one's parked private car to the final destination. This is <b>2.0 minutes</b> for all YKR IDs in the entirety of Helsinki Capital Region, except in a square defined over the center of Helsinki, where the value is <b>2.5 minutes</b> for an YKR ID (Toivonen et al. 2014).</td>
+			<td class='legend-td'>An averaged value (per postal code area, unit minutes) of walking time from one's parked private car to the final destination. In TTM18 this is <b>2.0 minutes</b> for all YKR IDs in the entirety of Helsinki Capital Region, except in a square defined over the center of Helsinki, where the value is <b>2.5 minutes</b> for an YKR ID (Toivonen et al. 2014).</td>
 		</tr>
 	</table>
 	<table class='legend-table'>
@@ -56,7 +56,7 @@
 		</tr>
 		<tr>
 			<td class='legend-td'>drivetime</td>
-			<td class='legend-td'>The length (value per postal code area, unit minutes) of the driving part of the complete travel time from origin YKR ID to the destination YKR ID with private car without searching for parking or walking to destination.
+			<td class='legend-td'>The length of the driving part (value per postal code area, unit minutes) of the averaged complete travel time from origin YKR ID to the destination YKR IDs without searching for parking (TTM18 value) or walking to destination (TTM18 value).
 			<ul>
 				<li>Formula: <code>ttm18_x_avg - ttm18_sfp - ttm18_wtd_avg</code>, where x is <code>r</code>, <code>m</code>, or <code>sl</code>.</li>
 			</ul>
@@ -64,7 +64,7 @@
 		</tr>
 		<tr>
 			<td class='legend-td'>pct</td>
-			<td class='legend-td'>How much does searching for parking and walking to one's destination constitute of the total drivetime? Value per postal code area, unit percent.
+			<td class='legend-td'>How much does searching for parking and walking from one's parked car to the final destination constitute of the total drivetime? Value per postal code area, unit percent.
 			<ul>
 				<li>Formula: <code>(ttm18_sfp + ttm18_wtd_avg) / ttm18_x_drivetime</code>, where x is <code>r</code>, <code>m</code>, or <code>sl</code>.</li>
 			</ul>
@@ -76,31 +76,39 @@
 	<table class='legend-table'>
 		<tr>
 			<th>Row name</th>
-			<th>Contents</th>
+			<th>Description</th>
 		</tr>
 		<tr>
 			<td class='legend-td'>sfp_avg</td>
-			<td class='legend-td'>hgfhgfhgf</td>
+			<td class='legend-td'>Time consumed, on average, in searching for parking in different areas of Helsinki Capital Region, according to the thesis survey respondents. The values of thesis data variable <code>parktime</code> are averaged for the current postal code area.
+			<ul>
+				<li>Formula: <code>parktime<sub>1</sub> + parktime<sub>2</sub> + ... + parktime<sub>n</sub> / n</code>, while postal code value is constant.</li>
+			</ul>
+			</td>
 		</tr>
 		<tr>
 			<td class='legend-td'>wtd_avg</td>
-			<td class='legend-td'>hfghfghgf</td>
+			<td class='legend-td'>Average walking time from one's parked private car to the final destination in different areas of Helsinki Capital Region, according to the thesis survey respondents. The values of thesis data variable <code>walktime</code>are averaged for the current postal code area.
+			<ul>
+				<li>Formula: <code>walktime<sub>1</sub> + walktime<sub>2</sub> + ... + walktime<sub>n</sub> / n</code>, while postal code value is constant.</li>
+			</ul>
+			</td>
 		</tr>
 	</table>
 	<table class='legend-table'>
 		<tr>
 			<td class='legend-td'>drivetime</td>
-			<td class='legend-td'>rush
+			<td class='legend-td'>The length of the driving part (value per postal code area, unit minutes) of the mean travel time from origin YKR ID to the destination YKR IDs, without searching for parking (thesis survey mean) or walking to destination (thesis survey mean).
 			<ul>
-				<li>Formula: <code>sadfasdf asdfa sdf</code>, where x is <code>r</code>, <code>m</code>, or <code>sl</code>.</li>
+				<li>Formula: <code>ttm_x_avg - thesis_x_sfp - thesis_x_wtd</code>, where x is <code>r</code>, <code>m</code>, or <code>sl</code>.</li>
 			</ul>
 			</td>
 		</tr>
 		<tr>
 			<td class='legend-td'>pct</td>
-			<td class='legend-td'><code>middyu</code>
+			<td class='legend-td'>How much do the thesis mean values for searching for parking and walking from one's parked car to the final destination constitute of the total drivetime, calculated from TTM18 data? Value per postal code area, unit percent.
 			<ul>
-				<li>Formula: <code>sadfasdf asdfa sdf</code>, where x is <code>r</code>, <code>m</code>, or <code>sl</code>.</li>
+				<li>Formula: <code>(thesis_x_sfp + thesis_x_wtd) / ttm_x_avg</code>, where x is <code>r</code>, <code>m</code>, or <code>sl</code>.</li>
 			</ul>
 			</td>
 		</tr>
@@ -110,39 +118,51 @@
 	<table class='legend-table'>
 		<tr>
 			<th>Row name</th>
-			<th>Contents</th>
+			<th>Description</th>
 		</tr>
 		<tr>
 			<td class='legend-td'>sfp</td>
-			<td class='legend-td'>hgfhgfhgf
+			<td class='legend-td'>Compare TTM18 and thesis survey value for searching for parking. If this comparison value is smaller than one, searching for parking takes longer in TTM18. If value is larger than one, searching for parking is longer in thesis data.
 			<ul>
-				<li>Formula: <code>sadfasdf asdfa sdf</code>, where x is <code>r</code>, <code>m</code>, or <code>sl</code>.</li>
+				<li>Formula: <code>thesis_x_sfp / ttm_sfp</code>, where x is <code>r</code>, <code>m</code>, or <code>sl</code>.</li>
 			</ul>
 			</td>
 		</tr>
 		<tr>
 			<td class='legend-td'>wtd</td>
-			<td class='legend-td'>hfghfghgf
+			<td class='legend-td'>Compare TTM18 and thesis survey value for the duration to walk from one's parked car to the final destination of the journey. 
 			<ul>
-				<li>Formula: <code>sadfasdf asdfa sdf</code>, where x is <code>r</code>, <code>m</code>, or <code>sl</code>.</li>
+				<li>Formula: <code>thesis_x_wtd / ttm_wtd_avg</code>, where x is <code>r</code>, <code>m</code>, or <code>sl</code>.</li>
 			</ul>
 			</td>
 		</tr>
 		<tr>
 			<td class='legend-td'>drivetime</td>
-			<td class='legend-td'>hfghfghgf
+			<td class='legend-td'>Compare the driving time part of the travel chain in TTM18 and thesis data.
 			<ul>
-				<li>Formula: <code>sadfasdf asdfa sdf</code>, where x is <code>r</code>, <code>m</code>, or <code>sl</code>.</li>
+				<li>Formula: <code>thesis_x_drivetime / ttm_x_drivetime</code>, where x is <code>r</code>, <code>m</code>, or <code>sl</code>.</li>
 			</ul>
 			</td>
 		</tr>
 		<tr>
 			<td class='legend-td'>pct</td>
-			<td class='legend-td'>hfghfghgf
+			<td class='legend-td'>Compare the percentual value of significance of searching for parking and walking to one's destination in TTM18 and thesis data.
 			<ul>
-				<li>Formula: <code>sadfasdf asdfa sdf</code>, where x is <code>r</code>, <code>m</code>, or <code>sl</code>.</li>
+				<li>Formula: <code>thesis_x_pct / ttm_x_pct</code>, where x is <code>r</code>, <code>m</code>, or <code>sl</code>.</li>
 			</ul>
 			</td>
 		</tr>
 	</table>
+	
+	<h4>Literature</h4>
+	<ul>
+		<li>Tenkanen, H., J.L. Espinosa, E. Willberg, V. Heikinheimo, A. Tarnanen, T. Jaakkola, J. Järvi, M. Salonen, T. Toivonen (2018). Helsinki Region Travel Time Matrix 2018. DOI: 10.13140/RG.2.2.20858.39362.</li>
+		<li>Toivonen, T., M. Salonen, H. Tenkanen, P. Saarsalmi, T. Jaakkola & J. Järvi (2014). Joukkoliikenteellä, autolla ja kävellen: Avoin saavutettavuusaineisto pääkaupunkiseudulla. <i>Terra</i> 126: 3, 127&ndash;136.</li>
+	</ul>
+	<h4>Spatial data sources</h4>
+	<ul>
+		<li><a href='https://hri.fi/data/dataset/paakaupunkiseudun-aluejakokartat'>Municipality subdivisions</a> (C) Helsingin, Espoon, Vantaan ja Kauniaisten mittausorganisaatiot 2011. Aineisto on muokkaamaton. License <a href='https://creativecommons.org/licenses/by/4.0/deed.en'>CC BY 4.0</a>.</li>
+		<li><a href='https://www.stat.fi/tup/paavo/index_en.html'>Postal code area boundaries</a> (C) Statistics Finland 2019. Retrieved 27.6.2019. License <a href='https://creativecommons.org/licenses/by/4.0/deed.en'>CC BY 4.0</a>.</li>
+		<li><a href='http://urn.fi/urn:nbn:fi:csc-kata00001000000000000226'>Regional population density 2012</a> (C) Statistics Finland 2019. Retrieved 13.3.2020. License <a href='http://www.nic.funet.fi/index/geodata/tilastokeskus/Tilastokeskus_terms_of_use_2018.pdf'>Other (Open)</a>.</li>
+	</ul>
 </div>

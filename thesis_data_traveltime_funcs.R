@@ -11,6 +11,11 @@
 # infix operator for sequential validation of input$ykrid
 `%then%` <- shiny:::`%OR%`
 
+# These custom infix operators work in the manner of += and ++ in C++/C# and
+# Java. Save some space and increase readability.
+`%+=%` = function(e1, e2) eval.parent(substitute(e1 <- e1 + e2))
+`%-=%` = function(e1, e2) eval.parent(substitute(e1 <- e1 - e2))
+
 
 
 # Fetch function for fst format Travel Time Matrix 2018 data
@@ -26,7 +31,7 @@ ReadAndClean <- function(fp) {
   # spaces and HTML comments.
   
   result <- 
-    paste(readLines(fp), collapse = "") %>%
+    paste(readLines(fp, encoding = "UTF-8"), collapse = "") %>%
     gsub("[\t]", "", .) %>%
     gsub(" <!--(.*?)-->", "", .)
   

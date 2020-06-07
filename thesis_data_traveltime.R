@@ -42,7 +42,7 @@ library(ggnewscale)
 
 
 # App version
-app_v <- "0031 (7.6.2020)"
+app_v <- "0032 (7.6.2020)"
 
 
 # Working directory
@@ -387,6 +387,30 @@ zipcode_lbl <- GetCentroids(postal_f, "zipcode", "zipcode")
 muns_lbl <- GetCentroids(muns_f, "nimi", "nimi")
 subdiv_lbl <- GetCentroids(subdiv_f, "Name", "Name")
 
+# Finetune locations for certain labels in zipcode_lbl. GetCentroids saves the 
+# second parameter as rownames. We can use that to reliably find correct rows
+# to finetune.
+zipcode_lbl["00250", 1] %+=% 500 # Taka-Töölö
+zipcode_lbl["00980", 1] %-=% 850 # Etelä-Vuosaari
+zipcode_lbl["01640", 2] %-=% 300 # Hämevaara 
+zipcode_lbl["01730", 2] %-=% 500 # Vantaanpuisto
+zipcode_lbl["02380", 1] %+=% 2400 # Suvisaaristo
+zipcode_lbl["02820", 1] %+=% 1000 # Nupuri-Nuuksio
+
+# Remove municipality names from subdivision annotations
+subdiv_lbl$label <- gsub(".* ", "", unique(subdiv_f$Name)) 
+rownames(subdiv_lbl) <- gsub(".* ", "", rownames(subdiv_lbl))
+
+# Manually move labels several subdivision labels to better positions.
+subdiv_lbl["Suur-Espoonlahti", "lat"] <- subdiv_lbl["Southern", "lat"]
+subdiv_lbl["Suur-Espoonlahti", "long"] <- subdiv_lbl["Pohjois-Espoo", "long"]
+subdiv_lbl["Southeastern", "lat"] <- subdiv_lbl["Southern", "lat"] + 1500
+subdiv_lbl["Southeastern", "long"] <- subdiv_lbl["Korso", "long"]
+subdiv_lbl["Southern", "lat"] %+=% 3000
+subdiv_lbl["Östersundom", "lat"] %-=% 500
+subdiv_lbl["Östersundom", "long"] %-=% 400
+subdiv_lbl["Suur-Matinkylä", "lat"] %-=% 500
+
 # Get all unique ykr_id values
 unique_ykr <- unique(result$YKR_ID)
 
@@ -447,8 +471,8 @@ server <- function(input, output, session) {
     runjs("$('#abbr-info').dialog({
             dialogClass: 'dialog-dropshadow',
             width: 550,
-            maxWidth:600,
-            maxHeight:800,
+            maxWidth: 600,
+            maxHeight: 800,
             show: {
               effect: 'fade',
               duration: 300

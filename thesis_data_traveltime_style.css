@@ -286,6 +286,9 @@ https://stackoverflow.com/q/31584544/9455395 */
 	background: #424952;
 	color: #bebebf;
 }
+.ui-widget-content a {
+	color: white;
+}
 .ui-corner-all {
 	border-top-right-radius: 5px;
 	border-top-left-radius: 5px;
@@ -331,6 +334,10 @@ render reliably */
     -webkit-font-smoothing: antialiased;
 	font-weight: 900; /* solid */
 	font-size: 1.0em;
+}
+/* additional margin when class icon inside h4 tag (jQuery info dialog) */
+h4 .icon {
+	margin: 0px 6px 0px 0px;
 }
 .calculator::before {
 	content: "\f1ec";
