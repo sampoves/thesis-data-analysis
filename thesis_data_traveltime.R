@@ -40,7 +40,7 @@ library(ggnewscale)
 
 
 # App version
-app_v <- "0033 (7.6.2020)"
+app_v <- "0034 (8.6.2020)"
 
 
 # Working directory
@@ -97,6 +97,13 @@ walkingHki <-
   dplyr::summarise(geometry = sf::st_combine(geometry)) %>%
   sf::st_cast("POLYGON")
 
+# Fortified walking center for visualisation
+walk_f <- 
+  st_coordinates(walkingHki)[, 1:2] %>%
+  sp::Polygon(.) %>%
+  ggplot2::fortify(.) %>%
+  dplyr::mutate(label = "walk")
+
 walking_ids <- 
   sf::st_intersection(sf::st_as_sf(grid), walkingHki) %>%
   as(., "Spatial") %>%
@@ -130,7 +137,8 @@ postal <-
   read.csv(file = postal_path,
            header = TRUE, 
            sep = ",",
-           colClasses = c(zipcode = "factor", kunta = "factor"),
+           colClasses = c(zipcode = "factor", kunta = "factor", 
+                          geometry = "character"),
            stringsAsFactors = TRUE) %>%
   dplyr::select(c(2, 3, 6, 108))
 
@@ -191,7 +199,7 @@ subdiv_f <- subdiv_f[order(subdiv_f$Name), ]
 
 #### 3 Spatial join postal data to grid, fortify -------------------------------
 
-# First, spatjoin postal data to grid centroids. Left FALSE is inner join. Then,
+# First, spatjoin postal data to grid centroids. Left = FALSE is inner join. Then,
 # Join centroid data back to grid polygons and convert grid to SpatialPolygons.
 # Finally, fortify for ggplot while keeping important columns.
 grid_f <- 
@@ -200,7 +208,7 @@ grid_f <-
               join = st_intersects,
               left = FALSE) %>%
   sf::st_join(sf::st_as_sf(grid), 
-              .,
+              ., 
               join = st_intersects) %>%
   as(., "Spatial") %>%
   {dplyr::left_join(ggplot2::fortify(.),
@@ -222,7 +230,6 @@ grid_f <-
 # Only specify an origin id (from_id in TTM18). to_id remains open because we 
 # want to view all possible destinations.
 origin_id <- "5985086"
-dt_grid <- as.data.table(grid_f)
 
 # Get all of the fst filepaths
 all_fst <- list.files(path = fst_filepath,
@@ -243,12 +250,15 @@ pos <- match(as.numeric(origin_id), ykr_ids) # get index of current id
 result <- 
   lapply(all_fst, FUN = TTM18fst_fetch, pos) %>%
   data.table::rbindlist(., fill = TRUE) %>%
-  data.table::merge.data.table(dt_grid, ., by.x = "YKR_ID", by.y = "to_id")
+  data.table::merge.data.table(as.data.table(grid_f), .,
+                               by.x = "YKR_ID", by.y = "to_id")
 
 
 
 #### 4.2 Add thesis data values to the fortified data --------------------------
 
+# TODO: move to before TTM18 fetch. additionally, this can be a static dataset,
+# I Think
 thesisdata <- 
   read.csv(file = recordspath,
            header = TRUE, 
@@ -270,6 +280,7 @@ thesisdata <-
                 sl_wtd = case_when(timeofday == 4 ~ walktime, TRUE ~ NA_integer_)) %>%
   
   # Calculate summaries by zipcode, then round to two decimals
+  # TODO: concisement
   dplyr::summarise(thesis_r_sfp = mean(r_sfp, na.rm = TRUE),
                    thesis_m_sfp = mean(m_sfp, na.rm = TRUE),
                    thesis_sl_sfp = mean(sl_sfp, na.rm = TRUE),
@@ -684,7 +695,6 @@ server <- function(input, output, session) {
       # Municipality boundaries
       g <- g + geom_polygon(data = muns_f,
                    aes(long, lat, group = group),   
-                   linetype = "solid",
                    color = alpha("black", 0.9), 
                    fill = "NA",
                    size = 1.0)
@@ -695,7 +705,6 @@ server <- function(input, output, session) {
       # Municipality boundaries
       g <- g + geom_polygon(data = subdiv_f,
                             aes(long, lat, group = group),
-                            linetype = "solid",
                             color = alpha("black", 0.6), 
                             fill = "NA",
                             size = 0.6)
@@ -707,10 +716,25 @@ server <- function(input, output, session) {
       # Postal code area boundaries
       g <- g + geom_polygon(data = postal_f,
                    aes(long, lat, group = group),
-                   linetype = "solid",
                    color = "black", 
                    fill = "NA",
                    size = 0.2)
+    }
+    
+    # Plot walking center boundaries
+    if(input$show_walk == TRUE) {
+      
+      # New legend entry for walking center of Helsinki
+      g <- g + ggnewscale::new_scale_color() +
+        
+        geom_polygon(data = walk_f,
+                     aes(long, lat, color = label),
+                     fill = NA,
+                     size = 0.9) + 
+        
+        scale_color_manual(name = NULL,
+                           values = setNames("#6b01ab", "walk"),
+                           labels = "Helsinki walking\ncenter (TTM18)")
     }
 
     # Plot postal code area labels
@@ -764,6 +788,7 @@ server <- function(input, output, session) {
                              fill = alpha("white", 0.5),
                              size = 5))
     }
+    
     
     # Prepare the downloadable interactive map. "interactive_out" is brought 
     # to global environment for download. Use larger fonts.
@@ -833,7 +858,7 @@ ui <- shinyUI(
     
     
     ### 6.5 Sidebar layout -----------------------------------------------------
-    titlePanel(NULL, windowTitle = "Travel time comparison ShinyApp"),
+    titlePanel(NULL, windowTitle = "Sampo Vesanen's thesis: Travel time comparison"),
     sidebarLayout(
       sidebarPanel(
         id = "sidebar",
@@ -893,12 +918,13 @@ ui <- shinyUI(
         HTML("</div>"),
         
         # Layer options: on-off switches
+        # Postal code areas
         HTML("<label class='control-label'>Layer options</label>",
              "<div id='contents'>",
              "<div class='onoff-container'>",
-             "<div class='onoff-div'><b>Postal code areas</b><br>"),
-        # Switch for interactive map labels
-        HTML("<label class='control-label onoff-label' for='show_postal'>Boundaries</label>"),
+             
+             "<div class='onoff-div'><b>Postal code areas</b><br>",
+             "<label class='control-label onoff-label' for='show_postal'>Boundaries</label>"),
         shinyWidgets::switchInput(
           inputId = "show_postal",
           size = "mini",
@@ -909,7 +935,16 @@ ui <- shinyUI(
           size = "mini",
           value = FALSE),
         HTML("</div>"),
-                   
+        
+        # Walking center switch
+        HTML("<div class='onoff-div'><b>Helsinki walking center (TTM18)</b><br>",
+             "<label class='control-label onoff-label' for='show_walk'>Boundaries</label>"),
+        shinyWidgets::switchInput(
+          inputId = "show_walk",
+          size = "mini",
+          value = TRUE),
+        HTML("</div>"),
+        
         # Switches for muns
         HTML("<div class='onoff-div'><b>Municipalities</b><br>",
              "<label class='control-label onoff-label' for='show_muns'>Boundaries</label>"),
