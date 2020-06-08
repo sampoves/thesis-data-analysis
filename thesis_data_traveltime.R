@@ -40,7 +40,7 @@ library(ggnewscale)
 
 
 # App version
-app_v <- "0034 (8.6.2020)"
+app_v <- "0035 (8.6.2020)"
 
 
 # Working directory
@@ -91,9 +91,9 @@ grid_point <- rgeos::gCentroid(grid, byid = TRUE)
 # which fit inside the walking center polygon.
 walkingHki <- 
   data.frame(
-    lon = c(387678.024778, 387891.53396, 383453.380944, 383239.871737, 387678.024778),
+    long = c(387678.024778, 387891.53396, 383453.380944, 383239.871737, 387678.024778),
     lat = c(6675360.99039, 6670403.35286, 6670212.21613, 6675169.85373, 6675360.99039)) %>%
-  sf::st_as_sf(coords = c("lon", "lat"), crs = app_crs) %>%
+  sf::st_as_sf(coords = c("long", "lat"), crs = app_crs) %>%
   dplyr::summarise(geometry = sf::st_combine(geometry)) %>%
   sf::st_cast("POLYGON")
 
@@ -197,68 +197,10 @@ subdiv_f <- subdiv_f[order(subdiv_f$Name), ]
 
 
 
-#### 3 Spatial join postal data to grid, fortify -------------------------------
+# 2.5 Thesis survey data ------------------------------------------------------- 
 
-# First, spatjoin postal data to grid centroids. Left = FALSE is inner join. Then,
-# Join centroid data back to grid polygons and convert grid to SpatialPolygons.
-# Finally, fortify for ggplot while keeping important columns.
-grid_f <- 
-  sf::st_join(sf::st_as_sf(grid_point), 
-              sf::st_as_sf(postal),
-              join = st_intersects,
-              left = FALSE) %>%
-  sf::st_join(sf::st_as_sf(grid), 
-              ., 
-              join = st_intersects) %>%
-  as(., "Spatial") %>%
-  {dplyr::left_join(ggplot2::fortify(.),
-                    as.data.frame(.) %>%
-                      dplyr::mutate(id = as.character(dplyr::row_number() - 1)))} %>%
-  dplyr::select(-c(x, y))
-
-
-
-#### 4 Integrate TTM18 ---------------------------------------------------------
-
-# NB! The execution of this code will fail at this point if TTM18 data is not 
-# converted to fst. Please make sure you have run "thesis_data_traveltime_conv.R".
-
-
-
-#### 4.1 Fetch TTM18 data ------------------------------------------------------
-
-# Only specify an origin id (from_id in TTM18). to_id remains open because we 
-# want to view all possible destinations.
-origin_id <- "5985086"
-
-# Get all of the fst filepaths
-all_fst <- list.files(path = fst_filepath,
-                      pattern = ".fst$",
-                      recursive = TRUE,
-                      full.names = TRUE)
-
-# Get the position of the current origin. In TTM data, origin ykr_ids are always
-# in the same position. We will use this to get the order to the ykr_ids once,
-# and then, when needed, find out the location queried ykr_id from the vector
-# of all the ykr_ids.
-ykrid_source <- file.path(ttm_path, "/5785xxx/travel_times_to_ 5785640.txt")
-ykr_ids <- read.csv(ykrid_source, sep = ";")[, 1]
-pos <- match(as.numeric(origin_id), ykr_ids) # get index of current id
-
-# Fetch fst format TTM18 and process the dataframe with the YKR_ID "origin_id"
-# as the starting point.
-result <- 
-  lapply(all_fst, FUN = TTM18fst_fetch, pos) %>%
-  data.table::rbindlist(., fill = TRUE) %>%
-  data.table::merge.data.table(as.data.table(grid_f), .,
-                               by.x = "YKR_ID", by.y = "to_id")
-
-
-
-#### 4.2 Add thesis data values to the fortified data --------------------------
-
-# TODO: move to before TTM18 fetch. additionally, this can be a static dataset,
-# I Think
+# Import Python processed thesis survey data. This data is later (chapter 4.2) 
+# joined with the currently fetched YKR ID Travel Time Matrix 2018 data.
 thesisdata <- 
   read.csv(file = recordspath,
            header = TRUE, 
@@ -280,7 +222,6 @@ thesisdata <-
                 sl_wtd = case_when(timeofday == 4 ~ walktime, TRUE ~ NA_integer_)) %>%
   
   # Calculate summaries by zipcode, then round to two decimals
-  # TODO: concisement
   dplyr::summarise(thesis_r_sfp = mean(r_sfp, na.rm = TRUE),
                    thesis_m_sfp = mean(m_sfp, na.rm = TRUE),
                    thesis_sl_sfp = mean(sl_sfp, na.rm = TRUE),
@@ -288,6 +229,7 @@ thesisdata <-
                    thesis_m_wtd = mean(m_wtd, na.rm = TRUE),
                    thesis_sl_wtd = mean(sl_wtd, na.rm = TRUE),
                    vals_in_zip = length(zipcode)) %>%
+  
   dplyr::mutate_if(is.numeric, round, 2)
 
 # NaNs are introduced in calculation of mean. Change to NA. Do not apply changes
@@ -295,101 +237,9 @@ thesisdata <-
 thesisdata[, -1] <- data.frame(
   sapply(thesisdata[, -1], function(x) ifelse(is.nan(x), NA, x)))
 
-# Join "thesisdata" to "result", the currently calculated travel times dataframe
-result <- dplyr::left_join(result, thesisdata, by = "zipcode") 
 
 
-
-#### 4.3 Add averaged columns --------------------------------------------------
-
-car_cols <- c("car_r_t", "car_m_t", "car_sl_t", "ttm_r_avg", "ttm_m_avg", 
-              "ttm_sl_avg")
-
-# Get grouped means of TTM18 data for current starting point to all 
-# destinations for each postal code area
-result <- result %>%
-  
-  # Add Travel Time Matrix "searching for parking" and "walk to destination" data
-  dplyr::mutate(ttm_sfp = 0.42,
-                ttm_wtd = case_when(YKR_ID %in% walking_ids ~ 2.5, TRUE ~ 2)) %>%
-  dplyr::group_by(zipcode) %>%
-  dplyr::summarise(ttm_r_avg = mean(car_r_t),
-                   ttm_m_avg = mean(car_m_t),
-                   ttm_sl_avg = mean(car_sl_t),
-                   ttm_sfp = mean(ttm_sfp),
-                   ttm_wtd = mean(ttm_wtd)) %>%
-  dplyr::mutate_if(is.numeric, round, 2) %>%
-  
-  # Join summarised columns back to original dataframe "result"
-  dplyr::inner_join(result, ., by = "zipcode") %>%
-  
-  # Generate drivetime (min) and pct (%) columns for TTM18 data
-  dplyr::mutate(ttm_r_drivetime = ttm_r_avg - ttm_sfp - ttm_wtd,
-                ttm_m_drivetime = ttm_m_avg - ttm_sfp - ttm_wtd,
-                ttm_sl_drivetime = ttm_sl_avg - ttm_sfp - ttm_wtd,
-                ttm_r_pct = (ttm_sfp + ttm_wtd) / ttm_r_drivetime,
-                ttm_m_pct = (ttm_sfp + ttm_wtd) / ttm_m_drivetime,
-                ttm_sl_pct = (ttm_sfp + ttm_wtd) / ttm_sl_drivetime) %>%
-  dplyr::mutate_at(vars(ttm_r_pct, ttm_m_pct, ttm_sl_pct), ~round(., 2)) %>%
-
-  # If zipcode is NA, then convert all calculated data to NA as well
-  # TODO: make this shorter
-  dplyr::mutate(ttm_r_avg = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_r_avg),
-                ttm_m_avg = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_m_avg),
-                ttm_sl_avg = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_sl_avg),
-                ttm_sfp = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_sfp),
-                ttm_wtd = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_wtd),
-                ttm_r_drivetime = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_r_drivetime),
-                ttm_m_drivetime = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_m_drivetime),
-                ttm_sl_drivetime = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_sl_drivetime),
-                ttm_r_pct = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_r_pct),
-                ttm_m_pct = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_m_pct),
-                ttm_sl_pct = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_sl_pct)) %>%
-  dplyr::mutate_at(car_cols, ~dplyr::na_if(., -1)) %>%
-  
-  # Add the rest of thesis_ columns. with if_else change possible NA's to zeros
-  # so that calculations are not rendered NA
-  dplyr::mutate(thesis_r_drivetime = ttm_r_avg - 
-                  if_else(is.na(thesis_r_sfp), 0, thesis_r_sfp) - 
-                  if_else(is.na(thesis_r_wtd), 0, thesis_r_wtd),
-                thesis_m_drivetime = ttm_m_avg - 
-                  if_else(is.na(thesis_m_sfp), 0, thesis_m_sfp) - 
-                  if_else(is.na(thesis_m_wtd), 0, thesis_m_wtd),
-                thesis_sl_drivetime = ttm_sl_avg - 
-                  if_else(is.na(thesis_sl_sfp), 0, thesis_sl_sfp) - 
-                  if_else(is.na(thesis_sl_wtd), 0, thesis_sl_wtd),
-                thesis_r_pct = (
-                  if_else(is.na(thesis_r_sfp), 0, thesis_r_sfp) + 
-                  if_else(is.na(thesis_r_wtd), 0, thesis_r_wtd)) / ttm_r_avg,
-                thesis_m_pct = (
-                  if_else(is.na(thesis_m_sfp), 0, thesis_m_sfp) + 
-                  if_else(is.na(thesis_m_wtd), 0, thesis_m_wtd)) / ttm_m_avg,
-                thesis_sl_pct = (
-                  if_else(is.na(thesis_sl_sfp), 0, thesis_sl_sfp) + 
-                  if_else(is.na(thesis_sl_wtd), 0, thesis_sl_wtd)) / ttm_sl_avg) %>%
-  dplyr::mutate_at(vars(thesis_r_pct, thesis_m_pct, thesis_sl_pct), ~round(., 2)) %>%
-  
-  # Add TTM18/thesis comparison columns
-  dplyr::mutate(comp_r_sfp = thesis_r_sfp / ttm_sfp,
-                comp_m_sfp = thesis_m_sfp / ttm_sfp,
-                comp_sl_sfp = thesis_sl_sfp / ttm_sfp,
-                comp_r_wtd = thesis_r_wtd / ttm_wtd,
-                comp_m_wtd = thesis_m_wtd / ttm_wtd,
-                comp_sl_wtd = thesis_sl_wtd / ttm_wtd,
-                comp_r_drivetime = thesis_r_drivetime / ttm_r_drivetime,
-                comp_m_drivetime = thesis_m_drivetime / ttm_m_drivetime,
-                comp_sl_drivetime = thesis_sl_drivetime / ttm_sl_drivetime,
-                comp_r_pct = thesis_r_pct / ttm_r_pct,
-                comp_m_pct = thesis_m_pct / ttm_m_pct,
-                comp_sl_pct = thesis_sl_pct / ttm_sl_pct) %>%
-  dplyr::mutate_at(vars(comp_r_sfp, comp_m_sfp, comp_sl_sfp, comp_r_wtd,
-                        comp_m_wtd, comp_sl_wtd, comp_r_drivetime, 
-                        comp_m_drivetime, comp_sl_drivetime, comp_r_pct,
-                        comp_m_pct, comp_sl_pct), ~round(., 2))
-
-
-
-#### 5 Labeling plot features --------------------------------------------------
+#### 2.6 Label comparison plot features ----------------------------------------
 
 # Create labels for zipcodes
 zipcode_lbl <- GetCentroids(postal_f, "zipcode", "zipcode")
@@ -464,6 +314,161 @@ vis_cols <- c("ttm18_r_t" = "car_r_t",
 
 
 
+#### 3 Spatial join postal data to grid, fortify -------------------------------
+
+# First, spatjoin postal data to grid centroids. Left = FALSE is inner join. Then,
+# Join centroid data back to grid polygons and convert grid to SpatialPolygons.
+# Finally, fortify for ggplot while keeping important columns.
+grid_f <- 
+  sf::st_join(sf::st_as_sf(grid_point), 
+              sf::st_as_sf(postal),
+              join = st_intersects,
+              left = FALSE) %>%
+  sf::st_join(sf::st_as_sf(grid), 
+              ., 
+              join = st_intersects) %>%
+  as(., "Spatial") %>%
+  {dplyr::left_join(ggplot2::fortify(.),
+                    as.data.frame(.) %>%
+                      dplyr::mutate(id = as.character(dplyr::row_number() - 1)))} %>%
+  dplyr::select(-c(x, y))
+
+
+
+#### 4 Integrate TTM18 ---------------------------------------------------------
+
+# NB! The execution of this code will fail at this point if TTM18 data is not 
+# converted to fst. Please make sure you have run "thesis_data_traveltime_conv.R".
+
+
+
+#### 4.1 Fetch TTM18 data ------------------------------------------------------
+
+# Only specify an origin id (from_id in TTM18). to_id remains open because we 
+# want to view all possible destinations.
+origin_id <- "5985086"
+
+# Get all of the fst filepaths
+all_fst <- list.files(path = fst_filepath,
+                      pattern = ".fst$",
+                      recursive = TRUE,
+                      full.names = TRUE)
+
+# Get the position of the current origin. In TTM data, origin ykr_ids are always
+# in the same position. We will use this to get the order to the ykr_ids once,
+# and then, when needed, find out the location queried ykr_id from the vector
+# of all the ykr_ids.
+ykrid_source <- file.path(ttm_path, "/5785xxx/travel_times_to_ 5785640.txt")
+ykr_ids <- read.csv(ykrid_source, sep = ";")[, 1]
+pos <- match(as.numeric(origin_id), ykr_ids) # get index of current id
+
+# Fetch fst format TTM18 and process the dataframe with the YKR_ID "origin_id"
+# as the starting point.
+result <- 
+  lapply(all_fst, FUN = TTM18fst_fetch, pos) %>%
+  data.table::rbindlist(., fill = TRUE) %>%
+  data.table::merge.data.table(as.data.table(grid_f), .,
+                               by.x = "YKR_ID", by.y = "to_id")
+
+
+
+#### 4.2 Add thesis data values to the fortified data --------------------------
+
+# Join "thesisdata", thesis survey results, to "result", the currently 
+# calculated travel times dataframe
+result <- dplyr::left_join(result, thesisdata, by = "zipcode") 
+
+
+
+#### 4.3 Add new data columns --------------------------------------------------
+
+# Get grouped means of TTM18 data for current starting point to all 
+# destinations for each postal code area
+result <- result %>%
+  
+  # Add Travel Time Matrix "searching for parking" and "walk to destination" data
+  dplyr::mutate(ttm_sfp = 0.42,
+                ttm_wtd = case_when(YKR_ID %in% walking_ids ~ 2.5, TRUE ~ 2)) %>%
+  dplyr::group_by(zipcode) %>%
+  dplyr::summarise(ttm_r_avg = mean(car_r_t),
+                   ttm_m_avg = mean(car_m_t),
+                   ttm_sl_avg = mean(car_sl_t),
+                   ttm_sfp = mean(ttm_sfp),
+                   ttm_wtd = mean(ttm_wtd)) %>%
+  dplyr::mutate_if(is.numeric, round, 2) %>%
+  
+  # Join summarised columns back to original dataframe "result"
+  dplyr::inner_join(result, ., by = "zipcode") %>%
+  
+  # Generate drivetime (min) and pct (%) columns for TTM18 data
+  dplyr::mutate(ttm_r_drivetime = ttm_r_avg - ttm_sfp - ttm_wtd,
+                ttm_m_drivetime = ttm_m_avg - ttm_sfp - ttm_wtd,
+                ttm_sl_drivetime = ttm_sl_avg - ttm_sfp - ttm_wtd,
+                ttm_r_pct = (ttm_sfp + ttm_wtd) / ttm_r_drivetime,
+                ttm_m_pct = (ttm_sfp + ttm_wtd) / ttm_m_drivetime,
+                ttm_sl_pct = (ttm_sfp + ttm_wtd) / ttm_sl_drivetime) %>%
+  dplyr::mutate_at(vars(ttm_r_pct, ttm_m_pct, ttm_sl_pct), ~round(., 2)) %>%
+
+  # If zipcode is NA, then convert all calculated data to NA as well
+  dplyr::mutate(ttm_r_avg = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_r_avg),
+                ttm_m_avg = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_m_avg),
+                ttm_sl_avg = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_sl_avg),
+                ttm_sfp = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_sfp),
+                ttm_wtd = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_wtd),
+                ttm_r_drivetime = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_r_drivetime),
+                ttm_m_drivetime = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_m_drivetime),
+                ttm_sl_drivetime = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_sl_drivetime),
+                ttm_r_pct = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_r_pct),
+                ttm_m_pct = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_m_pct),
+                ttm_sl_pct = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_sl_pct)) %>%
+  dplyr::mutate_at(vars(car_r_t, car_m_t, car_sl_t, ttm_r_avg, ttm_m_avg, 
+                        ttm_sl_avg),
+                   ~dplyr::na_if(., -1)) %>%
+  
+  # Add the rest of thesis_ columns. with if_else() change possible NA's to 
+  # zeros so that calculations are not rendered NA
+  dplyr::mutate(thesis_r_drivetime = ttm_r_avg - 
+                  if_else(is.na(thesis_r_sfp), 0, thesis_r_sfp) - 
+                  if_else(is.na(thesis_r_wtd), 0, thesis_r_wtd),
+                thesis_m_drivetime = ttm_m_avg - 
+                  if_else(is.na(thesis_m_sfp), 0, thesis_m_sfp) - 
+                  if_else(is.na(thesis_m_wtd), 0, thesis_m_wtd),
+                thesis_sl_drivetime = ttm_sl_avg - 
+                  if_else(is.na(thesis_sl_sfp), 0, thesis_sl_sfp) - 
+                  if_else(is.na(thesis_sl_wtd), 0, thesis_sl_wtd),
+                thesis_r_pct = (
+                  if_else(is.na(thesis_r_sfp), 0, thesis_r_sfp) + 
+                  if_else(is.na(thesis_r_wtd), 0, thesis_r_wtd)) / ttm_r_avg,
+                thesis_m_pct = (
+                  if_else(is.na(thesis_m_sfp), 0, thesis_m_sfp) + 
+                  if_else(is.na(thesis_m_wtd), 0, thesis_m_wtd)) / ttm_m_avg,
+                thesis_sl_pct = (
+                  if_else(is.na(thesis_sl_sfp), 0, thesis_sl_sfp) + 
+                  if_else(is.na(thesis_sl_wtd), 0, thesis_sl_wtd)) / ttm_sl_avg) %>%
+  dplyr::mutate_at(vars(thesis_r_pct, thesis_m_pct, thesis_sl_pct), 
+                   ~round(., 2)) %>%
+  
+  # Add TTM18/thesis comparison columns
+  dplyr::mutate(comp_r_sfp = thesis_r_sfp / ttm_sfp,
+                comp_m_sfp = thesis_m_sfp / ttm_sfp,
+                comp_sl_sfp = thesis_sl_sfp / ttm_sfp,
+                comp_r_wtd = thesis_r_wtd / ttm_wtd,
+                comp_m_wtd = thesis_m_wtd / ttm_wtd,
+                comp_sl_wtd = thesis_sl_wtd / ttm_wtd,
+                comp_r_drivetime = thesis_r_drivetime / ttm_r_drivetime,
+                comp_m_drivetime = thesis_m_drivetime / ttm_m_drivetime,
+                comp_sl_drivetime = thesis_sl_drivetime / ttm_sl_drivetime,
+                comp_r_pct = thesis_r_pct / ttm_r_pct,
+                comp_m_pct = thesis_m_pct / ttm_m_pct,
+                comp_sl_pct = thesis_sl_pct / ttm_sl_pct) %>%
+  dplyr::mutate_at(vars(comp_r_sfp, comp_m_sfp, comp_sl_sfp, comp_r_wtd,
+                        comp_m_wtd, comp_sl_wtd, comp_r_drivetime, 
+                        comp_m_drivetime, comp_sl_drivetime, comp_r_pct,
+                        comp_m_pct, comp_sl_pct), 
+                   ~round(., 2))
+
+
+
 #### 6 Travel Time Comparison ShinyApp -----------------------------------------
 server <- function(input, output, session) {
 
@@ -487,7 +492,8 @@ server <- function(input, output, session) {
               effect: 'fade',
               duration: 300
             }
-          });")
+          });
+          $('#abbr-info').dialog('open');")
   })
   
   # Validate ykr-id in the numeric field
@@ -523,8 +529,9 @@ server <- function(input, output, session) {
     help_output
   })
   
-  # this is the reactively built Travel Time Matrix for the origin id inserted
-  # by the user. User's chosen YKR_ID value is validate_ykrid().
+  # This is the reactively built Helsinki Region Travel Time Matrix 2018 for the 
+  # origin id inserted by the user. User's chosen YKR_ID value is 
+  # validate_ykrid().
   thisTTM_df <- reactive({
     
     origin_id <- validate_ykrid()
@@ -578,13 +585,15 @@ server <- function(input, output, session) {
   # TODO: could this be forgotten and just move the function to renderGirafe()?
   equalBreaksColumn <- reactive({
     
-    res <- CreateJenksColumn2(result, result, vis_cols[[input$fill_column]], 
-                              input$fill_column, input$classIntervals_n)
+    res <- CreateJenksColumn_b(result, result, vis_cols[[input$fill_column]], 
+                               input$fill_column, input$classIntervals_n)
     res
   })
   
   
   #### 6.2 ShinyApp outputs ----------------------------------------------------
+  
+  #### 6.2.1 Da plot -----------------------------------------------------------
   output$grid <- renderGirafe({
     
     # Reactive value: Insert equal breaks for mapping.
@@ -604,14 +613,18 @@ server <- function(input, output, session) {
                           unique() %>% 
                           as.character())
     
-    # current_subdiv is created so that values can be removed when necessary
-    # but they can also be returned into view.
+    # current_subdiv_lbl is created so that any values can be removed when 
+    # necessary from the dataframe. By using a duplicate of subdiv_lbl, labels 
+    # can also be returned into view.
     current_subdiv_lbl <- data.frame(subdiv_lbl)
     
     # Get the tooltip from a separate HTML file. Get rid of indentation and 
     # HTML comments in the function ReadAndClean().
     tooltip_content <- ReadAndClean(tooltip_path)
 
+    
+    
+    #### 6.2.1.1 Define ggplot obligatory elements ----
     g <- ggplot(data = inputdata) + 
       geom_polygon_interactive(
         color = "black",
@@ -639,7 +652,8 @@ server <- function(input, output, session) {
                              comp_r_sfp, comp_m_sfp, comp_sl_sfp,
                              comp_r_wtd, comp_m_wtd, comp_sl_wtd,
                              comp_r_drivetime, comp_m_drivetime, comp_sl_drivetime,
-                             comp_r_pct, comp_m_pct, comp_sl_pct)))) +
+                             comp_r_pct, comp_m_pct, comp_sl_pct))
+                   )) +
       
       # Jenks classes colouring and labels
       scale_fill_brewer(palette = "RdYlGn",
@@ -658,7 +672,7 @@ server <- function(input, output, session) {
       # properties, in this case a new scale_fill. 
       ggnewscale::new_scale_fill() +
       
-      # Map starting position
+      # Plot origin YKR_ID, the starting position for TTM18
       geom_polygon(data = origincell,
                    aes(long, lat, fill = nimi),
                    linetype = "solid",
@@ -677,6 +691,7 @@ server <- function(input, output, session) {
                      st.size = 4, 
                      height = 0.01, 
                      transform = FALSE) +
+      
       ggsn::north(inputdata, 
                   location = "topright", 
                   scale = 0.04, 
@@ -687,7 +702,8 @@ server <- function(input, output, session) {
             legend.text = element_text(size = 14))
     
     
-    #### On-off switch if statements ---
+    
+    #### 6.2.1.2 If statements for on-off switches ----
     
     # Plot municipality boundaries on the map
     if(input$show_muns == TRUE) {
@@ -790,6 +806,8 @@ server <- function(input, output, session) {
     }
     
     
+    #### 6.2.1.3 Download and rendering ----
+    
     # Prepare the downloadable interactive map. "interactive_out" is brought 
     # to global environment for download. Use larger fonts.
     compare_out <<- g + 
@@ -808,8 +826,7 @@ server <- function(input, output, session) {
                           opts_toolbar(position = "topright", saveaspng = FALSE)))
   })
   
-  
-  #### 6.2.1 Download comparison map ----
+  # Actual download functionality
   output$dl_compare <- downloadHandler(
     filename = paste("ttm18-thesis-compare_",
                      "mapfill-", input$fill_column, "_fromid-", input$ykrid, "_",
@@ -823,7 +840,7 @@ server <- function(input, output, session) {
   )
   
   
-  #### 6.2.2 Other outputs -------------------------------------------------------
+  #### 6.2.2 Other outputs -----------------------------------------------------
   output$ykr_validator <- renderText({ 
     validate_ykrid()
   })

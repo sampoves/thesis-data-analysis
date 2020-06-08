@@ -40,8 +40,12 @@ ReadAndClean <- function(fp) {
 
 
 
-CreateJenksColumn2 <- function(fortified, postal, datacol, newcolname, classes_n = 5) {
+CreateJenksColumn_b <- function(fortified, postal, datacol, newcolname, 
+                                classes_n = 5) {
   
+  # Function name _b refers to this function being the variant B of the function
+  # CreateJenksColumn in thesis_data_vis.R.
+  #
   # Use this function to create a column in fortified dataframe that can be
   # used to portray Jenks breaks colouring in a ggplot map. Dplyr note: to
   # enable parameters as column names in dplyr, apply !! and := for the left
