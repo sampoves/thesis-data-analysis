@@ -4,7 +4,7 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 9.6.2020
+# 10.6.2020
 
 
 
@@ -78,10 +78,10 @@ AddLevelCounts <- function(thisDf, datacol, newcolname, classes_n,
   # This function is non-optimal as half of this functionality is carried out
   # in CreateJenksColumn_b(), but for the sake of clarity keep them apart.
   
-  theseIntervals <- suppressWarnings(
+  intervals <- suppressWarnings(
     classInt::classIntervals(thisDf[, datacol], n = classes_n, style = "equal"))
   
-  content_cut <- cut(thisDf[, datacol], unique(theseIntervals$brks),
+  interv_codes <- cut(thisDf[, datacol], unique(intervals$brks),
                      include.lowest = T)
   input_levels <- levels(thisDf[, newcolname])
   
@@ -89,13 +89,10 @@ AddLevelCounts <- function(thisDf, datacol, newcolname, classes_n,
   # In left_join NAs can be preserved if the new dataframe has NA present
   # like this: data.frame(brks = c(input_levels, NA))
   levels_n <-
-    dplyr::select(pelledata, zipcode) %>%
-    dplyr::mutate(brks = content_cut) %>%
-    dplyr::group_by(brks, zipcode) %>%
-    dplyr::tally() %>%
-    dplyr::select(-n) %>%
+    dplyr::select(thisDf, zipcode) %>%
+    dplyr::mutate(brks = interv_codes) %>%
     dplyr::group_by(brks) %>%
-    dplyr::summarise(n = n()) %>%
+    dplyr::summarise(n = dplyr::n_distinct(zipcode)) %>%
     dplyr::left_join(data.frame(brks = input_levels), .) %>%
     dplyr::mutate(n = tidyr::replace_na(n, 0))
   

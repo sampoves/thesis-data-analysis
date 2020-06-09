@@ -2,7 +2,7 @@
 # Helsinki Region Travel Time comparison application
 # Helsinki Region Travel Time Matrix 2018 <--> My thesis survey results
 
-# 9.6.2020
+# 10.6.2020
 # Sampo Vesanen
 
 # This interactive Travel time comparison application is dependent on ggiraph 
@@ -12,10 +12,9 @@
 
 # TODO: colouring of tooltip table cells to assist conclusion drawing
 # TODO: Remember arbitrary selection of timeofday in thesisdata! Triplecheck it
-# TODO: row and column colouring not complete for new map fill options
 # TODO: laskenko pct:n drivetimesta vai avg:sta?! decide!!
-# TODO: "distance from" legend text is just wrong
-# TODO: thesis drivetimes have negative values
+# TODO: legend name is better, but still incorrect in comparison, maybe elsewhere as well
+# thesis drivetimes have negative values (this is a result in itself i think)
 
 
 #### 1 Initialise --------------------------------------------------------------
@@ -40,7 +39,7 @@ library(ggnewscale)
 
 
 # App version
-app_v <- "0037 (9.6.2020)"
+app_v <- "0038 (10.6.2020)"
 
 
 # Working directory
@@ -586,64 +585,100 @@ server <- function(input, output, session) {
     # Reactive value: Insert equal breaks for mapping.
     #inputdata <- thisTTM_df()
     inputdata <- equalBreaksColumn()
-    
-    
-    
-    
-    # # WHY IS LEGEND BROKKEN!?
-    # #pelledata <<- inputdata #use compare_m_sfp
-    # #pelledata2 <<- inputdata #use ttm18_m_avg
-    # AddLevelCounts <- function(thisDf, datacol, newcolname, class_n,
-    #                            labels_to_input) {
-    # 
-    #   thisInterval <- classInt::classIntervals(thisDf[, datacol], n = class_n,
-    #                                            style = "equal")
-    #   content_cut <- cut(thisDf[, datacol], unique(thisInterval$brks),
-    #                      include.lowest = T)
-    #   input_levels <- levels(thisDf[, newcolname])
-    # 
-    #   # Create level appearance count in this clunky way.
-    #   # In left_join NAs can be preserved if the new dataframe has NA present
-    #   # like this: data.frame(brks = c(input_levels, NA))
-    #   levels_n <-
-    #     dplyr::select(pelledata, zipcode) %>%
-    #     dplyr::mutate(brks = content_cut) %>%
-    #     dplyr::group_by(brks, zipcode) %>%
-    #     dplyr::tally() %>%
-    #     dplyr::select(-n) %>%
-    #     dplyr::group_by(brks) %>%
-    #     dplyr::summarise(n = n()) %>%
-    #     dplyr::left_join(data.frame(brks = input_levels), .) %>%
-    #     dplyr::mutate(n = tidyr::replace_na(n, 0))
-    # 
-    #   result <- paste0(labels_to_input, " [", levels_n$n, "]")
-    # 
-    #   return(result)
-    # }
-    # #lol3 <- AddLevelCounts(pelledata, "comp_m_sfp", "compare_m_sfp", 11, lol1)
-    
-  
-    
-    
-    
-    
+
+
     
     # Get an origin cell for mapping
     #origincell <- grid_f[grid_f["YKR_ID"] == as.numeric(validate_ykrid()), ]
     origincell <- grid_f[grid_f["YKR_ID"] == as.numeric(origin_id), ]
+    
+    
+    # move this when finished
+    GetLegendName <- function(val, origincell) {
+      
+      # Appropriately name the plot legend. Use parts of the input string to
+      # figure out what to print. Use strwrap to automatically add newlines
+      # to long strings.
+      
+      wherefrom <- paste0("origin ", origincell[, "YKR_ID"][1])
+      
+      if (grepl("ttm18_", val)) {
+        datasource <- "TTM18 data"
+        
+      } else if (grepl("msc_", val)) {
+        datasource <- "Thesis data"
+        
+      } else if (grepl("compare_", val)) {
+        datasource <- "Comparison data"
+      }
+      
+      if (grepl("_t", val)) {
+        description <- 
+          "The total travel time to YKR_ID (min)"
+        
+      } else if (grepl("_avg", val)) {
+        description <- 
+          "The mean total travel time to postal code area (min)"
+        
+      } else if (grepl("_drivetime", val)) {
+        description <- 
+          "The mean duration of the driving segment of the total travel time, to postal code area (min)"
+        
+      } else if (grepl("_pct", val)) {
+        description <- 
+          "The percentage of SFP and WTD in the total travel time (%)"
+        
+      } else if (grepl("_sfp", val)) {
+        description <- 
+          "The mean time consumed in searching for parking in the destination postal code area (min)"
+        
+      } else if (grepl("_wtd", val)) {
+        description <- 
+          "The mean duration to walk from one's parked car to the destination, in destination postal code area (min)"
+      }
+      # Automatically add newlines to the long description string
+      description <- 
+        strwrap(description, 22, prefix = "\n") %>%
+        paste(., collapse = "")
+      
+      if (grepl("_m_", val)) {
+        timeofday <- "during midday traffic"
+        
+      } else if (grepl("_r_", val)) {
+        timeofday <- "during rush hour traffic"
+        
+      } else if (grepl("_sl_", val)) {
+        timeofday <- "the route following speed limits without any additional impedances"
+      }
+      timeofday <- 
+        strwrap(timeofday, 22, prefix = "\n") %>%
+        paste(., collapse = "")
+      
+      result <- paste(datasource, ",\n", 
+                      wherefrom, ":\n", 
+                      description, ",\n",
+                      timeofday, sep = "")
+      return(result)
+    }
+    #GetLegendName("msc_r_drivetime", origincell)
+    
     
     # Format legend labels (Equal breaks classes). Remove [, ], (, and ). Also 
     # add list dash. Create named vector for the origin cell legend entry
     l_labels <- gsub("(])|(\\()|(\\[)", "", levels(inputdata[, input$fill_column]))
     l_labels <- gsub(",", " \U2012 ", l_labels)
     
-    # if fillcolumn visualises postal code areas, allow counting of factor levels
+    legendname <- GetLegendName(input$fill_column, origincell)
+    
+    # if fillcolumn visualises postal code areas, allow counting of factor 
+    # levels. Infix operator %notin% defined in funcs.R.
     if(input$fill_column %notin% c("ttm18_r_t", "ttm18_m_t", "ttm18_sl_t")) {
       l_labels <- AddLevelCounts(inputdata, vis_cols[[input$fill_column]], 
                                  input$fill_column, input$classIntervals_n, 
                                  l_labels)
     }
     
+    # Origin id legend label
     o_label <- setNames("purple", 
                         origincell[, "nimi"] %>% 
                           unique() %>% 
@@ -664,7 +699,7 @@ server <- function(input, output, session) {
     g <- ggplot(data = inputdata) + 
       geom_polygon_interactive(
         color = "black",
-        size = 0.2,
+        size = 0.15,
         aes_string("long", "lat", 
                    group = "group",
                    fill = input$fill_column,
@@ -697,8 +732,9 @@ server <- function(input, output, session) {
       # mix everything up.
       scale_fill_brewer(palette = "RdYlGn",
                         #name = paste("Distance from\n", validate_ykrid(), ", (min)",
-                        name = paste("Distance from\n", origin_id, ", (min)", 
-                                     sep = ""),
+                        #name = paste("Distance from\n", origin_id, ", (min)", 
+                        #             sep = ""),
+                        name = paste0(legendname, collapse = ""),
                         direction = -1,
                         labels = l_labels,
                         na.value = "darkgrey",
@@ -946,7 +982,7 @@ ui <- shinyUI(
         selectInput(
           inputId = "fill_column",
           label = "Visualise data (equal interval)",
-          selected = "compare_m_sfp",#"ttm18_r_avg",
+          selected = "msc_sl_drivetime",
           choices = list(
             `Travel Time Matrix 2018` = 
               c("ttm18_r_t", "ttm18_m_t", "ttm18_sl_t", 
