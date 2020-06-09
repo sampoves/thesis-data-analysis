@@ -4,7 +4,7 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 6.6.2020
+# 9.6.2020
 
 
 
@@ -15,6 +15,7 @@
 # Java. Save some space and increase readability.
 `%+=%` = function(e1, e2) eval.parent(substitute(e1 <- e1 + e2))
 `%-=%` = function(e1, e2) eval.parent(substitute(e1 <- e1 - e2))
+`%notin%` <- Negate(`%in%`)
 
 
 
@@ -40,8 +41,8 @@ ReadAndClean <- function(fp) {
 
 
 
-CreateJenksColumn_b <- function(fortified, postal, datacol, newcolname, 
-                                classes_n = 5) {
+CreateJenksColumn_b <- function(fortified, inputDf, datacol, newcolname, 
+                                classes_n = 11) {
   
   # Function name _b refers to this function being the variant B of the function
   # CreateJenksColumn in thesis_data_vis.R.
@@ -56,7 +57,7 @@ CreateJenksColumn_b <- function(fortified, postal, datacol, newcolname,
   
   # Suppress n jenks warnings, problem probably handled
   classes <- suppressWarnings(
-    classInt::classIntervals(postal[, datacol], n = classes_n, style = "equal"))
+    classInt::classIntervals(inputDf[, datacol], n = classes_n, style = "equal"))
   
   # classes$brk has to be wrapped with unique(), otherwise we can't get more
   # than six classes for parktime_median or walktime_median
@@ -64,6 +65,42 @@ CreateJenksColumn_b <- function(fortified, postal, datacol, newcolname,
     dplyr::mutate(!!newcolname := cut(!!rlang::sym(datacol), 
                                       unique(classes$brks), 
                                       include.lowest = T))
+  return(result)
+}
+
+
+
+AddLevelCounts <- function(thisDf, datacol, newcolname, classes_n,
+                           labels_to_input) {
+  
+  # Use this function to calculate how many times a legend key color appears
+  # in the comparison app and add those values to the ggplot legend labels.
+  # This function is non-optimal as half of this functionality is carried out
+  # in CreateJenksColumn_b(), but for the sake of clarity keep them apart.
+  
+  theseIntervals <- suppressWarnings(
+    classInt::classIntervals(thisDf[, datacol], n = classes_n, style = "equal"))
+  
+  content_cut <- cut(thisDf[, datacol], unique(theseIntervals$brks),
+                     include.lowest = T)
+  input_levels <- levels(thisDf[, newcolname])
+  
+  # Create level appearance count in this clunky way.
+  # In left_join NAs can be preserved if the new dataframe has NA present
+  # like this: data.frame(brks = c(input_levels, NA))
+  levels_n <-
+    dplyr::select(pelledata, zipcode) %>%
+    dplyr::mutate(brks = content_cut) %>%
+    dplyr::group_by(brks, zipcode) %>%
+    dplyr::tally() %>%
+    dplyr::select(-n) %>%
+    dplyr::group_by(brks) %>%
+    dplyr::summarise(n = n()) %>%
+    dplyr::left_join(data.frame(brks = input_levels), .) %>%
+    dplyr::mutate(n = tidyr::replace_na(n, 0))
+  
+  result <- paste0(labels_to_input, " [", levels_n$n, "]")
+  
   return(result)
 }
 

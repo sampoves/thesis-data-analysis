@@ -12,10 +12,10 @@
 
 # TODO: colouring of tooltip table cells to assist conclusion drawing
 # TODO: Remember arbitrary selection of timeofday in thesisdata! Triplecheck it
-# TODO: Some of the compare map fills have NA color grey for other purposes.
-# Check out what's up with that
 # TODO: row and column colouring not complete for new map fill options
 # TODO: laskenko pct:n drivetimesta vai avg:sta?! decide!!
+# TODO: "distance from" legend text is just wrong
+# TODO: thesis drivetimes have negative values
 
 
 #### 1 Initialise --------------------------------------------------------------
@@ -40,7 +40,7 @@ library(ggnewscale)
 
 
 # App version
-app_v <- "0036 (9.6.2020)"
+app_v <- "0037 (9.6.2020)"
 
 
 # Working directory
@@ -574,9 +574,6 @@ server <- function(input, output, session) {
     
     res <- CreateJenksColumn_b(result, result, vis_cols[[input$fill_column]], 
                                input$fill_column, input$classIntervals_n)
-    #spede <- CreateJenksColumn_b(result, result, "comp_m_sfp", 
-    #                           "compare_m_sfp", 11)
-    
     res
   })
   
@@ -589,7 +586,48 @@ server <- function(input, output, session) {
     # Reactive value: Insert equal breaks for mapping.
     #inputdata <- thisTTM_df()
     inputdata <- equalBreaksColumn()
-    pelledata2 <<- inputdata
+    
+    
+    
+    
+    # # WHY IS LEGEND BROKKEN!?
+    # #pelledata <<- inputdata #use compare_m_sfp
+    # #pelledata2 <<- inputdata #use ttm18_m_avg
+    # AddLevelCounts <- function(thisDf, datacol, newcolname, class_n,
+    #                            labels_to_input) {
+    # 
+    #   thisInterval <- classInt::classIntervals(thisDf[, datacol], n = class_n,
+    #                                            style = "equal")
+    #   content_cut <- cut(thisDf[, datacol], unique(thisInterval$brks),
+    #                      include.lowest = T)
+    #   input_levels <- levels(thisDf[, newcolname])
+    # 
+    #   # Create level appearance count in this clunky way.
+    #   # In left_join NAs can be preserved if the new dataframe has NA present
+    #   # like this: data.frame(brks = c(input_levels, NA))
+    #   levels_n <-
+    #     dplyr::select(pelledata, zipcode) %>%
+    #     dplyr::mutate(brks = content_cut) %>%
+    #     dplyr::group_by(brks, zipcode) %>%
+    #     dplyr::tally() %>%
+    #     dplyr::select(-n) %>%
+    #     dplyr::group_by(brks) %>%
+    #     dplyr::summarise(n = n()) %>%
+    #     dplyr::left_join(data.frame(brks = input_levels), .) %>%
+    #     dplyr::mutate(n = tidyr::replace_na(n, 0))
+    # 
+    #   result <- paste0(labels_to_input, " [", levels_n$n, "]")
+    # 
+    #   return(result)
+    # }
+    # #lol3 <- AddLevelCounts(pelledata, "comp_m_sfp", "compare_m_sfp", 11, lol1)
+    
+  
+    
+    
+    
+    
+    
     # Get an origin cell for mapping
     #origincell <- grid_f[grid_f["YKR_ID"] == as.numeric(validate_ykrid()), ]
     origincell <- grid_f[grid_f["YKR_ID"] == as.numeric(origin_id), ]
@@ -598,12 +636,18 @@ server <- function(input, output, session) {
     # add list dash. Create named vector for the origin cell legend entry
     l_labels <- gsub("(])|(\\()|(\\[)", "", levels(inputdata[, input$fill_column]))
     l_labels <- gsub(",", " \U2012 ", l_labels)
+    
+    # if fillcolumn visualises postal code areas, allow counting of factor levels
+    if(input$fill_column %notin% c("ttm18_r_t", "ttm18_m_t", "ttm18_sl_t")) {
+      l_labels <- AddLevelCounts(inputdata, vis_cols[[input$fill_column]], 
+                                 input$fill_column, input$classIntervals_n, 
+                                 l_labels)
+    }
+    
     o_label <- setNames("purple", 
                         origincell[, "nimi"] %>% 
                           unique() %>% 
                           as.character())
-    #lol2 <- gsub("(])|(\\()|(\\[)", "", levels(pelledata2[, "ttm18_m_avg"]))
-    #lol2 <- gsub(",", " \U2012 ", lol2)
     
     # current_subdiv_lbl is created so that any values can be removed when 
     # necessary from the dataframe. By using a duplicate of subdiv_lbl, labels 
@@ -647,14 +691,18 @@ server <- function(input, output, session) {
                              comp_r_pct, comp_m_pct, comp_sl_pct))
                    )) +
       
-      # Jenks classes colouring and labels
+      # Jenks classes colouring and labels. drop = FALSE is very important in
+      # most of the cases of input$fill_column. Levels may end up appearing zero
+      # times in the data, and that would get them erased from the legend and
+      # mix everything up.
       scale_fill_brewer(palette = "RdYlGn",
                         #name = paste("Distance from\n", validate_ykrid(), ", (min)",
                         name = paste("Distance from\n", origin_id, ", (min)", 
                                      sep = ""),
                         direction = -1,
                         labels = l_labels,
-                        na.value = "darkgrey") +
+                        na.value = "darkgrey",
+                        drop = FALSE) +
       
       # Define map extent manually
       coord_fixed(xlim = c(min(inputdata$lon) + 200, max(inputdata$lon) - 1200),
