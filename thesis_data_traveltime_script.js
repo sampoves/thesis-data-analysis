@@ -2,7 +2,7 @@
 // JavaScript for the travel time comparison app of my thesis results
 
 // "Parking of private cars and spatial accessibility in Helsinki Capital Region" 
-// by Sampo Vesanen, 6.6.2020
+// by Sampo Vesanen, 8.6.2020
 
 
 // use this counter to hopefully detect flow of code
@@ -14,6 +14,37 @@ function Counter() {
 }
 columnChangerCount = new Counter();
 
+
+
+// --------------------------------- //
+// Comparison app information window //
+// --------------------------------- //
+
+// Establish jQuery UI window
+$(function() {
+	$('#abbr-info').dialog({
+		autoOpen: false,
+		closeOnEscape: true,
+		dialogClass: 'dialog-dropshadow',
+		width: 550,
+		maxWidth: 600,
+		maxHeight: 800,
+		show: {
+			effect: 'fade',
+			duration: 300
+		},
+		hide: {
+			effect: 'fade',
+			duration: 300
+		}
+	});
+});
+
+
+
+// ----------------------- //
+// SidebarPanel operations //
+// ----------------------- //
 
 // Insert sidebar hide/show button to col-sm-3, the div that contains the sidebar. Add
 // the button after the actual sidebar div. The button appears on the top right corner
@@ -135,27 +166,42 @@ function columnColorize() {
 	setTimeout(function() {
 		// Find current drop-down menu value
 		var attr_val = $('.item').attr('data-value');
+		var attr_split = attr_val.split("_")[1];
 		
 		// Apply CSS to correct table columns
 		$('[id^="svg_"]').hover(function() {
-			if(attr_val === "ttm18_r_avg") {
+			if (attr_split === "r") {
 				$('table').colorColumn(1);
-				$('#ttm-avg').addClass("selected");
-			} else if (attr_val === "ttm18_m_avg") {
+			} else if (attr_split === "m") {
 				$('table').colorColumn(2);
-				$('#ttm-avg').addClass("selected");
-			} else if (attr_val === "ttm18_sl_avg") {
+			} else if (attr_split === "sl") {
 				$('table').colorColumn(3);
+			}
+			
+			if ("ttm18_r_avg,ttm18_m_avg,ttm18_sl_avg".includes(attr_val)) {
 				$('#ttm-avg').addClass("selected");
-			} else if (attr_val === "ttm18_r_t") {
-				$('table').colorColumn(1);
-				$('#ttm-car').addClass("selected");
-			} else if (attr_val === "ttm18_m_t") {
-				$('table').colorColumn(2);
-				$('#ttm-car').addClass("selected");
-			} else if (attr_val === "ttm18_sl_t") {
-				$('table').colorColumn(3);
-				$('#ttm-car').addClass("selected");
+			} else if ("ttm18_r_drivetime,ttm18_m_drivetime,ttm18_sl_drivetime".includes(attr_val)) {
+				$('#ttm-drivetime').addClass("selected");
+			} else if ("ttm18_r_pct,ttm18_m_pct,ttm18_sl_pct".includes(attr_val)) {
+				$('#ttm-pct').addClass("selected");
+				
+			} else if ("msc_r_sfp,msc_m_sfp,msc_sl_sfp".includes(attr_val)) {
+				$('#thesis-sfp').addClass("selected");
+			} else if ("msc_r_wtd,msc_m_wtd,msc_sl_wtd".includes(attr_val)) {
+				$('#thesis-wtd').addClass("selected");
+			} else if ("msc_r_drivetime,msc_m_drivetime,msc_sl_drivetime".includes(attr_val)) {
+				$('#thesis-drivetime').addClass("selected");
+			} else if ("msc_r_pct,msc_m_pct,msc_sl_pct".includes(attr_val)) {
+				$('#thesis-pct').addClass("selected");
+				
+			} else if ("compare_r_sfp,compare_m_sfp,compare_sl_sfp".includes(attr_val)) {
+				$('#compare-sfp').addClass("selected");
+			} else if ("compare_r_wtd,compare_m_wtd,compare_sl_wtd".includes(attr_val)) {
+				$('#compare-wtd').addClass("selected");
+			} else if ("compare_r_drivetime,compare_m_drivetime,compare_sl_drivetime".includes(attr_val)) {
+				$('#compare-drivetime').addClass("selected");
+			} else if ("compare_r_pct,compare_m_pct,compare_sl_pct".includes(attr_val)) {
+				$('#compare-pct').addClass("selected");
 			}
 		});
 	}, 250);
