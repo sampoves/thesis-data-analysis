@@ -1,5 +1,5 @@
  <!-- This is the HTML code for the travel time comparison app tooltip. -->
- <!-- for Sampo Vesanen's MSc thesis. 7.6.2020. -->
+ <!-- for Sampo Vesanen's MSc thesis. 9.6.2020. -->
 <div id='app-tooltip'>
 	<div>
 		<b>YKR ID %s</b></br> <!-- YKR_ID -->
@@ -12,62 +12,56 @@
 		<b>TTM18</b>
 	</div>
 	 <!-- Individual YKR_IDs -->
-	<table class='tg'>
-		<thead>
-			<tr>
-				<th class='tg-cell'></th>
-				<th class='tg-cell'>r</th>
-				<th class='tg-cell'>m</th>
-				<th class='tg-cell'>sl</th>
-			</tr>
-		</thead>
-		<tbody>
-			<tr id='ttm-car'>
-				<td class='tg-cell'>car_x_t</td>
-				<td class='tg-cell'>%s</td> <!-- car_r_t -->
-				<td class='tg-cell'>%s</td> <!-- car_m_t -->
-				<td class='tg-cell'>%s</td> <!-- car_sl_t -->
-			</tr>
-		</tbody>
+	<table class='tg tg-header'>
+		<tr>
+			<th class='tg-cell'></th>
+			<th class='tg-cell'>r</th>
+			<th class='tg-cell'>m</th>
+			<th class='tg-cell'>sl</th>
+		</tr>
+	</table>
+	<table class='tg vl-car'>
+		<tr id='ttm-car'>
+			<td class='tg-cell'>car_x_t</td>
+			<td class='tg-cell'>%s</td> <!-- car_r_t -->
+			<td class='tg-cell'>%s</td> <!-- car_m_t -->
+			<td class='tg-cell'>%s</td> <!-- car_sl_t -->
+		</tr>
 	</table>
 	<!-- TTM18 zipcode averages -->
-	<table class='tg'>
-		<tbody>
-			<tr id='ttm-sfp'>
-				<td class='tg-cell'>sfp</td>
-				<td class='tg-cell'>%s</td> <!-- ttm_sfp -->
-				<td class='tg-cell'>%s</td> <!-- ttm_sfp -->
-				<td class='tg-cell'>%s</td> <!-- ttm_sfp -->
-			</tr>
-			<tr id='ttm-wtd'>
-				<td class='tg-cell'>wtd_avg</td>
-				<td class='tg-cell'>%s</td> <!-- ttm_wtd -->
-				<td class='tg-cell'>%s</td> <!-- ttm_wtd -->
-				<td class='tg-cell'>%s</td> <!-- ttm_wtd -->
-			</tr>
-		</tbody>
+	<table class='tg vl-sfp-wtd'>
+		<tr id='ttm-sfp'>
+			<td class='tg-cell'>sfp</td>
+			<td class='tg-cell'>%s</td> <!-- ttm_sfp -->
+			<td class='tg-cell'>%s</td> <!-- ttm_sfp -->
+			<td class='tg-cell'>%s</td> <!-- ttm_sfp -->
+		</tr>
+		<tr id='ttm-wtd'>
+			<td class='tg-cell'>wtd_avg</td>
+			<td class='tg-cell'>%s</td> <!-- ttm_wtd -->
+			<td class='tg-cell'>%s</td> <!-- ttm_wtd -->
+			<td class='tg-cell'>%s</td> <!-- ttm_wtd -->
+		</tr>
 	</table>
 	<table class='tg'>
-		<tbody>
-			<tr id='ttm-avg'>
-				<td class='tg-cell'>avg</td>
-				<td class='tg-cell'>%s</td> <!-- ttm_r_avg -->
-				<td class='tg-cell'>%s</td> <!-- ttm_m_avg -->
-				<td class='tg-cell'>%s</td> <!-- ttm_sl_avg -->
-			</tr>
-			<tr id='ttm-drivetime'>
-				<td class='tg-cell'>drivetime</td>
-				<td class='tg-cell'>%s</td> <!-- ttm_r_drivetime -->
-				<td class='tg-cell'>%s</td> <!-- ttm_m_drivetime -->
-				<td class='tg-cell'>%s</td> <!-- ttm_sl_drivetime -->
-			</tr>
-			<tr id='ttm-pct'>
-				<td class='tg-cell'>pct</td>
-				<td class='tg-cell'>%s</td> <!-- ttm_r_pct -->
-				<td class='tg-cell'>%s</td> <!-- ttm_m_pct -->
-				<td class='tg-cell'>%s</td> <!-- ttm_sl_pct -->
-			</tr>
-		</tbody>
+		<tr class='tg vl-avg' id='ttm-avg'>
+			<td class='tg-cell'>avg</td>
+			<td class='tg-cell'>%s</td> <!-- ttm_r_avg -->
+			<td class='tg-cell'>%s</td> <!-- ttm_m_avg -->
+			<td class='tg-cell'>%s</td> <!-- ttm_sl_avg -->
+		</tr>
+		<tr class='tg vl-drive-pct' id='ttm-drivetime'>
+			<td class='tg-cell'>drivetime</td>
+			<td class='tg-cell'>%s</td> <!-- ttm_r_drivetime -->
+			<td class='tg-cell'>%s</td> <!-- ttm_m_drivetime -->
+			<td class='tg-cell'>%s</td> <!-- ttm_sl_drivetime -->
+		</tr>
+		<tr class='tg vl-drive-pct' id='ttm-pct'>
+			<td class='tg-cell'>pct</td>
+			<td class='tg-cell'>%s</td> <!-- ttm_r_pct -->
+			<td class='tg-cell'>%s</td> <!-- ttm_m_pct -->
+			<td class='tg-cell'>%s</td> <!-- ttm_sl_pct -->
+		</tr>
 	</table>
 	<hr class='tooltip-hr'>
 	 <!-- Thesis results data -->
@@ -75,45 +69,40 @@
 		<i class='icon poll'></i>
 		<b>Thesis data</b>, values: %s <!-- vals_in_zip -->
 	</div>
-	<table class='tg'>
-		<thead>
-			<tr>
-				<th class='tg-cell'></th>
-				<th class='tg-cell'>r</th>
-				<th class='tg-cell'>m</th>
-				<th class='tg-cell'>sl</th>
-			</tr>
-		</thead>
-		<tbody>
-			<tr id='thesis-sfp'>
-				<td class='tg-cell'>sfp_avg</td>
-				<td class='tg-cell'>%s</td> <!-- thesis_r_sfp -->
-				<td class='tg-cell'>%s</td> <!-- thesis_m_sfp -->
-				<td class='tg-cell'>%s</td> <!-- thesis_sl_sfp -->
-			</tr>
-			<tr id='thesis-wtd'>
-				<td class='tg-cell'>wtd_avg</td>
-				<td class='tg-cell'>%s</td> <!-- thesis_r_wtd -->
-				<td class='tg-cell'>%s</td> <!-- thesis_m_wtd -->
-				<td class='tg-cell'>%s</td> <!-- thesis_sl_wtd -->
-			</tr>
-		</tbody>
+	<table class='tg tg-header'>
+		<tr>
+			<th class='tg-cell'></th>
+			<th class='tg-cell'>r</th>
+			<th class='tg-cell'>m</th>
+			<th class='tg-cell'>sl</th>
+		</tr>
+	<table class='tg vl-sfp-wtd'>
+		<tr id='thesis-sfp'>
+			<td class='tg-cell'>sfp_avg</td>
+			<td class='tg-cell'>%s</td> <!-- thesis_r_sfp -->
+			<td class='tg-cell'>%s</td> <!-- thesis_m_sfp -->
+			<td class='tg-cell'>%s</td> <!-- thesis_sl_sfp -->
+		</tr>
+		<tr id='thesis-wtd'>
+			<td class='tg-cell'>wtd_avg</td>
+			<td class='tg-cell'>%s</td> <!-- thesis_r_wtd -->
+			<td class='tg-cell'>%s</td> <!-- thesis_m_wtd -->
+			<td class='tg-cell'>%s</td> <!-- thesis_sl_wtd -->
+		</tr>
 	</table>
-	<table class='tg'>
-		<tbody>
-			<tr id='thesis-drivetime'>
-				<td class='tg-cell'>drivetime</td>
-				<td class='tg-cell'>%s</td> <!-- thesis_r_drivetime -->
-				<td class='tg-cell'>%s</td> <!-- thesis_m_drivetime -->
-				<td class='tg-cell'>%s</td> <!-- thesis_sl_drivetime -->
-			</tr>
-			<tr id='thesis-pct'>
-				<td class='tg-cell'>pct</td>
-				<td class='tg-cell'>%s</td> <!-- thesis_r_pct -->
-				<td class='tg-cell'>%s</td> <!-- thesis_m_pct -->
-				<td class='tg-cell'>%s</td> <!-- thesis_sl_pct -->
-			</tr>
-		</tbody>
+	<table class='tg vl-drive-pct'>
+		<tr id='thesis-drivetime'>
+			<td class='tg-cell'>drivetime</td>
+			<td class='tg-cell'>%s</td> <!-- thesis_r_drivetime -->
+			<td class='tg-cell'>%s</td> <!-- thesis_m_drivetime -->
+			<td class='tg-cell'>%s</td> <!-- thesis_sl_drivetime -->
+		</tr>
+		<tr id='thesis-pct'>
+			<td class='tg-cell'>pct</td>
+			<td class='tg-cell'>%s</td> <!-- thesis_r_pct -->
+			<td class='tg-cell'>%s</td> <!-- thesis_m_pct -->
+			<td class='tg-cell'>%s</td> <!-- thesis_sl_pct -->
+		</tr>
 	</table>
 	<hr class='tooltip-hr'>
 	 <!-- Compare TTM18 and thesis data -->
@@ -122,40 +111,39 @@
 		<b>Comparison of TTM18<br>
 		and thesis data</b>
 	</div>
-	<table class='tg'>
-		<thead>
-			<tr>
-				<th class='tg-cell'></th>
-				<th class='tg-cell'>r</th>
-				<th class='tg-cell'>m</th>
-				<th class='tg-cell'>sl</th>
-			</tr>
-		</thead>
-		<tbody>
-			<tr id='compare-sfp'>
-				<td class='tg-cell'>sfp</td>
-				<td class='tg-cell'>%s</td> <!-- comp_r_sfp -->
-				<td class='tg-cell'>%s</td> <!-- comp_m_sfp -->
-				<td class='tg-cell'>%s</td> <!-- comp_sl_sfp -->
-			</tr>
-			<tr id='compare-wtd'>
-				<td class='tg-cell'>wtd</td>
-				<td class='tg-cell'>%s</td> <!-- comp_r_wtd -->
-				<td class='tg-cell'>%s</td> <!-- comp_m_wtd -->
-				<td class='tg-cell'>%s</td> <!-- comp_sl_wtd -->
-			</tr>
-			<tr id='compare-drivetime'>
-				<td class='tg-cell'>drivetime</td>
-				<td class='tg-cell'>%s</td> <!-- comp_r_drivetime -->
-				<td class='tg-cell'>%s</td> <!-- comp_m_drivetime -->
-				<td class='tg-cell'>%s</td> <!-- comp_sl_drivetime -->
-			</tr>
-			<tr id='compare-pct'>
-				<td class='tg-cell'>pct</td>
-				<td class='tg-cell'>%s</td> <!-- comp_r_pct -->
-				<td class='tg-cell'>%s</td> <!-- comp_m_pct -->
-				<td class='tg-cell'>%s</td> <!-- comp_sl_pct -->
-			</tr>
-		</tbody>
+	<table class='tg tg-header'>
+		<tr>
+			<th class='tg-cell'></th>
+			<th class='tg-cell'>r</th>
+			<th class='tg-cell'>m</th>
+			<th class='tg-cell'>sl</th>
+		</tr>
+	<table class='tg vl-sfp-wtd'>
+		<tr id='compare-sfp'>
+			<td class='tg-cell'>sfp</td>
+			<td class='tg-cell'>%s</td> <!-- comp_r_sfp -->
+			<td class='tg-cell'>%s</td> <!-- comp_m_sfp -->
+			<td class='tg-cell'>%s</td> <!-- comp_sl_sfp -->
+		</tr>
+		<tr id='compare-wtd'>
+			<td class='tg-cell'>wtd</td>
+			<td class='tg-cell'>%s</td> <!-- comp_r_wtd -->
+			<td class='tg-cell'>%s</td> <!-- comp_m_wtd -->
+			<td class='tg-cell'>%s</td> <!-- comp_sl_wtd -->
+		</tr>
+	</table>
+	<table class='tg vl-drive-pct'>
+		<tr id='compare-drivetime'>
+			<td class='tg-cell'>drivetime</td>
+			<td class='tg-cell'>%s</td> <!-- comp_r_drivetime -->
+			<td class='tg-cell'>%s</td> <!-- comp_m_drivetime -->
+			<td class='tg-cell'>%s</td> <!-- comp_sl_drivetime -->
+		</tr>
+		<tr id='compare-pct'>
+			<td class='tg-cell'>pct</td>
+			<td class='tg-cell'>%s</td> <!-- comp_r_pct -->
+			<td class='tg-cell'>%s</td> <!-- comp_m_pct -->
+			<td class='tg-cell'>%s</td> <!-- comp_sl_pct -->
+		</tr>
 	</table>
 </div>

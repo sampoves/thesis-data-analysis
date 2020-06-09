@@ -2,7 +2,7 @@
 # Helsinki Region Travel Time comparison application
 # Helsinki Region Travel Time Matrix 2018 <--> My thesis survey results
 
-# 8.6.2020
+# 9.6.2020
 # Sampo Vesanen
 
 # This interactive Travel time comparison application is dependent on ggiraph 
@@ -40,7 +40,7 @@ library(ggnewscale)
 
 
 # App version
-app_v <- "0035 (8.6.2020)"
+app_v <- "0036 (9.6.2020)"
 
 
 # Working directory
@@ -271,7 +271,7 @@ subdiv_lbl["Östersundom", "long"] %-=% 400
 subdiv_lbl["Suur-Matinkylä", "lat"] %-=% 500
 
 # In this named vector the first part is the name of the new, classified
-# column. Second part is the original column from where the classification
+# column. Second part is the original column name where the classification
 # was calculated from.
 vis_cols <- c("ttm18_r_t" = "car_r_t",
               "ttm18_m_t" = "car_m_t",
@@ -478,22 +478,9 @@ server <- function(input, output, session) {
   observeEvent(input$info_dialog_btn, {
     
     # the div id='abbr-info' is loaded in "6.4 ShinyApp header", the div itself 
-    # is the separate html file indicated in variable "info_path"
-    runjs("$('#abbr-info').dialog({
-            dialogClass: 'dialog-dropshadow',
-            width: 550,
-            maxWidth: 600,
-            maxHeight: 800,
-            show: {
-              effect: 'fade',
-              duration: 300
-            },
-            hide: {
-              effect: 'fade',
-              duration: 300
-            }
-          });
-          $('#abbr-info').dialog('open');")
+    # is the separate html file indicated in variable "info_path". Dialog 
+    # window properties are located in .js
+    runjs("$('#abbr-info').dialog('open');")
   })
   
   # Validate ykr-id in the numeric field
@@ -587,6 +574,9 @@ server <- function(input, output, session) {
     
     res <- CreateJenksColumn_b(result, result, vis_cols[[input$fill_column]], 
                                input$fill_column, input$classIntervals_n)
+    #spede <- CreateJenksColumn_b(result, result, "comp_m_sfp", 
+    #                           "compare_m_sfp", 11)
+    
     res
   })
   
@@ -599,7 +589,7 @@ server <- function(input, output, session) {
     # Reactive value: Insert equal breaks for mapping.
     #inputdata <- thisTTM_df()
     inputdata <- equalBreaksColumn()
-    
+    pelledata2 <<- inputdata
     # Get an origin cell for mapping
     #origincell <- grid_f[grid_f["YKR_ID"] == as.numeric(validate_ykrid()), ]
     origincell <- grid_f[grid_f["YKR_ID"] == as.numeric(origin_id), ]
@@ -612,6 +602,8 @@ server <- function(input, output, session) {
                         origincell[, "nimi"] %>% 
                           unique() %>% 
                           as.character())
+    #lol2 <- gsub("(])|(\\()|(\\[)", "", levels(pelledata2[, "ttm18_m_avg"]))
+    #lol2 <- gsub(",", " \U2012 ", lol2)
     
     # current_subdiv_lbl is created so that any values can be removed when 
     # necessary from the dataframe. By using a duplicate of subdiv_lbl, labels 
@@ -866,7 +858,7 @@ ui <- shinyUI(
               tags$script(src = "https://code.jquery.com/ui/1.12.1/jquery-ui.js"),
               tags$link(rel = "stylesheet", 
                         type = "text/css", 
-                        href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css"),
+                        href = "https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css"),
               htmltools::includeCSS(csspath)),
     htmltools::includeScript(path = jspath),
     
@@ -906,7 +898,7 @@ ui <- shinyUI(
         selectInput(
           inputId = "fill_column",
           label = "Visualise data (equal interval)",
-          selected = "ttm18_r_avg",
+          selected = "compare_m_sfp",#"ttm18_r_avg",
           choices = list(
             `Travel Time Matrix 2018` = 
               c("ttm18_r_t", "ttm18_m_t", "ttm18_sl_t", 

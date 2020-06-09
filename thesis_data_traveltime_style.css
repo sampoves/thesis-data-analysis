@@ -2,7 +2,7 @@
 /* CSS style sheet of for the Travel time comparison app of my thesis results
 
 "Parking of private cars and spatial accessibility in Helsinki Capital Region" 
-by Sampo Vesanen, 7.6.2020 */
+by Sampo Vesanen, 9.6.2020 */
 
 html, body {
 	height: 100%;
@@ -212,10 +212,17 @@ polyline:not([title]), polyline[title=""] {
 .tg {
 	border-collapse: collapse;
 	border-spacing: 0;
+    -moz-border-radius: 5px;
+    -webkit-border-radius: 5px;
 	border-radius: 5px;
 	margin-bottom: 4px;
 	table-layout: fixed;
 	width: 165px;
+}
+.tg-header {
+	margin-bottom: -1px;
+	border-left: 4px solid transparent;
+	border-radius: 5px;
 }
 .tg td {
 	border-color: black;
@@ -241,9 +248,8 @@ polyline:not([title]), polyline[title=""] {
 /* CSS properties set on active tooltip row, selected with visualise data input */
 .selected td {
 	font-weight: bold;
-	background-color: #008a27;
+	background-color: #616161;
 }
-
 /* Together with .tg table-layout and width, set column widths
 It is discussed here https://stackoverflow.com/a/19316337/9455395 
 that this is a bad performance solution */
@@ -251,14 +257,27 @@ that this is a bad performance solution */
 .tg tr > *:nth-child(2) { width: 22%; }
 .tg tr > *:nth-child(3) { width: 22%; }
 .tg tr > *:nth-child(4) { width: 22%; }
-
+/* coloured vertical line */
+.vl-car td:first-child {
+	border-left: 4px solid #20639b;
+	padding-right: 1px;
+}
+.vl-sfp-wtd td:first-child {
+	border-left: 4px solid #f6d55c;
+	padding-right: 1px;
+}
+.vl-avg td:first-child {
+	border-left: 4px solid #ed553b;
+	padding-right: 1px;	
+}
+.vl-drive-pct td:first-child {
+	border-left: 4px solid #3caea3;
+	padding-right: 1px;
+}
 
 /*-------------------------*/
 /* jQuery UI dialog window */
 /*-------------------------*/
-#abbr-info {
-	max-height: 600px;
-}
 .ui-front { /* dialog window in front to svg tooltip */
 	z-index: 1001;
 }
@@ -318,6 +337,10 @@ https://stackoverflow.com/q/31584544/9455395 */
 /* no horizontal line for the last row of table */
 .legend-table tbody > tr:last-child > td {
   border-bottom: 0;
+}
+.lt-header {
+	margin-bottom: 0px;
+	border-radius: 5px 5px 0px 0px;
 }
 
 /*--------------------------*/

@@ -1,5 +1,5 @@
  <!-- This is the HTML code for the travel time comparison information dialog -->
- <!-- for Sampo Vesanen's MSc thesis. 7.6.2020. -->
+ <!-- for Sampo Vesanen's MSc thesis. 9.6.2020. -->
 <div id='abbr-info' title='Travel time comparison app' style='display:none;'>
 	<h3>Parking of private car in Helsinki Capital Region: compare Helsinki Region Travel Time Matrix 2018 and thesis survey results of Sampo Vesanen</h3>
 	<p>Focusing on private cars, this application visualises the parking time differences between Helsinki Region Travel Time Matrix 2018 (Tenkanen et al. 2018) and the survey data carried out for the master's thesis of Sampo Vesanen. Use this information dialog to learn how the tooltip values were calculated.</p>
@@ -25,17 +25,19 @@
 	</table>
 	
 	<h4><i class='icon database'></i>TTM18, row names</h4>
-	<table class='legend-table'>
+	<table class='legend-table lt-header'>
 		<tr>
 			<th>Row name</th>
 			<th>Description</th>
 		</tr>
+	</table>
+	<table class='legend-table vl-car'>
 		<tr>
 			<td class='legend-td'>car_x_t</td>
 			<td class='legend-td'>Travel time from origin to destination by private car, the whole travel chain has been taken into account. This is unchanged TTM18 data. Replace <i>x</i> in the row name with <code>r</code>, <code>m</code>, <code>sl</code> to receive <code>car_r_t</code>, <code>car_m_t</code>, or <code>car_sl_t</code>, respectively. NA indicates a non-navigable route.</td>
 		</tr>
 	</table>
-	<table class='legend-table'>
+	<table class='legend-table vl-sfp-wtd'>
 		<tr>
 			<td class='legend-td'>sfp</td>
 			<td class='legend-td'>Time consumed in searching for parking. In TTM18, this is <b>0.42 minutes</b> for all YKR IDs in the entirety of Helsinki Capital Region (Toivonen et al. 2014).</td>
@@ -46,7 +48,7 @@
 		</tr>
 	</table>
 	<table class='legend-table'>
-		<tr>
+		<tr class='vl-avg'>
 			<td class='legend-td'>avg</td>
 			<td class='legend-td'>An averaged value (per postal code area, unit minutes) of the complete travel time with private car from origin YKR ID to all destination YKR IDs in the current postal code area.
 			<ul>
@@ -54,7 +56,7 @@
 			</ul>
 			</td>
 		</tr>
-		<tr>
+		<tr class='vl-drive-pct'>
 			<td class='legend-td'>drivetime</td>
 			<td class='legend-td'>The length of the driving part (value per postal code area, unit minutes) of the averaged complete travel time from origin YKR ID to the destination YKR IDs without searching for parking (TTM18 value) or walking to destination (TTM18 value).
 			<ul>
@@ -62,7 +64,7 @@
 			</ul>
 			</td>
 		</tr>
-		<tr>
+		<tr class='vl-drive-pct'>
 			<td class='legend-td'>pct</td>
 			<td class='legend-td'>How much does searching for parking and walking from one's parked car to the final destination constitute of the total drivetime? Value per postal code area, unit percent.
 			<ul>
@@ -73,11 +75,13 @@
 	</table>
 	
 	<h4><i class='icon poll'></i>Thesis data, row names</h4>
-	<table class='legend-table'>
+	<table class='legend-table lt-header'>
 		<tr>
 			<th>Row name</th>
 			<th>Description</th>
 		</tr>
+	</table>
+	<table class='legend-table vl-sfp-wtd'>
 		<tr>
 			<td class='legend-td'>sfp_avg</td>
 			<td class='legend-td'>Time consumed, on average, in searching for parking in different areas of Helsinki Capital Region, according to the thesis survey respondents. The values of thesis data variable <code>parktime</code> are averaged for the current postal code area.
@@ -95,7 +99,7 @@
 			</td>
 		</tr>
 	</table>
-	<table class='legend-table'>
+	<table class='legend-table vl-drive-pct'>
 		<tr>
 			<td class='legend-td'>drivetime</td>
 			<td class='legend-td'>The length of the driving part (value per postal code area, unit minutes) of the mean travel time from origin YKR ID to the destination YKR IDs, without searching for parking (thesis survey mean) or walking to destination (thesis survey mean).
@@ -115,12 +119,14 @@
 	</table>
 	
 	<h4><i class='icon exchange-alt'></i>Comparison of TTM18 and thesis data, row names</h4>
-	<table class='legend-table'>
+	<table class='legend-table lt-header'>
 		<tr>
 			<th>Row name</th>
 			<th>Description</th>
 		</tr>
-		<tr>
+	</table>
+	<table class='legend-table'>
+		<tr class='vl-sfp-wtd'>
 			<td class='legend-td'>sfp</td>
 			<td class='legend-td'>Compare TTM18 and thesis survey value for searching for parking. If this comparison value is smaller than one, searching for parking takes longer in TTM18. If value is larger than one, searching for parking is longer in thesis data.
 			<ul>
@@ -128,7 +134,7 @@
 			</ul>
 			</td>
 		</tr>
-		<tr>
+		<tr class='vl-sfp-wtd'>
 			<td class='legend-td'>wtd</td>
 			<td class='legend-td'>Compare TTM18 and thesis survey value for the duration to walk from one's parked car to the final destination of the journey. 
 			<ul>
@@ -136,7 +142,7 @@
 			</ul>
 			</td>
 		</tr>
-		<tr>
+		<tr class='vl-drive-pct'>
 			<td class='legend-td'>drivetime</td>
 			<td class='legend-td'>Compare the driving time part of the travel chain in TTM18 and thesis data.
 			<ul>
@@ -144,7 +150,7 @@
 			</ul>
 			</td>
 		</tr>
-		<tr>
+		<tr class='vl-drive-pct'>
 			<td class='legend-td'>pct</td>
 			<td class='legend-td'>Compare the percentual value of significance of searching for parking and walking to one's destination in TTM18 and thesis data.
 			<ul>
