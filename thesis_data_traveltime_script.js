@@ -2,7 +2,7 @@
 // JavaScript for the travel time comparison app of my thesis results
 
 // "Parking of private cars and spatial accessibility in Helsinki Capital Region" 
-// by Sampo Vesanen, 8.6.2020
+// by Sampo Vesanen, 11.6.2020
 
 
 // use this counter to hopefully detect flow of code
@@ -222,4 +222,46 @@ $(document).ready(function() {
 			columnColorize();
 		});
 	}
+});
+
+
+// Add icons to dropdown menu for user's aid or confusion. Need to reinitialise ids every 
+// time the dropdown menu opens
+$(document).one('shiny:idle', function(event) {
+	
+	// Disable mobile keyboard on selectize.js dropdown menus
+	$('.selectize-input input').attr('readonly','readonly');
+	
+	$(".selectize-input").on("click", function (e) {
+		var drop_lbls = $(".selectize-dropdown").find(".option");
+		
+		// Add ids for dropdown items
+		for(var i = 0; i < drop_lbls.length; i++) {
+			drop_lbls[i].setAttribute("id", "drop_" + i);
+		};
+		
+		// add coloured bars to the open dropdown menu
+		for(var i = 0; i < drop_lbls.length; i++) {
+			
+			var this_id = "#drop_" + i;
+			if (i >= 0 && i <= 2) {
+				$(this_id).prepend("<i class='dropbar'></i>");
+			} else if (i >= 3 && i <= 5) {
+				$(this_id).prepend("<i class='dropbar dd-avg'></i>");
+			} else if (i >= 6 && i <= 11 || i >= 18 && i <= 23 || i >= 30 && i <= 35) {
+				$(this_id).prepend("<i class='dropbar dd-drive-pct'></i>");
+			} else if (i >= 12 && i <= 17 || i >= 24 && i <= 29) {
+				$(this_id).prepend("<i class='dropbar dd-sfp-wtd'></i>");
+			}
+		};
+		
+		// add icons to the open dropdown menu in the same fashion as above
+		var optgroup_lbls = $(".selectize-dropdown").find(".optgroup-header");
+		for(var i = 0; i < optgroup_lbls.length; i++) {
+			optgroup_lbls[i].setAttribute("id", "optlbl_" + i);
+		};
+		$("#optlbl_0").prepend("<i class='icon database-grey'></i>");
+		$("#optlbl_1").prepend("<i class='icon poll-grey'></i>");
+		$("#optlbl_2").prepend("<i class='icon exchange-grey'></i>");
+	});
 });

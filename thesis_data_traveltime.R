@@ -2,7 +2,7 @@
 # Helsinki Region Travel Time comparison application
 # Helsinki Region Travel Time Matrix 2018 <--> My thesis survey results
 
-# 10.6.2020
+# 11.6.2020
 # Sampo Vesanen
 
 # This interactive Travel time comparison application is dependent on ggiraph 
@@ -39,7 +39,7 @@ library(ggnewscale)
 
 
 # App version
-app_v <- "0038 (10.6.2020)"
+app_v <- "0039 (11.6.2020)"
 
 
 # Working directory
@@ -609,8 +609,12 @@ server <- function(input, output, session) {
         datasource <- "Thesis data"
         
       } else if (grepl("compare_", val)) {
-        datasource <- "Comparison data"
+        datasource <- "Compare data sources (thesis data / TTM18 data)"
       }
+      # Automatically add newlines to the long datasource string
+      datasource <- 
+        strwrap(datasource, 22, prefix = "\n") %>%
+        paste(., collapse = "")
       
       if (grepl("_t", val)) {
         description <- 
@@ -636,7 +640,6 @@ server <- function(input, output, session) {
         description <- 
           "The mean duration to walk from one's parked car to the destination, in destination postal code area (min)"
       }
-      # Automatically add newlines to the long description string
       description <- 
         strwrap(description, 22, prefix = "\n") %>%
         paste(., collapse = "")
@@ -982,9 +985,9 @@ ui <- shinyUI(
         selectInput(
           inputId = "fill_column",
           label = "Visualise data (equal interval)",
-          selected = "msc_sl_drivetime",
+          selected = "msc_r_drivetime",
           choices = list(
-            `Travel Time Matrix 2018` = 
+            `Travel Time Matrix 2018 private car data` = 
               c("ttm18_r_t", "ttm18_m_t", "ttm18_sl_t", 
                 "ttm18_r_avg", "ttm18_m_avg", "ttm18_sl_avg",
                 "ttm18_r_drivetime", "ttm18_m_drivetime", "ttm18_sl_drivetime",
@@ -996,7 +999,7 @@ ui <- shinyUI(
                 "msc_r_drivetime", "msc_m_drivetime", "msc_sl_drivetime",
                 "msc_r_pct", "msc_m_pct", "msc_sl_pct"),
             
-            `Compare TTM18 and thesis results` = 
+            `Compare TTM18 and thesis survey results` = 
               c("compare_r_sfp", "compare_m_sfp", "compare_sl_sfp",
                 "compare_r_wtd", "compare_m_wtd", "compare_sl_wtd",
                 "compare_r_drivetime", "compare_m_drivetime", "compare_sl_drivetime",
@@ -1070,7 +1073,7 @@ ui <- shinyUI(
              "</div>",
              "</div>"),
         
-        HTML(paste("<p id='version-info'>Travel time comparison app version", 
+        HTML(paste("<p id='version-info'>Travel time comparison app version<br>", 
                    app_v, "</p>")),
         width = 1),
       
