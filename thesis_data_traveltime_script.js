@@ -2,7 +2,7 @@
 // JavaScript for the travel time comparison app of my thesis results
 
 // "Parking of private cars and spatial accessibility in Helsinki Capital Region" 
-// by Sampo Vesanen, 11.6.2020
+// by Sampo Vesanen, 13.6.2020
 
 
 // use this counter to hopefully detect flow of code
@@ -152,6 +152,26 @@ $.fn.revertColumn = function(column) {
 		return $(this).find('td').eq(column).removeAttr('style');
     }).get();
 };
+// Add icons to the comparison tables to signify the larger value
+$.fn.addIconsToCompare = function(column) {
+	return this.find('.compcol' + column).map(function() {
+
+		var val = parseFloat($(this).text());
+		
+		// Attempt to prevent presence of multiple icons in one cell
+		$(this).find("i.icon").remove();
+		
+		if (val < 1) {
+			return $(this).append('<i class="icon database-comp"></i>');
+		} else if (val > 1) {
+			return $(this).append('<i class="icon poll-comp"></i>');
+		} else if (val === 1) {
+			return $(this).append('<i class="icon equals"></i>');
+		}
+    }).get();
+};
+
+
 
 function columnColorize() {
 	// Revert column css before assigning new css properties
@@ -168,14 +188,17 @@ function columnColorize() {
 		var attr_val = $('.item').attr('data-value');
 		var attr_split = attr_val.split("_")[1];
 		
-		// Apply CSS to correct table columns
-		$('[id^="svg_"]').hover(function() {
+		// Apply CSS to correct table columns and add icons to comparison tables
+		$('polygon[id^="svg_"]').hover(function() {
 			if (attr_split === "r") {
-				$('table').colorColumn(1);
+				$('table.tg').colorColumn(1);
+				$('table.tg').addIconsToCompare(1);
 			} else if (attr_split === "m") {
-				$('table').colorColumn(2);
+				$('table.tg').colorColumn(2);
+				$('table.tg').addIconsToCompare(2);
 			} else if (attr_split === "sl") {
-				$('table').colorColumn(3);
+				$('table.tg').colorColumn(3);
+				$('table.tg').addIconsToCompare(3);
 			}
 			
 			if ("ttm18_r_avg,ttm18_m_avg,ttm18_sl_avg".includes(attr_val)) {

@@ -2,7 +2,7 @@
 /* CSS style sheet of for the Travel time comparison app of my thesis results
 
 "Parking of private cars and spatial accessibility in Helsinki Capital Region" 
-by Sampo Vesanen, 11.6.2020 */
+by Sampo Vesanen, 13.6.2020 */
 
 html, body {
 	height: 100%;
@@ -202,12 +202,13 @@ polyline:not([title]), polyline[title=""] {
 /* Custom tooltip properties */
 #app-tooltip {
 	font-size: 13px;
+	width: 215px;
 }
 .tooltip-hr {
 	margin-top: 1px; 
 	margin-bottom: 3px;
 }
-#tooltip-div {
+#tooltip-div { /*obsolete? not in use?*/
 	padding-top: 3px;
 }
 
@@ -222,7 +223,7 @@ polyline:not([title]), polyline[title=""] {
 	border-radius: 5px;
 	margin-bottom: 4px;
 	table-layout: fixed;
-	width: 170px;
+	width: 215px;/*170px;*/
 }
 /* fake an invisible 4px vertical line to stabilise the table cell positioning. Not
 using this positions table headers disproportionately compared to the rows */
@@ -252,12 +253,12 @@ using this positions table headers disproportionately compared to the rows */
 	background-color: #616161;
 }
 /* Together with .tg table-layout and width, set column widths
-It is discussed here https://stackoverflow.com/a/19316337/9455395 
-that this is a bad performance solution */
-.tg tr > *:nth-child(1) { width: 34%; }
-.tg tr > *:nth-child(2) { width: 22%; }
-.tg tr > *:nth-child(3) { width: 22%; }
-.tg tr > *:nth-child(4) { width: 22%; }
+It is discussed here (https://stackoverflow.com/a/19316337/9455395) that this is a bad 
+performance solution */
+.tg tr > *:nth-child(1) { width: 28%; }
+.tg tr > *:nth-child(2) { width: 24%; }
+.tg tr > *:nth-child(3) { width: 24%; }
+.tg tr > *:nth-child(4) { width: 24%; }
 /* remove top, right, and bottom borders from tooltip table */
 .tg tr:first-child th {
   border-top: 0;
@@ -458,6 +459,26 @@ h4 .icon {
 }
 .dd-drive-pct {
 	background-color: #3caea3;
+}
+/* for compare table */
+.equals::before {
+	content: "\f52c";
+	color: white;
+	float: right;
+	margin: 0px 2px 0px 2px;
+	
+}
+.database-comp::before {
+	content: "\f1c0";
+	color: white;
+	float: right;
+	margin: 0px 2px 0px 2px;
+}
+.poll-comp::before {
+	content: "\f681";
+	color: white;
+	float: right;
+	margin: 0px 2px 0px 2px;
 }
 
 /*---------------------------------*/

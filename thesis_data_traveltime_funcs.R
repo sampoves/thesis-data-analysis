@@ -4,7 +4,7 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 10.6.2020
+# 11.6.2020
 
 
 
@@ -101,6 +101,87 @@ AddLevelCounts <- function(thisDf, datacol, newcolname, classes_n,
   return(result)
 }
 
+
+
+GetLegendName <- function(val, origincell) {
+  
+  # Appropriately name the plot legend. Use parts of the input string to
+  # figure out what to print. Use strwrap() to automatically add newlines
+  # to long strings. Use origincell to add information about origin ykr_id.
+  
+  wherefrom <- paste0("origin ", origincell[, "YKR_ID"][1])
+  
+  if (grepl("ttm18_", val)) {
+    datasource <- "TTM18 data"
+    
+  } else if (grepl("msc_", val)) {
+    datasource <- "Thesis data"
+    
+  } else if (grepl("compare_", val)) {
+    datasource <- "Compare data sources (thesis data / TTM18 data)"
+  }
+  # Automatically add newlines to the long datasource string
+  datasource <- 
+    strwrap(datasource, 22, prefix = "\n") %>%
+    paste(., collapse = "")
+  
+  # thisUnit is minutes, except when datasource is "compare" or 
+  # description "_pct"
+  if (grepl("compare_", val) || grepl("_pct", val)) {
+    thisUnit <- "(unit %)"
+  } else {
+    thisUnit <- "(unit minutes)"
+  }
+  
+  if (grepl("_t", val)) {
+    description <- 
+      "The total travel time to YKR_ID"
+    
+  } else if (grepl("_avg", val)) {
+    description <- 
+      "The mean total travel time to postal code area"
+    
+  } else if (grepl("_drivetime", val)) {
+    description <- 
+      "The mean duration of the driving segment of the total travel time, to a postal code area"
+    
+  } else if (grepl("_pct", val)) {
+    description <- 
+      "The percentage of SFP and WTD in the total travel time"
+    
+  } else if (grepl("_sfp", val)) {
+    description <- 
+      "The mean time consumed in searching for parking in the destination postal code area"
+    
+  } else if (grepl("_wtd", val)) {
+    description <- 
+      "The mean duration to walk from one's parked car to the destination, in the destination postal code area"
+  }
+  description <- 
+    strwrap(description, 22, prefix = "\n") %>%
+    paste(., collapse = "")
+  
+  if (grepl("_m_", val)) {
+    timeofday <- paste("during midday traffic", thisUnit)
+    
+  } else if (grepl("_r_", val)) {
+    timeofday <- paste("during rush hour traffic", thisUnit)
+    
+  } else if (grepl("_sl_", val)) {
+    timeofday <- paste(
+      "the route following speed limits without any additional impedances", 
+      thisUnit)
+  }
+  timeofday <- 
+    strwrap(timeofday, 22, prefix = "\n") %>%
+    paste(., collapse = "")
+  
+  result <- paste(datasource, ",\n", 
+                  wherefrom, ":\n", 
+                  description, ",\n",
+                  timeofday, sep = "")
+  return(result)
+}
 
 
 GetCentroids <- function(fortified, unique_id, nominator) {

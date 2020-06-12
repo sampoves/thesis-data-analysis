@@ -1,5 +1,5 @@
  <!-- This is the HTML code for the travel time comparison app tooltip. -->
- <!-- for Sampo Vesanen's MSc thesis. 9.6.2020. -->
+ <!-- for Sampo Vesanen's MSc thesis. 13.6.2020. -->
 <div id='app-tooltip'>
 	<div>
 		<b>YKR ID %s</b></br> <!-- YKR_ID -->
@@ -108,8 +108,8 @@
 	 <!-- Compare TTM18 and thesis data -->
 	<div>
 		<i class='icon exchange-alt'></i>
-		<b>Comparison of TTM18<br>
-		and thesis data</b>
+		<b>Comparison of TTM18 and<br>
+		thesis data</b>
 	</div>
 	<table class='tg tg-header'>
 		<tr>
@@ -118,32 +118,32 @@
 			<th class='tg-cell'>m</th>
 			<th class='tg-cell'>sl</th>
 		</tr>
-	<table class='tg tg-flattop vl-sfp-wtd'>
+	<table class='tg tg-compare tg-flattop vl-sfp-wtd'>
 		<tr id='compare-sfp'>
 			<td class='tg-cell'>sfp</td>
-			<td class='tg-cell'>%s</td> <!-- comp_r_sfp -->
-			<td class='tg-cell'>%s</td> <!-- comp_m_sfp -->
-			<td class='tg-cell'>%s</td> <!-- comp_sl_sfp -->
+			<td class='tg-cell compcol1'>%s</td> <!-- comp_r_sfp -->
+			<td class='tg-cell compcol2'>%s</td> <!-- comp_m_sfp -->
+			<td class='tg-cell compcol3'>%s</td> <!-- comp_sl_sfp -->
 		</tr>
 		<tr id='compare-wtd'>
 			<td class='tg-cell'>wtd</td>
-			<td class='tg-cell'>%s</td> <!-- comp_r_wtd -->
-			<td class='tg-cell'>%s</td> <!-- comp_m_wtd -->
-			<td class='tg-cell'>%s</td> <!-- comp_sl_wtd -->
+			<td class='tg-cell compcol1'>%s</td> <!-- comp_r_wtd -->
+			<td class='tg-cell compcol2'>%s</td> <!-- comp_m_wtd -->
+			<td class='tg-cell compcol3'>%s</td> <!-- comp_sl_wtd -->
 		</tr>
 	</table>
-	<table class='tg vl-drive-pct'>
+	<table class='tg tg-compare vl-drive-pct'>
 		<tr id='compare-drivetime'>
 			<td class='tg-cell'>drivetime</td>
-			<td class='tg-cell'>%s</td> <!-- comp_r_drivetime -->
-			<td class='tg-cell'>%s</td> <!-- comp_m_drivetime -->
-			<td class='tg-cell'>%s</td> <!-- comp_sl_drivetime -->
+			<td class='tg-cell compcol1'>%s</td> <!-- comp_r_drivetime -->
+			<td class='tg-cell compcol2'>%s</td> <!-- comp_m_drivetime -->
+			<td class='tg-cell compcol3'>%s</td> <!-- comp_sl_drivetime -->
 		</tr>
 		<tr id='compare-pct'>
 			<td class='tg-cell'>pct</td>
-			<td class='tg-cell'>%s</td> <!-- comp_r_pct -->
-			<td class='tg-cell'>%s</td> <!-- comp_m_pct -->
-			<td class='tg-cell'>%s</td> <!-- comp_sl_pct -->
+			<td class='tg-cell compcol1'>%s</td> <!-- comp_r_pct -->
+			<td class='tg-cell compcol2'>%s</td> <!-- comp_m_pct -->
+			<td class='tg-cell compcol3'>%s</td> <!-- comp_sl_pct -->
 		</tr>
 	</table>
 </div>

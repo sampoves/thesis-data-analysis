@@ -2,7 +2,7 @@
 # Helsinki Region Travel Time comparison application
 # Helsinki Region Travel Time Matrix 2018 <--> My thesis survey results
 
-# 11.6.2020
+# 13.6.2020
 # Sampo Vesanen
 
 # This interactive Travel time comparison application is dependent on ggiraph 
@@ -10,11 +10,13 @@
 # ggiraph 0.7.0 would load the map an unreasonably long time. I strongly 
 # suspected some fault in the tooltip generation.
 
-# TODO: colouring of tooltip table cells to assist conclusion drawing
-# TODO: Remember arbitrary selection of timeofday in thesisdata! Triplecheck it
-# TODO: laskenko pct:n drivetimesta vai avg:sta?! decide!!
-# TODO: legend name is better, but still incorrect in comparison, maybe elsewhere as well
-# thesis drivetimes have negative values (this is a result in itself i think)
+# Some decisions need decising:
+# - Remember arbitrary selection of timeofday in thesisdata! Triplecheck it
+# - Remember to be sure about calculation of pct: from drivetime or avg?
+# - thesis drivetimes have negative values (this is a result in itself i think),
+#   deal with this with colouring or something
+# - consider adding lakes and main roads for increased readability
+# - verify download service products
 
 
 #### 1 Initialise --------------------------------------------------------------
@@ -39,7 +41,7 @@ library(ggnewscale)
 
 
 # App version
-app_v <- "0039 (11.6.2020)"
+app_v <- "0040 (13.6.2020)"
 
 
 # Working directory
@@ -50,6 +52,8 @@ ttm_path <- file.path(wd, "HelsinkiTravelTimeMatrix2018")
 munspath <- file.path(wd, "python/paavo/hcr_muns_clipped.shp")
 gridpath <- file.path(wd, "python/MetropAccess_YKR_grid_EurefFIN.shp")
 subdivpath <- file.path(wd, "python/suuralueet/PKS_suuralue.kml")
+waterpath <- file.path(wd, "python/FI001L3_HELSINKI/ua2012_water.shp")
+roadpath <- file.path(wd, "python/vayla/nopeusrajoitus_k_60.shp")
 
 # Thesis' processed data
 recordspath <- file.path(wd, "records_for_r.csv")
@@ -238,7 +242,23 @@ thesisdata[, -1] <- data.frame(
 
 
 
-#### 2.6 Label comparison plot features ----------------------------------------
+#### 2.6 Water and roads -------------------------------------------------------
+
+# # Digiroad
+# roads_f <-
+#   rgdal::readOGR(roadpath, stringsAsFactors = TRUE) %>%
+#   sp::spTransform(., app_crs) %>%
+#   ggplot2::fortify(.)
+# 
+# # UA2012
+# water_f <-
+#   rgdal::readOGR(waterpath, stringsAsFactors = TRUE) %>%
+#   sp::spTransform(., app_crs) %>%
+#   ggplot2::fortify(.)
+
+
+
+#### 2.7 Label comparison plot features ----------------------------------------
 
 # Create labels for zipcodes
 zipcode_lbl <- GetCentroids(postal_f, "zipcode", "zipcode")
@@ -585,86 +605,12 @@ server <- function(input, output, session) {
     # Reactive value: Insert equal breaks for mapping.
     #inputdata <- thisTTM_df()
     inputdata <- equalBreaksColumn()
-
-
+    fc <- input$fill_column
+    
     
     # Get an origin cell for mapping
     #origincell <- grid_f[grid_f["YKR_ID"] == as.numeric(validate_ykrid()), ]
     origincell <- grid_f[grid_f["YKR_ID"] == as.numeric(origin_id), ]
-    
-    
-    # move this when finished
-    GetLegendName <- function(val, origincell) {
-      
-      # Appropriately name the plot legend. Use parts of the input string to
-      # figure out what to print. Use strwrap to automatically add newlines
-      # to long strings.
-      
-      wherefrom <- paste0("origin ", origincell[, "YKR_ID"][1])
-      
-      if (grepl("ttm18_", val)) {
-        datasource <- "TTM18 data"
-        
-      } else if (grepl("msc_", val)) {
-        datasource <- "Thesis data"
-        
-      } else if (grepl("compare_", val)) {
-        datasource <- "Compare data sources (thesis data / TTM18 data)"
-      }
-      # Automatically add newlines to the long datasource string
-      datasource <- 
-        strwrap(datasource, 22, prefix = "\n") %>%
-        paste(., collapse = "")
-      
-      if (grepl("_t", val)) {
-        description <- 
-          "The total travel time to YKR_ID (min)"
-        
-      } else if (grepl("_avg", val)) {
-        description <- 
-          "The mean total travel time to postal code area (min)"
-        
-      } else if (grepl("_drivetime", val)) {
-        description <- 
-          "The mean duration of the driving segment of the total travel time, to postal code area (min)"
-        
-      } else if (grepl("_pct", val)) {
-        description <- 
-          "The percentage of SFP and WTD in the total travel time (%)"
-        
-      } else if (grepl("_sfp", val)) {
-        description <- 
-          "The mean time consumed in searching for parking in the destination postal code area (min)"
-        
-      } else if (grepl("_wtd", val)) {
-        description <- 
-          "The mean duration to walk from one's parked car to the destination, in destination postal code area (min)"
-      }
-      description <- 
-        strwrap(description, 22, prefix = "\n") %>%
-        paste(., collapse = "")
-      
-      if (grepl("_m_", val)) {
-        timeofday <- "during midday traffic"
-        
-      } else if (grepl("_r_", val)) {
-        timeofday <- "during rush hour traffic"
-        
-      } else if (grepl("_sl_", val)) {
-        timeofday <- "the route following speed limits without any additional impedances"
-      }
-      timeofday <- 
-        strwrap(timeofday, 22, prefix = "\n") %>%
-        paste(., collapse = "")
-      
-      result <- paste(datasource, ",\n", 
-                      wherefrom, ":\n", 
-                      description, ",\n",
-                      timeofday, sep = "")
-      return(result)
-    }
-    #GetLegendName("msc_r_drivetime", origincell)
-    
     
     # Format legend labels (Equal breaks classes). Remove [, ], (, and ). Also 
     # add list dash. Create named vector for the origin cell legend entry
@@ -746,6 +692,18 @@ server <- function(input, output, session) {
       # Define map extent manually
       coord_fixed(xlim = c(min(inputdata$lon) + 200, max(inputdata$lon) - 1200),
                   ylim = c(min(inputdata$lat) + 600, max(inputdata$lat) - 600)) +
+      
+      # Roads and water if we want them mapped
+      # geom_polygon(data = roads_f,
+      #              aes(long, lat, group = group),   
+      #              color = "#454545", 
+      #              size = 0.7) +
+      # 
+      # geom_polygon(data = water_f,
+      #              aes(long, lat, group = group),   
+      #              color = alpha("blue", 0.9), 
+      #              fill = "lightblue",
+      #              size = 0.4) +
       
       # ggnewscale makes it possible to map additional legends with same 
       # properties, in this case a new scale_fill. 
