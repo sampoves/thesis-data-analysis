@@ -5,6 +5,12 @@
 // by Sampo Vesanen, 13.6.2020
 
 
+
+// Trigger application's first comparison map calculation
+$(document).one('shiny:idle', function(event) {
+	$("#calcYkr").click();
+});
+
 // use this counter to hopefully detect flow of code
 function Counter() {
 	this.n = 0,
