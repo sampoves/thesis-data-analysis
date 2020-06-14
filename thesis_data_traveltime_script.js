@@ -2,7 +2,7 @@
 // JavaScript for the travel time comparison app of my thesis results
 
 // "Parking of private cars and spatial accessibility in Helsinki Capital Region" 
-// by Sampo Vesanen, 13.6.2020
+// by Sampo Vesanen, 14.6.2020
 
 
 
@@ -100,7 +100,7 @@ $(document).ready(function() {
 $(document).on('shiny:idle', function(event) {
 	
 	setTimeout(function() {
-		$('polygon').click(function() {
+		$('polygon[id^="svg_"]').click(function() {
 			
 			// On click, change value in numeric input
 			var tooltip_content = $(this)[0].attributes.title.textContent;

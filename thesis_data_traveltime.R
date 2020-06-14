@@ -17,7 +17,7 @@
 #   deal with this with colouring or something
 # - consider adding lakes and main roads for increased readability
 # - verify download service products
-# - make invalid ykrid only appear in sidebar, do not show message in stead of map
+# - make invalid ykrid only appear in sidebar, do not show message instead of map
 
 
 #### 1 Initialise --------------------------------------------------------------
@@ -42,19 +42,18 @@ library(ggnewscale)
 
 
 # App version
-app_v <- "0041 (14.6.2020)"
+app_v <- "0042 (14.6.2020)"
 
 
 # Working directory
 wd <- "C:/Sampon/Maantiede/Master of the Universe"
 
 # Data directories
-ttm_path <- file.path(wd, "HelsinkiTravelTimeMatrix2018")
 munspath <- file.path(wd, "python/paavo/hcr_muns_clipped.shp")
 gridpath <- file.path(wd, "python/MetropAccess_YKR_grid_EurefFIN.shp")
 subdivpath <- file.path(wd, "python/suuralueet/PKS_suuralue.kml")
-waterpath <- file.path(wd, "python/FI001L3_HELSINKI/ua2012_water.shp")
-roadpath <- file.path(wd, "python/vayla/nopeusrajoitus_k_60.shp")
+#waterpath <- file.path(wd, "python/FI001L3_HELSINKI/ua2012_water.shp")
+#roadpath <- file.path(wd, "python/vayla/nopeusrajoitus_k_60.shp")
 
 # Thesis' processed data
 recordspath <- file.path(wd, "records_for_r.csv")
@@ -403,8 +402,7 @@ all_fst <- list.files(path = fst_filepath,
 
 # Use "ykr_ids" as the location vector for each YKR_ID. This vector will be
 # queried in the reactive fetching of TTM18 data.
-ykrid_source <- file.path(ttm_path, "/5785xxx/travel_times_to_ 5785640.txt")
-ykr_ids <- read.csv(ykrid_source, sep = ";")[, 1]
+ykr_ids <- fst::read_fst(all_fst[1])[, 1]
 
 
 
@@ -606,7 +604,7 @@ server <- function(input, output, session) {
   output$grid <- renderGirafe({
     
     # Reactive value: Insert equal breaks for mapping.
-    inputdata <<- equalBreaksColumn()
+    inputdata <- equalBreaksColumn()
     
     # Get an origin cell for mapping
     origincell <- grid_f[grid_f["YKR_ID"] == as.numeric(validate_ykrid()), ]
@@ -873,11 +871,8 @@ server <- function(input, output, session) {
   
   
   #### 6.2.2 Other outputs -----------------------------------------------------
-  output$ykr_validator <- renderText({ 
-    validate_ykrid()
-  })
   
-  # Helps user understand where their ykrid is located
+  # Helps user understand where their ykr_id is located
   output$ykr_helper <- renderText({
     helper_output_ykrid()
   })
@@ -1033,6 +1028,7 @@ ui <- shinyUI(
       
       ### 6.6 Mainpanel layout -------------------------------------------------
       mainPanel(
+        
         HTML("<div class='rightside-toolbar'>"),
         downloadLink(
           outputId = "dl_compare",
@@ -1041,6 +1037,7 @@ ui <- shinyUI(
           inputId = "info_dialog_btn",
           label = HTML("<i class='icon info' title='Open tooltip abbreviations legend dialog'></i>")),
         HTML("</div>"),
+        
         girafeOutput("grid"), 
         
         width = 9
