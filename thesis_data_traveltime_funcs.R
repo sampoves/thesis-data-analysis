@@ -4,7 +4,7 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 11.6.2020
+# 15.6.2020
 
 
 
@@ -93,8 +93,8 @@ AddLevelCounts <- function(thisDf, datacol, newcolname, classes_n,
     dplyr::mutate(brks = interv_codes) %>%
     dplyr::group_by(brks) %>%
     dplyr::summarise(n = dplyr::n_distinct(zipcode)) %>%
-    dplyr::left_join(data.frame(brks = input_levels), .) %>%
-    dplyr::mutate(n = tidyr::replace_na(n, 0))
+    dplyr::left_join(data.frame(brks = input_levels), .)
+  levels_n$n[is.na(levels_n$n)] <- 0
   
   result <- paste0(labels_to_input, " [", levels_n$n, "]")
   

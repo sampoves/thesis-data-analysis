@@ -42,7 +42,7 @@ library(ggnewscale)
 
 
 # App version
-app_v <- "0042 (14.6.2020)"
+app_v <- "0043 (15.6.2020)"
 
 
 # Working directory
@@ -130,7 +130,7 @@ muns_f <-
   {dplyr::left_join(ggplot2::fortify(.),
                     as.data.frame(.) %>%
                       dplyr::mutate(id = as.character(dplyr::row_number() - 1)))} %>%
-  dplyr::select(-c(namn, vaestontih, km2, vakiluku))
+  dplyr::select(-c(namn, vaestontih, km2, vakiluku, kuntakoodi))
 
 
 
@@ -143,7 +143,7 @@ postal <-
            colClasses = c(zipcode = "factor", kunta = "factor", 
                           geometry = "character"),
            stringsAsFactors = TRUE) %>%
-  dplyr::select(c(2, 3, 6, 108))
+  dplyr::select(c(2, 3, 108))
 
 # "postal" geometries are in well-known text format. Some processing is needed 
 # to utilise these polygons in R. readWKT() uses rgeos.
@@ -162,7 +162,8 @@ postal_f <-
   {dplyr::left_join(ggplot2::fortify(.),
                     as.data.frame(.) %>%
                       dplyr::mutate(id = as.character(zipcode)),
-                    by = "id")}
+                    by = "id")} %>%
+  dplyr::select(-geometry)
 
 
 
@@ -611,8 +612,9 @@ server <- function(input, output, session) {
     
     # Format legend labels (Equal breaks classes). Remove [, ], (, and ). Also 
     # add list dash. Create named vector for the origin cell legend entry
-    l_labels <- gsub("(])|(\\()|(\\[)", "", levels(inputdata[, input$fill_column]))
-    l_labels <- gsub(",", " \U2012 ", l_labels)
+    l_labels <- 
+      gsub("(])|(\\()|(\\[)", "", levels(inputdata[, input$fill_column])) %>%
+      gsub(",", " \U2012 ", .)
     legendname <- GetLegendName(input$fill_column, origincell)
 
     # if fillcolumn visualises postal code areas, allow counting of factor 
