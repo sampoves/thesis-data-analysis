@@ -4,7 +4,7 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 15.6.2020
+# 17.6.2020
 
 
 
@@ -24,6 +24,15 @@ TTM18fst_fetch <- function(x, pos) {
   fst::read_fst(x, from = pos, to = pos, as.data.table = TRUE)
 }
 
+
+
+# Fetch a fst format Travel Time Matrix data file, then subset that file with
+# the character vector zipcode_ids, which represents ids of one postal code area.
+TTM18fst_fetch2 <- function(x, zipcode_ids) {
+  df <- fst::read_fst(x, as.data.table = TRUE)
+  df <- df[from_id %in% zipcode_ids, ]
+  return(df)
+}
 
 
 ReadAndClean <- function(fp) {
@@ -109,7 +118,8 @@ GetLegendName <- function(val, origincell) {
   # figure out what to print. Use strwrap() to automatically add newlines
   # to long strings. Use origincell to add information about origin ykr_id.
   
-  wherefrom <- paste0("origin ", origincell[, "YKR_ID"][1])
+  wherefrom <- paste0("origin ", origincell[, "zipcode"][1])
+  #wherefrom <- paste0("origin ", origincell)
   
   if (grepl("ttm18_", val)) {
     datasource <- "TTM18 data"

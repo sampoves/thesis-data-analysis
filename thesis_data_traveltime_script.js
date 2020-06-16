@@ -2,7 +2,7 @@
 // JavaScript for the travel time comparison app of my thesis results
 
 // "Parking of private cars and spatial accessibility in Helsinki Capital Region" 
-// by Sampo Vesanen, 14.6.2020
+// by Sampo Vesanen, 17.6.2020
 
 
 
@@ -123,10 +123,11 @@ $(document).on('shiny:idle', function(event) {
 	}, 3000);
 });
 
-// this function only preserved integers of length 7 from the character string that is 
-// the tooltip inside the clicked polygon element
+// this function only preserves integers of length 5 from the character string that is 
+// the tooltip inside the clicked polygon element. Postal code is included twice in the
+// tooltip, therefore "[0]".
 function clean(str) {
-	return parseInt(str.match(/\d{7}/g));
+	return str.match(/\d{5}/g)[0];
 }
 
 

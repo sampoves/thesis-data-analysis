@@ -2,7 +2,7 @@
 # Helsinki Region Travel Time comparison application
 # Helsinki Region Travel Time Matrix 2018 <--> My thesis survey results
 
-# 14.6.2020
+# 17.6.2020
 # Sampo Vesanen
 
 # This interactive Travel time comparison application is dependent on ggiraph 
@@ -42,7 +42,7 @@ library(ggnewscale)
 
 
 # App version
-app_v <- "0043 (15.6.2020)"
+app_v <- "0044.postal (17.6.2020)"
 
 
 # Working directory
@@ -58,6 +58,7 @@ subdivpath <- file.path(wd, "python/suuralueet/PKS_suuralue.kml")
 # Thesis' processed data
 recordspath <- file.path(wd, "records_for_r.csv")
 postal_path <- file.path(wd, "postal_for_r.csv")
+gridzipcodes <- file.path(wd, "grid_for_r.csv")
 
 # Directives
 csspath <- file.path(wd, "python/thesis_data_traveltime_style.css")
@@ -88,7 +89,7 @@ grid <- rgdal::readOGR(gridpath, stringsAsFactors = TRUE) %>%
   sp::spTransform(., app_crs)
 
 # Save grid as centroids for the spatial join of data
-grid_point <- rgeos::gCentroid(grid, byid = TRUE)
+#grid_point <- rgeos::gCentroid(grid, byid = TRUE)
 
 # TTM18 Helsinki walking center polygon. Source: Henrikki Tenkanen. Get YKR_IDs
 # which fit inside the walking center polygon.
@@ -164,6 +165,16 @@ postal_f <-
                       dplyr::mutate(id = as.character(zipcode)),
                     by = "id")} %>%
   dplyr::select(-geometry)
+
+# This dataframe, produced in Python, helps find the zipcodes for each YKR_ID.
+# 99999 is outside of research area.
+ykrid_zipcodes <- 
+  read.csv(file = gridzipcodes,
+           header = TRUE, 
+           sep = ",",
+           colClasses = c(YKR_ID = "integer", zipcode = "character"),
+           stringsAsFactors = TRUE) %>%
+  dplyr::select(-X)
 
 
 
@@ -293,10 +304,7 @@ subdiv_lbl["Suur-Matinkylä", "lat"] %-=% 500
 # In this named vector the first part is the name of the new, classified
 # column. Second part is the original column name where the classification
 # was calculated from.
-vis_cols <- c("ttm18_r_t" = "car_r_t",
-              "ttm18_m_t" = "car_m_t",
-              "ttm18_sl_t" = "car_sl_t",
-              "ttm18_r_avg" = "ttm_r_avg",
+vis_cols <- c("ttm18_r_avg" = "ttm_r_avg",
               "ttm18_m_avg" = "ttm_m_avg",
               "ttm18_sl_avg" = "ttm_sl_avg",
               "ttm18_r_drivetime" = "ttm_r_drivetime",
@@ -332,40 +340,40 @@ vis_cols <- c("ttm18_r_t" = "car_r_t",
               "compare_m_pct" = "comp_m_pct",
               "compare_sl_pct" = "comp_sl_pct")
 
-# These values below are NA for car_r_t, car_m_t, and car_sl_t. The app will not
-# function with these values. Use this list to prevent user from using these.
-
-# One can get these values by catching any calculated inputdata dataframe from
-# the app with a global scope <<- operator and running this code (NB! This
-# code erroneously counts the current origin id as NA YKR_ID. From "illegal_vals"
-# this that origin id is deleted, but be aware of this caveat when you run this 
-# code):
-#dplyr::filter(inputdata, is.na(car_r_t) & is.na(car_m_t) & is.na(car_sl_t)) %>%
-#dplyr::group_by(zipcode, YKR_ID) %>%
-#dplyr::summarise() %>%
-#as.data.frame()
-
-illegal_vals <-
-  c(5973738, 5981895, 5945775, 5967170, 5968818, 5924025, 5907587, 5905744, 
-    5900277, 5902115, 5903952, 5903953, 5905789, 5920430, 5920431, 5922253, 
-    5922254, 5922255, 5924063, 5924064, 5925883, 5925884, 5925885, 5927703, 
-    5927704, 5927705, 5929522, 5929523, 5929524, 5925879, 5927699, 5934973, 
-    5947626, 5868827, 5870687, 5870688, 5872546, 5872547, 5872548, 5872549, 
-    5874403, 5874404, 5874405, 5874406, 5874407, 5876260, 5876261, 5876262, 
-    5866950, 5855745, 5865085, 5844493, 5818070, 5818071, 5831321, 5846344, 
-    5846345, 5848213, 5848214, 5848220, 5848221, 5850087, 5850088, 5850089, 
-    5850094, 5850095, 5851961, 5851962, 5851963, 5851967, 5851968, 5855709, 
-    5855710, 5855711, 5857579, 5859445, 5859446, 5859459, 5883603, 5870606, 
-    5872466, 5872467, 5874324, 5855705, 5866884, 5866885, 5870607, 5870626, 
-    5848181, 5848182, 5850057, 5850058, 5797069, 5821815, 5821816, 5986698, 
-    5933066, 5927624, 5929442, 5887250, 5887251, 5889098, 5889099, 5889100, 
-    5889101, 5890944, 5890945, 5890946, 5890947, 5892788, 5892789, 5892790, 
-    5892791, 5892792, 5894631, 5894632, 5894633, 5894634, 5896474, 5896475, 
-    5896476, 5898315, 5898316, 5898317, 5900155, 5925774, 5940312, 5949303, 
-    5949308, 5887249, 5889097, 5890943, 5846301, 5848176, 5848178, 5848179, 
-    5848180, 5850051, 5850052, 5850053, 5850054, 5850055, 5850056, 5851926, 
-    5851927, 5851928, 5853800, 5870689, 5922256, 5924077, 5924078, 5924079, 
-    5949422, 5976984, 5978642, 5989981, 5999550)
+# # These values below are NA for car_r_t, car_m_t, and car_sl_t. The app will not
+# # function with these values. Use this list to prevent user from using these.
+# 
+# # One can get these values by catching any calculated inputdata dataframe from
+# # the app with a global scope <<- operator and running this code (NB! This
+# # code erroneously counts the current origin id as NA YKR_ID. From "illegal_vals"
+# # this that origin id is deleted, but be aware of this caveat when you run this 
+# # code):
+# #dplyr::filter(inputdata, is.na(car_r_t) & is.na(car_m_t) & is.na(car_sl_t)) %>%
+# #dplyr::group_by(zipcode, YKR_ID) %>%
+# #dplyr::summarise() %>%
+# #as.data.frame()
+#
+# illegal_vals <-
+#   c(5973738, 5981895, 5945775, 5967170, 5968818, 5924025, 5907587, 5905744, 
+#     5900277, 5902115, 5903952, 5903953, 5905789, 5920430, 5920431, 5922253, 
+#     5922254, 5922255, 5924063, 5924064, 5925883, 5925884, 5925885, 5927703, 
+#     5927704, 5927705, 5929522, 5929523, 5929524, 5925879, 5927699, 5934973, 
+#     5947626, 5868827, 5870687, 5870688, 5872546, 5872547, 5872548, 5872549, 
+#     5874403, 5874404, 5874405, 5874406, 5874407, 5876260, 5876261, 5876262, 
+#     5866950, 5855745, 5865085, 5844493, 5818070, 5818071, 5831321, 5846344, 
+#     5846345, 5848213, 5848214, 5848220, 5848221, 5850087, 5850088, 5850089, 
+#     5850094, 5850095, 5851961, 5851962, 5851963, 5851967, 5851968, 5855709, 
+#     5855710, 5855711, 5857579, 5859445, 5859446, 5859459, 5883603, 5870606, 
+#     5872466, 5872467, 5874324, 5855705, 5866884, 5866885, 5870607, 5870626, 
+#     5848181, 5848182, 5850057, 5850058, 5797069, 5821815, 5821816, 5986698, 
+#     5933066, 5927624, 5929442, 5887250, 5887251, 5889098, 5889099, 5889100, 
+#     5889101, 5890944, 5890945, 5890946, 5890947, 5892788, 5892789, 5892790, 
+#     5892791, 5892792, 5894631, 5894632, 5894633, 5894634, 5896474, 5896475, 
+#     5896476, 5898315, 5898316, 5898317, 5900155, 5925774, 5940312, 5949303, 
+#     5949308, 5887249, 5889097, 5890943, 5846301, 5848176, 5848178, 5848179, 
+#     5848180, 5850051, 5850052, 5850053, 5850054, 5850055, 5850056, 5851926, 
+#     5851927, 5851928, 5853800, 5870689, 5922256, 5924077, 5924078, 5924079, 
+#     5949422, 5976984, 5978642, 5989981, 5999550)
 
 
 
@@ -374,19 +382,19 @@ illegal_vals <-
 # First, spatjoin postal data to grid centroids. Left = FALSE is inner join. Then,
 # Join centroid data back to grid polygons and convert grid to SpatialPolygons.
 # Finally, fortify for ggplot while keeping important columns.
-grid_f <- 
-  sf::st_join(sf::st_as_sf(grid_point), 
-              sf::st_as_sf(postal),
-              join = st_intersects,
-              left = FALSE) %>%
-  sf::st_join(sf::st_as_sf(grid), 
-              ., 
-              join = st_intersects) %>%
-  as(., "Spatial") %>%
-  {dplyr::left_join(ggplot2::fortify(.),
-                    as.data.frame(.) %>%
-                      dplyr::mutate(id = as.character(dplyr::row_number() - 1)))} %>%
-  dplyr::select(-c(x, y))
+# grid_f <- 
+#   sf::st_join(sf::st_as_sf(grid_point), 
+#               sf::st_as_sf(postal),
+#               join = st_intersects,
+#               left = FALSE) %>%
+#   sf::st_join(sf::st_as_sf(grid), 
+#               ., 
+#               join = st_intersects) %>%
+#   as(., "Spatial") %>%
+#   {dplyr::left_join(ggplot2::fortify(.),
+#                     as.data.frame(.) %>%
+#                       dplyr::mutate(id = as.character(dplyr::row_number() - 1)))} %>%
+#   dplyr::select(-c(x, y))
 
 
 
@@ -404,6 +412,36 @@ all_fst <- list.files(path = fst_filepath,
 # Use "ykr_ids" as the location vector for each YKR_ID. This vector will be
 # queried in the reactive fetching of TTM18 data.
 ykr_ids <- fst::read_fst(all_fst[1])[, 1]
+
+
+
+
+
+# redesign fst fetch
+# thisval <- "02180"
+# theseIds <- ykrid_zipcodes[ykrid_zipcodes$zipcode == thisval, ][[1]]
+# 
+# result4209 <- 
+#   lapply(all_fst, FUN = TTM18fst_fetch2, theseIds) %>%
+#   data.table::rbindlist(., fill = TRUE) %>%
+# 
+#   # Get all means, start postal code area is "thisval". This counts all starting
+#   # YKR_IDs in "thisval", and all destination YKR_IDs, including those in starting
+#   # postal code area.
+#   merge(., ykrid_zipcodes, by.x = "to_id", by.y = "YKR_ID") %>%
+#   dplyr::mutate(ttm_sfp = 0.42,
+#                 ttm_wtd = case_when(to_id %in% walking_ids ~ 2.5, TRUE ~ 2)) %>%
+#   dplyr::group_by(zipcode) %>%
+#   summarise(car_r_avg = mean(car_r_t),
+#             car_m_avg = mean(car_m_t),
+#             car_sl_avg = mean(car_sl_t),
+#             ttm_sfp = mean(ttm_sfp),
+#             ttm_wtd = mean(ttm_wtd)) %>%
+#   dplyr::mutate_at(vars(car_r_avg, car_m_avg, car_sl_avg, ttm_wtd), ~round(., 2)) %>%
+#   
+#   dplyr::left_join(., thesisdata, by = "zipcode") %>%
+#   dplyr::left_join(postal_f, ., by = "zipcode")
+
 
 
 
@@ -426,36 +464,30 @@ server <- function(input, output, session) {
     
     # %then% allows only one error message at a time
     validate(
-      need(is.numeric(input$ykrid), "Not an integer") %then%
-      need(nchar(input$ykrid) == 7, "Seven digits pls") %then%
-      need(input$ykrid <= max(ykr_ids), 
-           paste("Value maximum is", max(ykr_ids))) %then%
-      need(input$ykrid >= min(ykr_ids), 
-           paste("Value minimum is", min(ykr_ids))) %then%
-      need(input$ykrid %in% ykr_ids, "Value not a valid YKR_ID") %then%
-      need(input$ykrid %notin% illegal_vals, 
-           "Value is NA in TTM18, can't compute comparison")
+      need(nchar(input$ykrid) == 5, "Five chars pls") %then%
+      need(input$ykrid %in% unique(ykrid_zipcodes$zipcode), 
+           "Value not a valid postal code")
     )
     input$ykrid
   })
   
   # Print helpful text for the user
-  helper_output_ykrid <- reactive({
-    
-    # if input from validate_ykrid() is numeric, display useful information
-    # to the user
-    if(is.numeric(validate_ykrid())) {
-      
-      inputdata <- thisTTM()
-      thisVal <- inputdata[inputdata$YKR_ID == validate_ykrid(), ][1, ]
-      help_output <- paste(
-        "<p style='margin: 0 0 0px;'>",
-        "<b>YKR_ID: ", validate_ykrid(), "</b>,<br>",
-        thisVal[["zipcode"]], " ", thisVal[["nimi"]],
-        "</p>", sep = "")
-    }
-    help_output
-  })
+  # helper_output_ykrid <- reactive({
+  #   
+  #   # if input from validate_ykrid() is numeric, display useful information
+  #   # to the user
+  #   if(is.numeric(validate_ykrid())) {
+  #     
+  #     inputdata <- thisTTM()
+  #     thisVal <- inputdata[inputdata$YKR_ID == validate_ykrid(), ][1, ]
+  #     help_output <- paste(
+  #       "<p style='margin: 0 0 0px;'>",
+  #       "<b>YKR_ID: ", validate_ykrid(), "</b>,<br>",
+  #       thisVal[["zipcode"]], " ", thisVal[["nimi"]],
+  #       "</p>", sep = "")
+  #   }
+  #   help_output
+  # })
   
   
   
@@ -467,54 +499,32 @@ server <- function(input, output, session) {
   thisTTM <- reactive({
     
     #### Fetch TTM18 data ---
-    
+
     # Only specify an origin id (from_id in TTM18). to_id remains open because we 
     # want to view all possible destinations.
-    origin_id <- validate_ykrid()
+    origin_zip <- validate_ykrid()
+    theseIds <- ykrid_zipcodes[ykrid_zipcodes$zipcode == origin_zip, ][[1]]
     
-    # Get the position of the current origin. In TTM18 data, origin ykr_ids are 
-    # always in the same position. We will use this to get the order to the 
-    # ykr_ids once, and then, when needed, find out the location queried ykr_id 
-    # from the vector of all the ykr_ids.
-    pos <- match(as.numeric(origin_id), ykr_ids) # get index of current id
-    
-    # Fetch fst format TTM18 and process the dataframe with the YKR_ID "origin_id"
-    # as the starting point.
     result <- 
-      lapply(all_fst, FUN = TTM18fst_fetch, pos) %>%
+      lapply(all_fst, FUN = TTM18fst_fetch2, theseIds) %>%
       data.table::rbindlist(., fill = TRUE) %>%
-      data.table::merge.data.table(as.data.table(grid_f), .,
-                                   by.x = "YKR_ID", by.y = "to_id")
-    
-    
-    
-    #### Add thesis data values to the fortified data ---
-    
-    # Join "thesisdata", thesis survey results, to "result", the currently 
-    # calculated travel times dataframe
-    result <- dplyr::left_join(result, thesisdata, by = "zipcode")
-    
-    
-    
-    #### Add new data columns ---
-    
-    # Get grouped means of TTM18 data for current starting point to all 
-    # destinations for each postal code area
-    result <- result %>%
       
-      # Add Travel Time Matrix "searching for parking" and "walk to destination" data
+      # Get all means, start postal code area is "thisval". This counts all starting
+      # YKR_IDs in "thisval", and all destination YKR_IDs, including those in starting
+      # postal code area.
+      merge(., ykrid_zipcodes, by.x = "to_id", by.y = "YKR_ID") %>%
       dplyr::mutate(ttm_sfp = 0.42,
-                    ttm_wtd = case_when(YKR_ID %in% walking_ids ~ 2.5, TRUE ~ 2)) %>%
+                    ttm_wtd = case_when(to_id %in% walking_ids ~ 2.5, TRUE ~ 2)) %>%
       dplyr::group_by(zipcode) %>%
-      dplyr::summarise(ttm_r_avg = mean(car_r_t),
-                       ttm_m_avg = mean(car_m_t),
-                       ttm_sl_avg = mean(car_sl_t),
-                       ttm_sfp = mean(ttm_sfp),
-                       ttm_wtd = mean(ttm_wtd)) %>%
-      dplyr::mutate_if(is.numeric, round, 2) %>%
+      summarise(ttm_r_avg = mean(car_r_t),
+                ttm_m_avg = mean(car_m_t),
+                ttm_sl_avg = mean(car_sl_t),
+                ttm_sfp = mean(ttm_sfp),
+                ttm_wtd = mean(ttm_wtd)) %>%
+      dplyr::mutate_at(vars(ttm_r_avg, ttm_m_avg, ttm_sl_avg, ttm_wtd), ~round(., 2)) %>%
       
-      # Join summarised columns back to original dataframe "result"
-      dplyr::inner_join(result, ., by = "zipcode") %>%
+      dplyr::left_join(., thesisdata, by = "zipcode") %>%
+      dplyr::left_join(postal_f, ., by = "zipcode") %>%
       
       # Generate drivetime (min) and pct (%) columns for TTM18 data
       dplyr::mutate(ttm_r_drivetime = ttm_r_avg - ttm_sfp - ttm_wtd,
@@ -537,8 +547,7 @@ server <- function(input, output, session) {
                     ttm_r_pct = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_r_pct),
                     ttm_m_pct = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_m_pct),
                     ttm_sl_pct = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_sl_pct)) %>%
-      dplyr::mutate_at(vars(car_r_t, car_m_t, car_sl_t, ttm_r_avg, ttm_m_avg, 
-                            ttm_sl_avg),
+      dplyr::mutate_at(vars(ttm_r_avg, ttm_m_avg, ttm_sl_avg),
                        ~dplyr::na_if(., -1)) %>%
       
       # Add the rest of thesis_ columns. with if_else() change possible NA's to 
@@ -608,7 +617,7 @@ server <- function(input, output, session) {
     inputdata <- equalBreaksColumn()
     
     # Get an origin cell for mapping
-    origincell <- grid_f[grid_f["YKR_ID"] == as.numeric(validate_ykrid()), ]
+    origincell <- postal_f[postal_f["zipcode"] == validate_ykrid(), ]
     
     # Format legend labels (Equal breaks classes). Remove [, ], (, and ). Also 
     # add list dash. Create named vector for the origin cell legend entry
@@ -626,9 +635,9 @@ server <- function(input, output, session) {
     }
     
     # Origin id legend label
-    o_label <- setNames("purple", 
-                        origincell[, "nimi"] %>% 
-                          unique() %>% 
+    o_label <- setNames("purple",
+                        origincell[, "nimi"] %>%
+                          unique() %>%
                           as.character())
     
     # current_subdiv_lbl is created so that any values can be removed when 
@@ -646,15 +655,15 @@ server <- function(input, output, session) {
     g <- ggplot(data = inputdata) + 
       geom_polygon_interactive(
         color = "black",
-        size = 0.15,
+        size = 0.3,
         aes_string("long", "lat", 
                    group = "group",
                    fill = input$fill_column,
                    tooltip = substitute(
-                     sprintf(tooltip_content, YKR_ID, 
+                     sprintf(tooltip_content,
                              zipcode, nimi,
                              
-                             car_r_t, car_m_t, car_sl_t,
+                             "NA", "na", "na",
                              ttm_sfp, ttm_sfp, ttm_sfp,
                              ttm_wtd, ttm_wtd, ttm_wtd,
                              ttm_r_avg, ttm_m_avg, ttm_sl_avg,
@@ -702,18 +711,18 @@ server <- function(input, output, session) {
       
       # ggnewscale makes it possible to map additional legends with same 
       # properties, in this case a new scale_fill. 
-      ggnewscale::new_scale_fill() +
-      
+      ggnewscale::new_scale_color() +
+
       # Plot origin YKR_ID, the starting position for TTM18
       geom_polygon(data = origincell,
-                   aes(long, lat, fill = nimi),
-                   linetype = "solid",
-                   size = 0.6) +
-      
+                   aes(long, lat, color = nimi),
+                   fill = NA,
+                   size = 1.0) +
+
       # Get a legend entry for origin ykr id
-      scale_fill_manual(name = "Origin YKR ID", 
-                        values = o_label,
-                        labels = names(o_label)) +
+      scale_color_manual(name = "Origin YKR ID",
+                         values = o_label,
+                         labels = names(o_label)) +
     
       # Scale bar and north arrow
       ggsn::scalebar(inputdata, 
@@ -742,10 +751,10 @@ server <- function(input, output, session) {
       
       # Municipality boundaries
       g <- g + geom_polygon(data = muns_f,
-                   aes(long, lat, group = group),   
-                   color = alpha("black", 0.9), 
-                   fill = "NA",
-                   size = 1.0)
+                            aes(long, lat, group = group),   
+                            color = alpha("black", 0.9), 
+                            fill = "NA",
+                            size = 1.0)
     }
     
     if(input$show_subdiv == TRUE) {
@@ -759,15 +768,15 @@ server <- function(input, output, session) {
     }
     
     # Plot postal code area boundaries on the map
-    if(input$show_postal == TRUE) {
-      
-      # Postal code area boundaries
-      g <- g + geom_polygon(data = postal_f,
-                   aes(long, lat, group = group),
-                   color = "black", 
-                   fill = "NA",
-                   size = 0.2)
-    }
+    # if(input$show_postal == TRUE) {
+    #   
+    #   # Postal code area boundaries
+    #   g <- g + geom_polygon(data = postal_f,
+    #                aes(long, lat, group = group),
+    #                color = "black", 
+    #                fill = "NA",
+    #                size = 0.2)
+    # }
     
     # Plot walking center boundaries
     if(input$show_walk == TRUE) {
@@ -875,9 +884,9 @@ server <- function(input, output, session) {
   #### 6.2.2 Other outputs -----------------------------------------------------
   
   # Helps user understand where their ykr_id is located
-  output$ykr_helper <- renderText({
-    helper_output_ykrid()
-  })
+  # output$ykr_helper <- renderText({
+  #   helper_output_ykrid()
+  # })
 }
 
 
@@ -912,12 +921,10 @@ ui <- shinyUI(
         HTML("<label class='control-label'>Origin YKR ID</label>",
              "<div id='contents'>",
              "<div id='ykr-flash'>"),
-        numericInput(
-          inputId = "ykrid", 
+        textInput(
+          inputId = "ykrid",
           label = "Origin YKR ID",
-          max = max(ykr_ids),
-          min = min(ykr_ids),
-          value = 5975375), # Starting value Rautatientori, Ateneum
+          value = "00100"), # Starting value Rautatientori, Ateneum
         HTML("</div>"),
                    
         actionButton(
@@ -926,7 +933,7 @@ ui <- shinyUI(
         
         HTML("<p id='smalltext'><b>Current origin YKR_ID</b></p>",
              "<div id='contents'>"),
-        htmlOutput("ykr_helper"),
+        #htmlOutput("ykr_helper"),
         HTML("</div>",
              "</div>"),
         
@@ -938,8 +945,7 @@ ui <- shinyUI(
           selected = "compare_r_sfp",
           choices = list(
             `Travel Time Matrix 2018 private car data` = 
-              c("ttm18_r_t", "ttm18_m_t", "ttm18_sl_t", 
-                "ttm18_r_avg", "ttm18_m_avg", "ttm18_sl_avg",
+              c("ttm18_r_avg", "ttm18_m_avg", "ttm18_sl_avg",
                 "ttm18_r_drivetime", "ttm18_m_drivetime", "ttm18_sl_drivetime",
                 "ttm18_r_pct", "ttm18_m_pct", "ttm18_sl_pct"),
             
@@ -969,12 +975,13 @@ ui <- shinyUI(
              "<div id='contents'>",
              "<div class='onoff-container'>",
              
-             "<div class='onoff-div'><b>Postal code areas</b><br>",
-             "<label class='control-label onoff-label' for='show_postal'>Boundaries</label>"),
-        shinyWidgets::switchInput(
-          inputId = "show_postal",
-          size = "mini",
-          value = TRUE),
+             "<div class='onoff-div'><b>Postal code areas</b><br>"),
+        #      "<label class='control-label onoff-label' for='show_postal'>Boundaries</label>"),
+        # shinyWidgets::switchInput(
+        #   inputId = "show_postal",
+        #   size = "mini",
+        #   value = TRUE),
+        
         HTML("<label class='control-label onoff-label' for='show_postal_labels'>Labels</label>"),
         shinyWidgets::switchInput(
           inputId = "show_postal_labels", 
@@ -995,10 +1002,10 @@ ui <- shinyUI(
         HTML("<div class='onoff-div'><b>Municipalities</b><br>",
              "<label class='control-label onoff-label' for='show_muns'>Boundaries</label>"),
         shinyWidgets::switchInput(
-          inputId = "show_muns", 
+          inputId = "show_muns",
           size = "mini",
           value = TRUE),
-                   
+
         HTML("<label class='control-label onoff-label' for='show_muns_labels'>Labels</label>"),
         shinyWidgets::switchInput(
           inputId = "show_muns_labels", 
