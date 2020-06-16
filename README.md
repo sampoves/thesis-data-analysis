@@ -10,4 +10,4 @@ You may view and explore my research data with these two ShinyApps deployed on S
 
 * https://sampoves.shinyapps.io/analysis/
 * https://sampoves.shinyapps.io/visitors/
-
+* https://sampoves.shinyapps.io/comparison/
