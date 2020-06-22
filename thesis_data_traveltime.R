@@ -2,7 +2,7 @@
 # Helsinki Region Travel Time comparison application
 # Helsinki Region Travel Time Matrix 2018 <--> My thesis survey results
 
-# 17.6.2020
+# 23.6.2020
 # Sampo Vesanen
 
 # This interactive Travel time comparison application is dependent on ggiraph 
@@ -17,7 +17,10 @@
 #   deal with this with colouring or something
 # - consider adding lakes and main roads for increased readability
 # - verify download service products
-# - make invalid ykrid only appear in sidebar, do not show message instead of map
+# - preprocess TTM18 data to make app use much faster (only 167 different 
+#   possibilities anymore)
+# - add ttm_sfp to postal fst files
+# - add transparent zipcode boundaries
 
 
 #### 1 Initialise --------------------------------------------------------------
@@ -42,8 +45,7 @@ library(ggnewscale)
 
 
 # App version
-app_v <- "0044.postal (17.6.2020)"
-
+app_v <- "0045.postal (23.6.2020)"
 
 # Working directory
 wd <- "C:/Sampon/Maantiede/Master of the Universe"
@@ -74,7 +76,7 @@ source(file.path(wd, "python/thesis_data_traveltime_funcs.R"))
 # executed once. "fst_filepath" is the location of TTM18 converted to fst.
 fst_filepath <- file.path(wd, "TTM18")
 #source(file.path(wd, "python/thesis_data_traveltime_conv.R"))
-
+fst_postal_fp <- file.path(wd, "TTM18_postal")
 
 
 #### 2 Import data layers ------------------------------------------------------
@@ -85,11 +87,8 @@ fst_filepath <- file.path(wd, "TTM18")
 app_crs <- sp::CRS("+init=epsg:3067")
 
 # Read an transform
-grid <- rgdal::readOGR(gridpath, stringsAsFactors = TRUE) %>%
+gridi <- rgdal::readOGR(gridpath, stringsAsFactors = TRUE) %>%
   sp::spTransform(., app_crs)
-
-# Save grid as centroids for the spatial join of data
-#grid_point <- rgeos::gCentroid(grid, byid = TRUE)
 
 # TTM18 Helsinki walking center polygon. Source: Henrikki Tenkanen. Get YKR_IDs
 # which fit inside the walking center polygon.
@@ -109,7 +108,7 @@ walk_f <-
   dplyr::mutate(label = "walk")
 
 walking_ids <- 
-  sf::st_intersection(sf::st_as_sf(grid), walkingHki) %>%
+  sf::st_intersection(sf::st_as_sf(gridi), walkingHki) %>%
   as(., "Spatial") %>%
   {dplyr::left_join(ggplot2::fortify(.),
                     as.data.frame(.) %>%
@@ -340,62 +339,6 @@ vis_cols <- c("ttm18_r_avg" = "ttm_r_avg",
               "compare_m_pct" = "comp_m_pct",
               "compare_sl_pct" = "comp_sl_pct")
 
-# # These values below are NA for car_r_t, car_m_t, and car_sl_t. The app will not
-# # function with these values. Use this list to prevent user from using these.
-# 
-# # One can get these values by catching any calculated inputdata dataframe from
-# # the app with a global scope <<- operator and running this code (NB! This
-# # code erroneously counts the current origin id as NA YKR_ID. From "illegal_vals"
-# # this that origin id is deleted, but be aware of this caveat when you run this 
-# # code):
-# #dplyr::filter(inputdata, is.na(car_r_t) & is.na(car_m_t) & is.na(car_sl_t)) %>%
-# #dplyr::group_by(zipcode, YKR_ID) %>%
-# #dplyr::summarise() %>%
-# #as.data.frame()
-#
-# illegal_vals <-
-#   c(5973738, 5981895, 5945775, 5967170, 5968818, 5924025, 5907587, 5905744, 
-#     5900277, 5902115, 5903952, 5903953, 5905789, 5920430, 5920431, 5922253, 
-#     5922254, 5922255, 5924063, 5924064, 5925883, 5925884, 5925885, 5927703, 
-#     5927704, 5927705, 5929522, 5929523, 5929524, 5925879, 5927699, 5934973, 
-#     5947626, 5868827, 5870687, 5870688, 5872546, 5872547, 5872548, 5872549, 
-#     5874403, 5874404, 5874405, 5874406, 5874407, 5876260, 5876261, 5876262, 
-#     5866950, 5855745, 5865085, 5844493, 5818070, 5818071, 5831321, 5846344, 
-#     5846345, 5848213, 5848214, 5848220, 5848221, 5850087, 5850088, 5850089, 
-#     5850094, 5850095, 5851961, 5851962, 5851963, 5851967, 5851968, 5855709, 
-#     5855710, 5855711, 5857579, 5859445, 5859446, 5859459, 5883603, 5870606, 
-#     5872466, 5872467, 5874324, 5855705, 5866884, 5866885, 5870607, 5870626, 
-#     5848181, 5848182, 5850057, 5850058, 5797069, 5821815, 5821816, 5986698, 
-#     5933066, 5927624, 5929442, 5887250, 5887251, 5889098, 5889099, 5889100, 
-#     5889101, 5890944, 5890945, 5890946, 5890947, 5892788, 5892789, 5892790, 
-#     5892791, 5892792, 5894631, 5894632, 5894633, 5894634, 5896474, 5896475, 
-#     5896476, 5898315, 5898316, 5898317, 5900155, 5925774, 5940312, 5949303, 
-#     5949308, 5887249, 5889097, 5890943, 5846301, 5848176, 5848178, 5848179, 
-#     5848180, 5850051, 5850052, 5850053, 5850054, 5850055, 5850056, 5851926, 
-#     5851927, 5851928, 5853800, 5870689, 5922256, 5924077, 5924078, 5924079, 
-#     5949422, 5976984, 5978642, 5989981, 5999550)
-
-
-
-#### 3 Spatial join postal data to grid, fortify -------------------------------
-
-# First, spatjoin postal data to grid centroids. Left = FALSE is inner join. Then,
-# Join centroid data back to grid polygons and convert grid to SpatialPolygons.
-# Finally, fortify for ggplot while keeping important columns.
-# grid_f <- 
-#   sf::st_join(sf::st_as_sf(grid_point), 
-#               sf::st_as_sf(postal),
-#               join = st_intersects,
-#               left = FALSE) %>%
-#   sf::st_join(sf::st_as_sf(grid), 
-#               ., 
-#               join = st_intersects) %>%
-#   as(., "Spatial") %>%
-#   {dplyr::left_join(ggplot2::fortify(.),
-#                     as.data.frame(.) %>%
-#                       dplyr::mutate(id = as.character(dplyr::row_number() - 1)))} %>%
-#   dplyr::select(-c(x, y))
-
 
 
 #### 4 Prepare reactive fetch of TTM18 data ----------------------------------
@@ -413,36 +356,10 @@ all_fst <- list.files(path = fst_filepath,
 # queried in the reactive fetching of TTM18 data.
 ykr_ids <- fst::read_fst(all_fst[1])[, 1]
 
-
-
-
-
-# redesign fst fetch
-# thisval <- "02180"
-# theseIds <- ykrid_zipcodes[ykrid_zipcodes$zipcode == thisval, ][[1]]
-# 
-# result4209 <- 
-#   lapply(all_fst, FUN = TTM18fst_fetch2, theseIds) %>%
-#   data.table::rbindlist(., fill = TRUE) %>%
-# 
-#   # Get all means, start postal code area is "thisval". This counts all starting
-#   # YKR_IDs in "thisval", and all destination YKR_IDs, including those in starting
-#   # postal code area.
-#   merge(., ykrid_zipcodes, by.x = "to_id", by.y = "YKR_ID") %>%
-#   dplyr::mutate(ttm_sfp = 0.42,
-#                 ttm_wtd = case_when(to_id %in% walking_ids ~ 2.5, TRUE ~ 2)) %>%
-#   dplyr::group_by(zipcode) %>%
-#   summarise(car_r_avg = mean(car_r_t),
-#             car_m_avg = mean(car_m_t),
-#             car_sl_avg = mean(car_sl_t),
-#             ttm_sfp = mean(ttm_sfp),
-#             ttm_wtd = mean(ttm_wtd)) %>%
-#   dplyr::mutate_at(vars(car_r_avg, car_m_avg, car_sl_avg, ttm_wtd), ~round(., 2)) %>%
-#   
-#   dplyr::left_join(., thesisdata, by = "zipcode") %>%
-#   dplyr::left_join(postal_f, ., by = "zipcode")
-
-
+all_postal_fst <- list.files(path = fst_postal_fp,
+                             pattern = ".fst$",
+                             recursive = TRUE,
+                             full.names = TRUE)
 
 
 #### 6 Travel Time Comparison ShinyApp -----------------------------------------
@@ -502,27 +419,33 @@ server <- function(input, output, session) {
 
     # Only specify an origin id (from_id in TTM18). to_id remains open because we 
     # want to view all possible destinations.
-    origin_zip <- validate_ykrid()
-    theseIds <- ykrid_zipcodes[ykrid_zipcodes$zipcode == origin_zip, ][[1]]
+    #origin_zip <- validate_ykrid()
+    #theseIds <- ykrid_zipcodes[ykrid_zipcodes$zipcode == origin_zip, ][[1]]
+    postal_loc <- grepl(validate_ykrid(), all_postal_fst, fixed = TRUE)
+    this_fp <- all_postal_fst[postal_loc]
     
     result <- 
-      lapply(all_fst, FUN = TTM18fst_fetch2, theseIds) %>%
-      data.table::rbindlist(., fill = TRUE) %>%
-      
-      # Get all means, start postal code area is "thisval". This counts all starting
-      # YKR_IDs in "thisval", and all destination YKR_IDs, including those in starting
-      # postal code area.
-      merge(., ykrid_zipcodes, by.x = "to_id", by.y = "YKR_ID") %>%
-      dplyr::mutate(ttm_sfp = 0.42,
-                    ttm_wtd = case_when(to_id %in% walking_ids ~ 2.5, TRUE ~ 2)) %>%
-      dplyr::group_by(zipcode) %>%
-      summarise(ttm_r_avg = mean(car_r_t),
-                ttm_m_avg = mean(car_m_t),
-                ttm_sl_avg = mean(car_sl_t),
-                ttm_sfp = mean(ttm_sfp),
-                ttm_wtd = mean(ttm_wtd)) %>%
-      dplyr::mutate_at(vars(ttm_r_avg, ttm_m_avg, ttm_sl_avg, ttm_wtd), ~round(., 2)) %>%
-      
+      # lapply(all_fst, FUN = TTM18fst_fetch2, theseIds) %>%
+      # data.table::rbindlist(., fill = TRUE) %>%
+      # 
+      # # Get all means, start postal code area is "thisval". This counts all starting
+      # # YKR_IDs in "thisval", and all destination YKR_IDs, including those in starting
+      # # postal code area.
+      # merge(., ykrid_zipcodes, by.x = "to_id", by.y = "YKR_ID") %>%
+      # dplyr::mutate(ttm_sfp = 0.42,
+      #               ttm_wtd = case_when(to_id %in% walking_ids ~ 2.5, TRUE ~ 2)) %>%
+      # dplyr::group_by(zipcode) %>%
+      # summarise(ttm_r_avg = mean(car_r_t),
+      #           ttm_m_avg = mean(car_m_t),
+      #           ttm_sl_avg = mean(car_sl_t),
+      #           ttm_sfp = mean(ttm_sfp),
+      #           ttm_wtd = mean(ttm_wtd)) %>%
+      # dplyr::mutate_at(vars(ttm_r_avg, ttm_m_avg, ttm_sl_avg, ttm_wtd), ~round(., 2)) %>%
+      fst::read_fst(this_fp, as.data.table = TRUE) %>%
+      dplyr::rename(zipcode = to_zip) %>%
+      dplyr::filter(zipcode != "99999") %>%
+      dplyr::mutate(ttm_sfp = 0.42) %>%
+
       dplyr::left_join(., thesisdata, by = "zipcode") %>%
       dplyr::left_join(postal_f, ., by = "zipcode") %>%
       
@@ -597,7 +520,6 @@ server <- function(input, output, session) {
   
   # equalBreaksColumn() calculates new class intervals when an input change is
   # detected on input$fill_column. Use the named vector "vis_cols".
-  # TODO: could this be forgotten and just move the function to renderGirafe()?
   equalBreaksColumn <- reactive({
     
     inputdata <- thisTTM()
@@ -708,21 +630,6 @@ server <- function(input, output, session) {
       #              color = alpha("blue", 0.9), 
       #              fill = "lightblue",
       #              size = 0.4) +
-      
-      # ggnewscale makes it possible to map additional legends with same 
-      # properties, in this case a new scale_fill. 
-      ggnewscale::new_scale_color() +
-
-      # Plot origin YKR_ID, the starting position for TTM18
-      geom_polygon(data = origincell,
-                   aes(long, lat, color = nimi),
-                   fill = NA,
-                   size = 1.0) +
-
-      # Get a legend entry for origin ykr id
-      scale_color_manual(name = "Origin YKR ID",
-                         values = o_label,
-                         labels = names(o_label)) +
     
       # Scale bar and north arrow
       ggsn::scalebar(inputdata, 
@@ -757,6 +664,21 @@ server <- function(input, output, session) {
                             size = 1.0)
     }
     
+    # ggnewscale makes it possible to map additional legends with same 
+    # properties, in this case a new scale_fill. 
+    g <- g + ggnewscale::new_scale_color() +
+      
+      # Plot origin YKR_ID, the starting position for TTM18
+      geom_polygon(data = origincell,
+                   aes(long, lat, group = group, color = nimi),
+                   fill = NA,
+                   size = 1.2) +
+      
+      # Get a legend entry for origin ykr id
+      scale_color_manual(name = "Origin postal\ncode area",
+                         values = o_label,
+                         labels = names(o_label))
+    
     if(input$show_subdiv == TRUE) {
       
       # Municipality boundaries
@@ -766,17 +688,6 @@ server <- function(input, output, session) {
                             fill = "NA",
                             size = 0.6)
     }
-    
-    # Plot postal code area boundaries on the map
-    # if(input$show_postal == TRUE) {
-    #   
-    #   # Postal code area boundaries
-    #   g <- g + geom_polygon(data = postal_f,
-    #                aes(long, lat, group = group),
-    #                color = "black", 
-    #                fill = "NA",
-    #                size = 0.2)
-    # }
     
     # Plot walking center boundaries
     if(input$show_walk == TRUE) {
@@ -974,14 +885,8 @@ ui <- shinyUI(
         HTML("<label class='control-label'>Layer options</label>",
              "<div id='contents'>",
              "<div class='onoff-container'>",
-             
              "<div class='onoff-div'><b>Postal code areas</b><br>"),
-        #      "<label class='control-label onoff-label' for='show_postal'>Boundaries</label>"),
-        # shinyWidgets::switchInput(
-        #   inputId = "show_postal",
-        #   size = "mini",
-        #   value = TRUE),
-        
+
         HTML("<label class='control-label onoff-label' for='show_postal_labels'>Labels</label>"),
         shinyWidgets::switchInput(
           inputId = "show_postal_labels", 
