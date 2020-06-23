@@ -1,26 +1,28 @@
 
-# Conversion of Helsinki Region Travel Time Matrix 2018 data into fst
+# Conversion of Helsinki Region Travel Time Matrix 2018 data into fst and then
+# fst-format TTM18 to dataset in the resolution of postal code areas
 
 # For the thesis:
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 
 # by Sampo Vesanen
-# 23.6.2020
+# 24.6.2020
 
 
 # This tool will convert an unchanged Helsinki Region Travel Time Matrix dataset 
 # into fst format to a new location on disk, while preserving only columns 
 # relevant to the travel mode private car ("from_id", "to_id", "car_r_t", 
-# "car_m_t" and "car_sl_t"). The converted dataset will be compressed and can't 
-# be accessed readily though text editors such as Notepad. This tool is made
-# for Travel Time Matrix 2018.
+# "car_m_t" and "car_sl_t"). The converted dataset will be compressed (required
+# disk space is about 400 megabytes) and can't be accessed readily though text 
+# editors such as Notepad. This tool is made for Travel Time Matrix 2018.
+
+# As an additional feature the fst format TTM18 will be transformed to a version
+# where data is aggregated by postal code areas. This operation requires only
+# one megabyte of diskspace, but the calculation takes about 2.5 hours.
 
 # The use of fst will enable the travel time comparison application to 
-# recalculate the Helsinki region 250 x 250 meter grid with a great speed,
+# recalculate the research area (Helsinki Capital Region) with a great speed,
 # making the application much more responsive to an user.
-
-# This code needs to be run only once The filesize of the converted dataset will 
-# be about 400 megabytes.
 
 # fst by Mark Klik, learn more at: https://www.fstpackage.org/index.html
 
@@ -42,6 +44,7 @@ library(data.table)
 library(sp)
 library(sf)
 library(R.utils)
+library(tibble)
 
 
 # Working directory
@@ -56,7 +59,7 @@ gridpath <- file.path(wd, "python/MetropAccess_YKR_grid_EurefFIN.shp")
 
 
 
-#### Transform TTM18 data to fst -----------------------------------------------
+#### Transform unchanged TTM18 data to fst -------------------------------------
 
 TTM18_to_fst <- function(filepath) {
   
@@ -94,18 +97,18 @@ all_files <- list.files(path = ttm_path,
 all_files <- all_files[-grepl("META", all_files)]
 
 # This runs for about 10 minutes because of the maximum compression.
-#lapply(all_files, FUN = TTM18_to_fst)
+lapply(all_files, FUN = TTM18_to_fst)
 
 
 
-#### Prepare for simplified TTM18 datafetch ------------------------------------
+#### Prepare for aggregated TTM18 datafetch ------------------------------------
 
 # Conditionally create folder name of object "TTM18_foldername"
 if (!dir.exists(fst_postal_fp)) {
   dir.create(fst_postal_fp)
 }
 
-# Get all of the fst filepaths
+# Get all of the TTM18 fst filepaths
 all_fst <- list.files(path = fst_orig_fp,
                       pattern = ".fst$",
                       recursive = TRUE,
@@ -136,10 +139,9 @@ zips <- unique(ykrid_zipcodes$zipcode)[-2]
 
 #### Get Helsinki walking center YKR_IDs ---------------------------------------
 
-# use this CRS information throughout the app
 app_crs <- sp::CRS("+init=epsg:3067")
 
-# Read an transform
+# Read and transform the grid cells
 gridi <- rgdal::readOGR(gridpath, stringsAsFactors = TRUE) %>%
   sp::spTransform(., app_crs)
 
@@ -167,17 +169,17 @@ walking_ids <- walking_ids[, 1]
 #### Generate TTM18 data simplified to postal code area level ------------------
 
 # Reader function
-TTM18fst_fetch_postal <- function(x, from, to) {
+TTM18fst_fetch <- function(x, from, to) {
   fst::read_fst(x, from = from, to = to)
 }
 
 # This large lapply() operation takes a long time to run, about 2.5 hours. It
 # was not optimised further because this needs to be executed only once.
-# invisible() prevents printing of lapply() output
+# invisible() prevents printing of lapply() output.
 invisible(
   lapply(seq_along(zips), function(list_id) {
     
-    # Track exec time
+    # Track execution time
     starttime <- Sys.time()
     
     # Filepath and filename
@@ -195,12 +197,12 @@ invisible(
     sequences <- R.utils::seqToIntervals(these_pos)
     
     res <- 
-      # Fetch the sequences, defined in rows of the dataframe sequences
+      # Fetch the curent zipcode fst data using the dataframe "sequences"
       sapply(1:nrow(sequences), function(seq_id) {
         
         # This fetches all data for the YKR_IDs of the current zipcode
         lapply(all_fst,
-               FUN = TTM18fst_fetch_postal,
+               FUN = TTM18fst_fetch,
                sequences[seq_id, 1],
                sequences[seq_id, 2])
       }) %>%
@@ -210,10 +212,10 @@ invisible(
       # cells.
       dplyr::mutate(ttm_sfp = 0.42,
                     ttm_wtd = case_when(to_id %in% walking_ids ~ 2.5, TRUE ~ 2),
-                    to_zip = as.vector(ykrid3[as.character(to_id)])) %>%
+                    zipcode = as.vector(ykrid3[as.character(to_id)])) %>%
       
       # Generate TTM18 means
-      group_by(to_zip) %>%
+      group_by(zipcode) %>%
       
       dplyr::summarise(from_zip = listname,
                        ttm_r_avg = mean(car_r_t),
@@ -221,7 +223,10 @@ invisible(
                        ttm_sl_avg = mean(car_sl_t),
                        ttm_sfp = mean(ttm_sfp),
                        ttm_wtd = mean(ttm_wtd)) %>%
-      dplyr::mutate_at(vars(ttm_r_avg, ttm_m_avg, ttm_sl_avg, ttm_wtd), ~round(., 2))
+      dplyr::mutate_at(vars(ttm_r_avg, ttm_m_avg, ttm_sl_avg, ttm_wtd), ~round(., 2)) %>%
+      
+      # Remove data for zipcode 99999, out of research area
+      dplyr::filter(zipcode != "99999")
     
     # Write file
     fst::write_fst(res, fullpath, compress = 100)

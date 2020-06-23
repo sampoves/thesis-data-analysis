@@ -2,25 +2,18 @@
 # Helsinki Region Travel Time comparison application
 # Helsinki Region Travel Time Matrix 2018 <--> My thesis survey results
 
-# 23.6.2020
+# 24.6.2020
 # Sampo Vesanen
 
-# This interactive Travel time comparison application is dependent on ggiraph 
-# 0.7.7 (only available through GitHub at the time of writing). With my setup
-# ggiraph 0.7.0 would load the map an unreasonably long time. I strongly 
-# suspected some fault in the tooltip generation.
 
 # Some decisions need decising:
 # - Remember arbitrary selection of timeofday in thesisdata! Triplecheck it
 # - Remember to be sure about calculation of pct: from drivetime or avg?
 # - thesis drivetimes have negative values (this is a result in itself i think),
 #   deal with this with colouring or something
-# - consider adding lakes and main roads for increased readability
 # - verify download service products
-# - preprocess TTM18 data to make app use much faster (only 167 different 
-#   possibilities anymore)
-# - add ttm_sfp to postal fst files
 # - add transparent zipcode boundaries
+# - consider changing boundaries visibility to switch na-alpha0.45
 
 
 #### 1 Initialise --------------------------------------------------------------
@@ -45,24 +38,24 @@ library(ggnewscale)
 
 
 # App version
-app_v <- "0045.postal (23.6.2020)"
+app_v <- "0046.postal (24.6.2020)"
 
 # Working directory
 wd <- "C:/Sampon/Maantiede/Master of the Universe"
 
 # Data directories
 munspath <- file.path(wd, "python/paavo/hcr_muns_clipped.shp")
-gridpath <- file.path(wd, "python/MetropAccess_YKR_grid_EurefFIN.shp")
 subdivpath <- file.path(wd, "python/suuralueet/PKS_suuralue.kml")
-#waterpath <- file.path(wd, "python/FI001L3_HELSINKI/ua2012_water.shp")
-#roadpath <- file.path(wd, "python/vayla/nopeusrajoitus_k_60.shp")
+waterpath <- file.path(wd, "python/FI001L3_HELSINKI/ua2012_water.shp")
+roadpath <- file.path(wd, "python/vayla/nopeusrajoitus_k_60.shp")
 
 # Thesis' processed data
 recordspath <- file.path(wd, "records_for_r.csv")
 postal_path <- file.path(wd, "postal_for_r.csv")
 gridzipcodes <- file.path(wd, "grid_for_r.csv")
+fst_postal_fp <- file.path(wd, "TTM18_postal")
 
-# Directives
+# Comparison app additional functionality
 csspath <- file.path(wd, "python/thesis_data_traveltime_style.css")
 jspath <- file.path(wd, "python/thesis_data_traveltime_script.js")
 tooltip_path <- file.path(wd, "python/thesis_data_traveltime_tooltip.html")
@@ -71,27 +64,23 @@ info_path <- file.path(wd, "python/thesis_data_traveltime_info.html")
 # Source functions and postal code variables
 source(file.path(wd, "python/thesis_data_traveltime_funcs.R"))
 
-# Convert Helsinki Region Travel Time Matrix 2018 into fst. This is a required
-# step to be able to run the comparison application. It is only needed to be
-# executed once. "fst_filepath" is the location of TTM18 converted to fst.
-fst_filepath <- file.path(wd, "TTM18")
+# Convert Helsinki Region Travel Time Matrix 2018 into fst and then to dataset
+# aggregated to postal code area resolution. The user of this script is not
+# needed to run this script as the end-product of this script is provided in
+# the GitHub repository.
 #source(file.path(wd, "python/thesis_data_traveltime_conv.R"))
-fst_postal_fp <- file.path(wd, "TTM18_postal")
+
 
 
 #### 2 Import data layers ------------------------------------------------------
 
-#### 2.1 Grid ------------------------------------------------------------------
+#### 2.1 Walking center polygon ------------------------------------------------
 
 # use this CRS information throughout the app
 app_crs <- sp::CRS("+init=epsg:3067")
 
-# Read an transform
-gridi <- rgdal::readOGR(gridpath, stringsAsFactors = TRUE) %>%
-  sp::spTransform(., app_crs)
-
-# TTM18 Helsinki walking center polygon. Source: Henrikki Tenkanen. Get YKR_IDs
-# which fit inside the walking center polygon.
+# TTM18 Helsinki walking center polygon. Use fortified version of the walking 
+# center for visualisation
 walkingHki <- 
   data.frame(
     long = c(387678.024778, 387891.53396, 383453.380944, 383239.871737, 387678.024778),
@@ -100,21 +89,12 @@ walkingHki <-
   dplyr::summarise(geometry = sf::st_combine(geometry)) %>%
   sf::st_cast("POLYGON")
 
-# Fortified walking center for visualisation
+# Fortify
 walk_f <- 
-  st_coordinates(walkingHki)[, 1:2] %>%
+  sf::st_coordinates(walkingHki)[, 1:2] %>%
   sp::Polygon(.) %>%
   ggplot2::fortify(.) %>%
   dplyr::mutate(label = "walk")
-
-walking_ids <- 
-  sf::st_intersection(sf::st_as_sf(gridi), walkingHki) %>%
-  as(., "Spatial") %>%
-  {dplyr::left_join(ggplot2::fortify(.),
-                    as.data.frame(.) %>%
-                      tibble::rownames_to_column(., var = "id"))} %>%
-  dplyr::select(YKR_ID)
-walking_ids <- walking_ids[, 1]
 
 
 
@@ -256,16 +236,16 @@ thesisdata[, -1] <- data.frame(
 #### 2.6 Water and roads -------------------------------------------------------
 
 # # Digiroad
-# roads_f <-
-#   rgdal::readOGR(roadpath, stringsAsFactors = TRUE) %>%
-#   sp::spTransform(., app_crs) %>%
-#   ggplot2::fortify(.)
-# 
-# # UA2012
-# water_f <-
-#   rgdal::readOGR(waterpath, stringsAsFactors = TRUE) %>%
-#   sp::spTransform(., app_crs) %>%
-#   ggplot2::fortify(.)
+roads_f <-
+  rgdal::readOGR(roadpath, stringsAsFactors = TRUE) %>%
+  sp::spTransform(., app_crs) %>%
+  ggplot2::fortify(.)
+
+# UA2012 inland water
+water_f <-
+  rgdal::readOGR(waterpath, stringsAsFactors = TRUE) %>%
+  sp::spTransform(., app_crs) %>%
+  ggplot2::fortify(.)
 
 
 
@@ -347,19 +327,22 @@ vis_cols <- c("ttm18_r_avg" = "ttm_r_avg",
 # converted to fst. Please make sure you have run "thesis_data_traveltime_conv.R".
 
 # Get all of the fst filepaths
-all_fst <- list.files(path = fst_filepath,
-                      pattern = ".fst$",
-                      recursive = TRUE,
-                      full.names = TRUE)
+# all_fst <- list.files(path = fst_filepath,
+#                       pattern = ".fst$",
+#                       recursive = TRUE,
+#                       full.names = TRUE)
 
 # Use "ykr_ids" as the location vector for each YKR_ID. This vector will be
 # queried in the reactive fetching of TTM18 data.
-ykr_ids <- fst::read_fst(all_fst[1])[, 1]
+# ykr_ids <- fst::read_fst(
+#   file.path(fst_orig_fp, "5785xxx/travel_times_to_ 5785640.fst"))[, 1]
 
+# Get all of the fst-format TTM18 aggregated to postal code area level
 all_postal_fst <- list.files(path = fst_postal_fp,
                              pattern = ".fst$",
                              recursive = TRUE,
                              full.names = TRUE)
+
 
 
 #### 6 Travel Time Comparison ShinyApp -----------------------------------------
@@ -368,43 +351,40 @@ server <- function(input, output, session) {
   #### 6.1 Reactive elements ---------------------------------------------------
 
   # Launch tooltip legend jQuery UI dialog
-  observeEvent(input$info_dialog_btn, {
+  shiny::observeEvent(input$info_dialog_btn, {
     
     # the div id='abbr-info' is loaded in "6.4 ShinyApp header", the div itself 
     # is the separate html file indicated in variable "info_path". Dialog 
     # window properties are located in .js
-    runjs("$('#abbr-info').dialog('open');")
+    shinyjs::runjs("$('#abbr-info').dialog('open');")
   })
   
   # Validate ykr-id in the numeric field
-  validate_ykrid <- eventReactive(input$calcYkr, {
+  validate_zipcode <- shiny::eventReactive(input$calcZip, {
     
     # %then% allows only one error message at a time
-    validate(
-      need(nchar(input$ykrid) == 5, "Five chars pls") %then%
-      need(input$ykrid %in% unique(ykrid_zipcodes$zipcode), 
+    shiny::validate(
+      shiny::need(!is.na(as.numeric(input$zipcode)), "Can't contain letters") %then%
+      shiny::need(nchar(input$zipcode) == 5, "Five digits pls") %then%
+      shiny::need(input$zipcode %in% unique(ykrid_zipcodes$zipcode), 
            "Value not a valid postal code")
     )
-    input$ykrid
+    input$zipcode
   })
   
   # Print helpful text for the user
-  # helper_output_ykrid <- reactive({
-  #   
-  #   # if input from validate_ykrid() is numeric, display useful information
-  #   # to the user
-  #   if(is.numeric(validate_ykrid())) {
-  #     
-  #     inputdata <- thisTTM()
-  #     thisVal <- inputdata[inputdata$YKR_ID == validate_ykrid(), ][1, ]
-  #     help_output <- paste(
-  #       "<p style='margin: 0 0 0px;'>",
-  #       "<b>YKR_ID: ", validate_ykrid(), "</b>,<br>",
-  #       thisVal[["zipcode"]], " ", thisVal[["nimi"]],
-  #       "</p>", sep = "")
-  #   }
-  #   help_output
-  # })
+  helper_output_zip <- shiny::reactive({
+    
+    inputdata <- thisTTM()
+    thisVal <- inputdata[inputdata$zipcode == validate_zipcode(), ][1, ]
+    help_output <- paste(
+      "<p style='margin: 0 0 0px;'>",
+      "<b>Current origin postal code area:</b><br>",
+      thisVal[["zipcode"]], " ", thisVal[["nimi"]],
+      "</p>", sep = "")
+    
+    help_output
+  })
   
   
   
@@ -412,40 +392,18 @@ server <- function(input, output, session) {
   
   # This is the reactively built Helsinki Region Travel Time Matrix 2018 for the 
   # origin id inserted by the user. User's chosen YKR_ID value is 
-  # validate_ykrid().
-  thisTTM <- reactive({
+  # validate_zipcode().
+  thisTTM <- shiny::reactive({
     
-    #### Fetch TTM18 data ---
+    #### Fetch aggregated TTM18 data ---
 
-    # Only specify an origin id (from_id in TTM18). to_id remains open because we 
-    # want to view all possible destinations.
-    #origin_zip <- validate_ykrid()
-    #theseIds <- ykrid_zipcodes[ykrid_zipcodes$zipcode == origin_zip, ][[1]]
-    postal_loc <- grepl(validate_ykrid(), all_postal_fst, fixed = TRUE)
+    # Use 
+    postal_loc <- grepl(validate_zipcode(), all_postal_fst, fixed = TRUE)
     this_fp <- all_postal_fst[postal_loc]
     
     result <- 
-      # lapply(all_fst, FUN = TTM18fst_fetch2, theseIds) %>%
-      # data.table::rbindlist(., fill = TRUE) %>%
-      # 
-      # # Get all means, start postal code area is "thisval". This counts all starting
-      # # YKR_IDs in "thisval", and all destination YKR_IDs, including those in starting
-      # # postal code area.
-      # merge(., ykrid_zipcodes, by.x = "to_id", by.y = "YKR_ID") %>%
-      # dplyr::mutate(ttm_sfp = 0.42,
-      #               ttm_wtd = case_when(to_id %in% walking_ids ~ 2.5, TRUE ~ 2)) %>%
-      # dplyr::group_by(zipcode) %>%
-      # summarise(ttm_r_avg = mean(car_r_t),
-      #           ttm_m_avg = mean(car_m_t),
-      #           ttm_sl_avg = mean(car_sl_t),
-      #           ttm_sfp = mean(ttm_sfp),
-      #           ttm_wtd = mean(ttm_wtd)) %>%
-      # dplyr::mutate_at(vars(ttm_r_avg, ttm_m_avg, ttm_sl_avg, ttm_wtd), ~round(., 2)) %>%
       fst::read_fst(this_fp, as.data.table = TRUE) %>%
-      dplyr::rename(zipcode = to_zip) %>%
-      dplyr::filter(zipcode != "99999") %>%
-      dplyr::mutate(ttm_sfp = 0.42) %>%
-
+      
       dplyr::left_join(., thesisdata, by = "zipcode") %>%
       dplyr::left_join(postal_f, ., by = "zipcode") %>%
       
@@ -478,21 +436,27 @@ server <- function(input, output, session) {
       dplyr::mutate(thesis_r_drivetime = ttm_r_avg - 
                       if_else(is.na(thesis_r_sfp), 0, thesis_r_sfp) - 
                       if_else(is.na(thesis_r_wtd), 0, thesis_r_wtd),
+                    
                     thesis_m_drivetime = ttm_m_avg - 
                       if_else(is.na(thesis_m_sfp), 0, thesis_m_sfp) - 
                       if_else(is.na(thesis_m_wtd), 0, thesis_m_wtd),
+                    
                     thesis_sl_drivetime = ttm_sl_avg - 
                       if_else(is.na(thesis_sl_sfp), 0, thesis_sl_sfp) - 
                       if_else(is.na(thesis_sl_wtd), 0, thesis_sl_wtd),
+                    
                     thesis_r_pct = (
                       if_else(is.na(thesis_r_sfp), 0, thesis_r_sfp) + 
                         if_else(is.na(thesis_r_wtd), 0, thesis_r_wtd)) / ttm_r_avg,
+                    
                     thesis_m_pct = (
                       if_else(is.na(thesis_m_sfp), 0, thesis_m_sfp) + 
                         if_else(is.na(thesis_m_wtd), 0, thesis_m_wtd)) / ttm_m_avg,
+                    
                     thesis_sl_pct = (
                       if_else(is.na(thesis_sl_sfp), 0, thesis_sl_sfp) + 
                         if_else(is.na(thesis_sl_wtd), 0, thesis_sl_wtd)) / ttm_sl_avg) %>%
+      
       dplyr::mutate_at(vars(thesis_r_pct, thesis_m_pct, thesis_sl_pct), 
                        ~round(., 2)) %>%
       
@@ -533,13 +497,13 @@ server <- function(input, output, session) {
   #### 6.2 ShinyApp outputs ----------------------------------------------------
   
   #### 6.2.1 Da plot -----------------------------------------------------------
-  output$grid <- renderGirafe({
+  output$researcharea <- renderGirafe({
     
     # Reactive value: Insert equal breaks for mapping.
     inputdata <- equalBreaksColumn()
     
     # Get an origin cell for mapping
-    origincell <- postal_f[postal_f["zipcode"] == validate_ykrid(), ]
+    origincell <- postal_f[postal_f["zipcode"] == validate_zipcode(), ]
     
     # Format legend labels (Equal breaks classes). Remove [, ], (, and ). Also 
     # add list dash. Create named vector for the origin cell legend entry
@@ -576,7 +540,7 @@ server <- function(input, output, session) {
     #### 6.2.1.1 Define ggplot obligatory elements ----
     g <- ggplot(data = inputdata) + 
       geom_polygon_interactive(
-        color = "black",
+        color = alpha("black", input$postal_vis),
         size = 0.3,
         aes_string("long", "lat", 
                    group = "group",
@@ -585,7 +549,7 @@ server <- function(input, output, session) {
                      sprintf(tooltip_content,
                              zipcode, nimi,
                              
-                             "NA", "na", "na",
+                             "obs.", "obs.", "obs.",
                              ttm_sfp, ttm_sfp, ttm_sfp,
                              ttm_wtd, ttm_wtd, ttm_wtd,
                              ttm_r_avg, ttm_m_avg, ttm_sl_avg,
@@ -619,18 +583,6 @@ server <- function(input, output, session) {
       coord_fixed(xlim = c(min(inputdata$lon) + 200, max(inputdata$lon) - 1200),
                   ylim = c(min(inputdata$lat) + 600, max(inputdata$lat) - 600)) +
       
-      # Roads and water if we want them mapped
-      # geom_polygon(data = roads_f,
-      #              aes(long, lat, group = group),   
-      #              color = "#454545", 
-      #              size = 0.7) +
-      # 
-      # geom_polygon(data = water_f,
-      #              aes(long, lat, group = group),   
-      #              color = alpha("blue", 0.9), 
-      #              fill = "lightblue",
-      #              size = 0.4) +
-    
       # Scale bar and north arrow
       ggsn::scalebar(inputdata, 
                      dist_unit = "km",
@@ -652,6 +604,24 @@ server <- function(input, output, session) {
     
     
     #### 6.2.1.2 If statements for on-off switches ----
+    
+    
+    # Roads and water in case we want them mapped
+    if(input$show_water == TRUE) {
+      g <- g + geom_polygon(data = water_f,
+                   aes(long, lat, group = group),
+                   color = alpha("blue", 0.9),
+                   fill = "lightblue",
+                   size = 0.4)
+    }
+    
+    if(input$show_roads == TRUE) {
+      g <- g + geom_polygon(data = roads_f,
+                            aes(long, lat, group = group),
+                            color = "#454545",
+                            fill = "NA",
+                            size = 0.7)
+    }
     
     # Plot municipality boundaries on the map
     if(input$show_muns == TRUE) {
@@ -704,7 +674,7 @@ server <- function(input, output, session) {
                            values = setNames("#6b01ab", "walk"),
                            labels = "Helsinki walking\ncenter (TTM18)")
     }
-
+    
     # Plot postal code area labels
     if(input$show_postal_labels == TRUE) {
       
@@ -781,7 +751,7 @@ server <- function(input, output, session) {
   # Actual download functionality
   output$dl_compare <- downloadHandler(
     filename = paste("ttm18-thesis-compare_",
-                     "mapfill-", input$fill_column, "_fromid-", input$ykrid, "_",
+                     "mapfill-", input$fill_column, "_fromzip-", input$zipcode, "_",
                      format(Sys.time(), "%d-%m-%Y"), 
                      ".png",
                      sep = ""),
@@ -795,9 +765,9 @@ server <- function(input, output, session) {
   #### 6.2.2 Other outputs -----------------------------------------------------
   
   # Helps user understand where their ykr_id is located
-  # output$ykr_helper <- renderText({
-  #   helper_output_ykrid()
-  # })
+  output$zip_helper <- renderText({
+    helper_output_zip()
+  })
 }
 
 
@@ -809,12 +779,12 @@ ui <- shinyUI(
     
     
     #### 6.4 ShinyApp header ---------------------------------------------------
-    tags$head(tags$link(rel = "stylesheet", 
-                        type = "text/css", 
+    tags$head(tags$link(rel = "stylesheet",
+                        type = "text/css",
                         href = "https://use.fontawesome.com/releases/v5.13.0/css/all.css"),
               tags$script(src = "https://code.jquery.com/ui/1.12.1/jquery-ui.js"),
-              tags$link(rel = "stylesheet", 
-                        type = "text/css", 
+              tags$link(rel = "stylesheet",
+                        type = "text/css",
                         href = "https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css"),
               htmltools::includeCSS(csspath)),
     htmltools::includeScript(path = jspath),
@@ -829,22 +799,21 @@ ui <- shinyUI(
       sidebarPanel(
         id = "sidebar",
         
-        HTML("<label class='control-label'>Origin YKR ID</label>",
+        HTML("<label class='control-label'>Travel chain origin</label>",
              "<div id='contents'>",
-             "<div id='ykr-flash'>"),
+             "<div id='zip-flash'>"),
         textInput(
-          inputId = "ykrid",
-          label = "Origin YKR ID",
+          inputId = "zipcode",
+          label = "Enter an origin postal code",
           value = "00100"), # Starting value Rautatientori, Ateneum
         HTML("</div>"),
                    
         actionButton(
-          inputId = "calcYkr",
-          label = HTML("<i class='icon calculator'></i>Calculate a new comparison with this YKR_ID")),
+          inputId = "calcZip",
+          label = HTML("<i class='icon calculator'></i>Calculate a new comparison with this postal code")),
         
-        HTML("<p id='smalltext'><b>Current origin YKR_ID</b></p>",
-             "<div id='contents'>"),
-        #htmlOutput("ykr_helper"),
+        HTML("<div id='contents'>"),
+        htmlOutput("zip_helper"),
         HTML("</div>",
              "</div>"),
         
@@ -881,12 +850,21 @@ ui <- shinyUI(
         HTML("</div>"),
         
         # Layer options: on-off switches
-        # Postal code areas
+        #### Postal code areas ---
         HTML("<label class='control-label'>Layer options</label>",
              "<div id='contents'>",
-             "<div class='onoff-container'>",
-             "<div class='onoff-div'><b>Postal code areas</b><br>"),
-
+             "<div class='onoff-container'>"),
+        
+        HTML("<div class='onoff-div'><b>Postal code areas</b><br>"),
+        HTML("<label class='control-label onoff-label' for='postal_vis'>Boundaries visibility</label>"),
+        sliderInput(
+          inputId = "postal_vis",
+          label = NULL,
+          min = 0, 
+          max = 1, 
+          value = 0.4,
+          step = 0.1),
+        
         HTML("<label class='control-label onoff-label' for='show_postal_labels'>Labels</label>"),
         shinyWidgets::switchInput(
           inputId = "show_postal_labels", 
@@ -894,7 +872,7 @@ ui <- shinyUI(
           value = FALSE),
         HTML("</div>"),
         
-        # Walking center switch
+        #### Walking center switch ---
         HTML("<div class='onoff-div'><b>Helsinki walking center (TTM18)</b><br>",
              "<label class='control-label onoff-label' for='show_walk'>Boundaries</label>"),
         shinyWidgets::switchInput(
@@ -903,7 +881,7 @@ ui <- shinyUI(
           value = TRUE),
         HTML("</div>"),
         
-        # Switches for muns
+        #### Switches for muns ---
         HTML("<div class='onoff-div'><b>Municipalities</b><br>",
              "<label class='control-label onoff-label' for='show_muns'>Boundaries</label>"),
         shinyWidgets::switchInput(
@@ -918,7 +896,7 @@ ui <- shinyUI(
           value = FALSE),
         HTML("</div>"),
         
-        # Switches for subdivisions
+        #### Switches for subdivisions ---
         HTML("<div class='onoff-div'><b>Subdivisions</b><br>",
              "<label class='control-label onoff-label' for='show_subdiv'>Boundaries</label>"),
         shinyWidgets::switchInput(
@@ -929,6 +907,21 @@ ui <- shinyUI(
         HTML("<label class='control-label onoff-label' for='show_subdiv_labels'>Labels</label>"),
         shinyWidgets::switchInput(
           inputId = "show_subdiv_labels", 
+          size = "mini",
+          value = FALSE),
+        HTML("</div>"),
+        
+        #### Switches for roads and water ---
+        HTML("<div class='onoff-div'><b>Physical features</b><br>",
+             "<label class='control-label onoff-label' for='show_roads'>Roads</label>"),
+        shinyWidgets::switchInput(
+          inputId = "show_roads",
+          size = "mini",
+          value = FALSE),
+        
+        HTML("<label class='control-label onoff-label' for='show_water'>Water</label>"),
+        shinyWidgets::switchInput(
+          inputId = "show_water", 
           size = "mini",
           value = FALSE),
         HTML("</div>",
@@ -952,7 +945,7 @@ ui <- shinyUI(
           label = HTML("<i class='icon info' title='Open tooltip abbreviations legend dialog'></i>")),
         HTML("</div>"),
         
-        girafeOutput("grid"), 
+        girafeOutput("researcharea"), 
         
         width = 9
       )

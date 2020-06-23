@@ -8,7 +8,7 @@
 
 // Trigger application's first comparison map calculation
 $(document).one('shiny:idle', function(event) {
-	$("#calcYkr").click();
+	$("#calcZip").click();
 });
 
 // use this counter to hopefully detect flow of code
@@ -87,12 +87,12 @@ $(document).ready(function() {
 
 
 
-// ------------------------------------------------- //
-// Send YKR_ID information to numeric input on click //
-// ------------------------------------------------- //
+// -------------------------------------------------- //
+// Send zipcode information to numeric input on click //
+// -------------------------------------------------- //
 
 // Add click listener for all ids that contain "svg_". Then retrieve the tooltip contents
-// and fetch the current ykr_id. Send that to YKR_ID number input field. 
+// and fetch the current zipcode. Send that to zipcode number input field. 
 // Wrap this inside a clunky timeout function because couldn't figure out another way to 
 // automatically establish these features as these elements are not finished at shiny:idle
 // or document ready.
@@ -104,11 +104,11 @@ $(document).on('shiny:idle', function(event) {
 			
 			// On click, change value in numeric input
 			var tooltip_content = $(this)[0].attributes.title.textContent;
-			var clean_ykr = clean(tooltip_content);
-			$("#ykrid").val(clean_ykr).change();
+			var clean_zip = clean(tooltip_content);
+			$("#zipcode").val(clean_zip).change();
 			
 			// Next, animate the numeric input to notify user
-			var flash_elem = document.getElementById("ykr-flash");
+			var flash_elem = document.getElementById("zip-flash");
 			flash_elem.classList.add('animate');
 		
 			//run after 0.8 seconds. 0.05 seconds longer than animation
@@ -137,7 +137,7 @@ function clean(str) {
 
 // This is carried out in a rather complicated manner. First, define two functions
 // which carry out the actual CSS property changes. Then, define a function that
-// runs the CSS property changes according to the current value in input$ykrid.
+// runs the CSS property changes according to the current value in input$zipcode.
 // Finally, we have a document listening function that checks from the object
 // columnChangerCount if this is the first time the map is opened. Then it either
 // runs the first time option or any other time option.

@@ -120,7 +120,7 @@ form.well {
 	border-radius: 10px;
 }
 /* Assorted buttons */
-#calcYkr {
+#calcZip {
 	font-size: 12px;
 	width: 100%;
 	padding: 3px 0px 5px 0px;
@@ -148,7 +148,7 @@ form.well {
 	margin-top: 4px;
 	margin-bottom: 1px;
 }
-/* ykr id field validator on error */
+/* zipcode field validator on error */
 .shiny-output-error-validation {
 	color: red;
 }
