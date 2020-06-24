@@ -7,13 +7,11 @@
 
 
 # Some decisions need decising:
-# - Remember arbitrary selection of timeofday in thesisdata! Triplecheck it
+# - Remember arbitrary selection of timeofday in thesisdata! Triplecheck
 # - Remember to be sure about calculation of pct: from drivetime or avg?
 # - thesis drivetimes have negative values (this is a result in itself i think),
 #   deal with this with colouring or something
 # - verify download service products
-# - add transparent zipcode boundaries
-# - consider changing boundaries visibility to switch na-alpha0.45
 
 
 #### 1 Initialise --------------------------------------------------------------
@@ -38,7 +36,7 @@ library(ggnewscale)
 
 
 # App version
-app_v <- "0046.postal (24.6.2020)"
+app_v <- "0047.postal (24.6.2020)"
 
 # Working directory
 wd <- "C:/Sampon/Maantiede/Master of the Universe"
@@ -197,9 +195,9 @@ subdiv_f <- subdiv_f[order(subdiv_f$Name), ]
 # joined with the currently fetched YKR ID Travel Time Matrix 2018 data.
 thesisdata <- 
   read.csv(file = recordspath,
-           header = TRUE, 
+           header = TRUE,
            sep = ",",
-           colClasses = c(timestamp = "POSIXct", zipcode = "factor"),
+           colClasses = c(zipcode = "factor"),
            stringsAsFactors = TRUE) %>%
   dplyr::select(zipcode, parktime, walktime, timeofday) %>%
   dplyr::filter(parktime <= 59,
@@ -223,7 +221,6 @@ thesisdata <-
                    thesis_m_wtd = mean(m_wtd, na.rm = TRUE),
                    thesis_sl_wtd = mean(sl_wtd, na.rm = TRUE),
                    vals_in_zip = length(zipcode)) %>%
-  
   dplyr::mutate_if(is.numeric, round, 2)
 
 # NaNs are introduced in calculation of mean. Change to NA. Do not apply changes
@@ -324,18 +321,8 @@ vis_cols <- c("ttm18_r_avg" = "ttm_r_avg",
 #### 4 Prepare reactive fetch of TTM18 data ----------------------------------
 
 # NB! The execution of this code will fail at this point if TTM18 data is not 
-# converted to fst. Please make sure you have run "thesis_data_traveltime_conv.R".
-
-# Get all of the fst filepaths
-# all_fst <- list.files(path = fst_filepath,
-#                       pattern = ".fst$",
-#                       recursive = TRUE,
-#                       full.names = TRUE)
-
-# Use "ykr_ids" as the location vector for each YKR_ID. This vector will be
-# queried in the reactive fetching of TTM18 data.
-# ykr_ids <- fst::read_fst(
-#   file.path(fst_orig_fp, "5785xxx/travel_times_to_ 5785640.fst"))[, 1]
+# converted to fst. Please make sure you have a local copy of the fst format
+# dataset of TTM18 aggregated to postal code areas.
 
 # Get all of the fst-format TTM18 aggregated to postal code area level
 all_postal_fst <- list.files(path = fst_postal_fp,
@@ -367,7 +354,7 @@ server <- function(input, output, session) {
       shiny::need(!is.na(as.numeric(input$zipcode)), "Can't contain letters") %then%
       shiny::need(nchar(input$zipcode) == 5, "Five digits pls") %then%
       shiny::need(input$zipcode %in% unique(ykrid_zipcodes$zipcode), 
-           "Value not a valid postal code")
+           "Not a valid postal code")
     )
     input$zipcode
   })
@@ -397,11 +384,12 @@ server <- function(input, output, session) {
     
     #### Fetch aggregated TTM18 data ---
 
-    # Use 
+    # Use validate_zipcode() to find the filepath for the needed aggregated
+    # TTM18 fst file
     postal_loc <- grepl(validate_zipcode(), all_postal_fst, fixed = TRUE)
     this_fp <- all_postal_fst[postal_loc]
     
-    result <- 
+    result <-
       fst::read_fst(this_fp, as.data.table = TRUE) %>%
       
       dplyr::left_join(., thesisdata, by = "zipcode") %>%
@@ -499,42 +487,39 @@ server <- function(input, output, session) {
   #### 6.2.1 Da plot -----------------------------------------------------------
   output$researcharea <- renderGirafe({
     
-    # Reactive value: Insert equal breaks for mapping.
+    # Reactive value: Insert equal breaks column for ggplot mapping.
     inputdata <- equalBreaksColumn()
     
-    # Get an origin cell for mapping
-    origincell <- postal_f[postal_f["zipcode"] == validate_zipcode(), ]
+    # Get the origin zipcode for mapping
+    originzip <<- postal_f[postal_f["zipcode"] == validate_zipcode(), ]
     
     # Format legend labels (Equal breaks classes). Remove [, ], (, and ). Also 
-    # add list dash. Create named vector for the origin cell legend entry
+    # add list dash. Create named vector for the origin zipcode legend entry
     l_labels <- 
       gsub("(])|(\\()|(\\[)", "", levels(inputdata[, input$fill_column])) %>%
       gsub(",", " \U2012 ", .)
-    legendname <- GetLegendName(input$fill_column, origincell)
+    legendname <- GetLegendName(input$fill_column, originzip)
 
-    # if fillcolumn visualises postal code areas, allow counting of factor 
-    # levels. Infix operator %notin% defined in funcs.R.
-    if(input$fill_column %notin% c("ttm18_r_t", "ttm18_m_t", "ttm18_sl_t")) {
-      l_labels <- AddLevelCounts(inputdata, vis_cols[[input$fill_column]], 
-                                 input$fill_column, input$classIntervals_n, 
-                                 l_labels)
-    }
+    # The sum of individual factor levels
+    l_labels <- AddLevelCounts(inputdata, vis_cols[[input$fill_column]], 
+                               input$fill_column, input$classIntervals_n, 
+                               l_labels)
     
     # Origin id legend label
     o_label <- setNames("purple",
-                        origincell[, "nimi"] %>%
+                        originzip[, "nimi"] %>%
                           unique() %>%
                           as.character())
     
-    # current_subdiv_lbl is created so that any values can be removed when 
-    # necessary from the dataframe. By using a duplicate of subdiv_lbl, labels 
-    # can also be returned into view.
+    # current_subdiv_lbl is created so that any amount of values can be removed 
+    # when necessary from the dataframe. By using a duplicate of subdiv_lbl, 
+    # labels can also be returned into view.
     current_subdiv_lbl <- data.frame(subdiv_lbl)
     
     # Get the tooltip from a separate HTML file. Get rid of indentation and 
     # HTML comments in the function ReadAndClean().
     tooltip_content <- ReadAndClean(tooltip_path)
-
+    
     
     
     #### 6.2.1.1 Define ggplot obligatory elements ----
@@ -547,9 +532,9 @@ server <- function(input, output, session) {
                    fill = input$fill_column,
                    tooltip = substitute(
                      sprintf(tooltip_content,
+                             from_zip, "ds",
                              zipcode, nimi,
                              
-                             "obs.", "obs.", "obs.",
                              ttm_sfp, ttm_sfp, ttm_sfp,
                              ttm_wtd, ttm_wtd, ttm_wtd,
                              ttm_r_avg, ttm_m_avg, ttm_sl_avg,
@@ -639,7 +624,7 @@ server <- function(input, output, session) {
     g <- g + ggnewscale::new_scale_color() +
       
       # Plot origin YKR_ID, the starting position for TTM18
-      geom_polygon(data = origincell,
+      geom_polygon(data = originzip,
                    aes(long, lat, group = group, color = nimi),
                    fill = NA,
                    size = 1.2) +
@@ -774,7 +759,7 @@ server <- function(input, output, session) {
 #### 6.3 ShinyApp UI -----------------------------------------------------------
 ui <- shinyUI(
   fluidPage(
-    useShinyjs(),
+    shinyjs::useShinyjs(),
     theme = shinytheme("slate"),
     
     

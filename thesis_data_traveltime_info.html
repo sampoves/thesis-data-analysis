@@ -2,7 +2,8 @@
  <!-- for Sampo Vesanen's MSc thesis. 9.6.2020. -->
 <div id='abbr-info' title='Travel time comparison app' style='display:none;'>
 	<h3>Parking of private car in Helsinki Capital Region: compare Helsinki Region Travel Time Matrix 2018 and thesis survey results of Sampo Vesanen</h3>
-	<p>Focusing on private cars, this application visualises the parking time differences between Helsinki Region Travel Time Matrix 2018 (Tenkanen et al. 2018) and the survey data carried out for the master's thesis of Sampo Vesanen. Use this information dialog to learn how the tooltip values were calculated.</p>
+	<p>Focusing on private cars, this application visualises the parking time differences between Helsinki Region Travel Time Matrix 2018 (Tenkanen et al. 2018) and the survey data carried out for the master's thesis of Sampo Vesanen. All data is aggregated to the level of postal code areas. Use this information dialog to learn how the tooltip values were calculated.</p>
+	<p>In this application terms <i>origin postal code area</i> and <i>destination postal code area</i> are used. Origin is the postal code you enter to the toolbar field on the left and is shown as <i>Origin postal code area</i> item in the map legend. Destination is the postal code area your cursor currently hovers on.</p>
 	
 	<h4>Tooltip column names</h4>
 	<table class='legend-table'>
@@ -31,26 +32,20 @@
 			<th>Description</th>
 		</tr>
 	</table>
-	<table class='legend-table lt-top-row vl-car'>
-		<tr>
-			<td class='legend-td'>car_x_t</td>
-			<td class='legend-td'>Travel time from origin to destination by private car, the whole travel chain has been taken into account. This is unchanged TTM18 data. Replace <i>x</i> in the row name with <code>r</code>, <code>m</code>, <code>sl</code> to receive <code>car_r_t</code>, <code>car_m_t</code>, or <code>car_sl_t</code>, respectively. NA indicates a non-navigable route.</td>
-		</tr>
-	</table>
-	<table class='legend-table vl-sfp-wtd'>
+	<table class='legend-table lt-top-row vl-sfp-wtd'>
 		<tr>
 			<td class='legend-td'>sfp</td>
 			<td class='legend-td'>Time consumed in searching for parking. In TTM18, this is <b>0.42 minutes</b> for all YKR IDs in the entirety of Helsinki Capital Region (Toivonen et al. 2014).</td>
 		</tr>
 		<tr>
 			<td class='legend-td'>wtd_avg</td>
-			<td class='legend-td'>An averaged value (per postal code area, unit minutes) of walking time from one's parked private car to the final destination. In TTM18 this is <b>2.0 minutes</b> for all YKR IDs in the entirety of Helsinki Capital Region, except in a square defined over the center of Helsinki, where the value is <b>2.5 minutes</b> for an YKR ID (Toivonen et al. 2014).</td>
+			<td class='legend-td'>An averaged value (per postal code area, unit minutes) of walking time from one's parked private car to the final destination. In TTM18 this is <b>2.0 minutes</b> for all YKR IDs in the entirety of Helsinki Capital Region, except in a square defined over the center of Helsinki, where the value is <b>2.5 minutes</b> for an YKR ID (Toivonen et al. 2014). See the switch "Helsinki walking center (TTM18)" in the toolbar to the left.</td>
 		</tr>
 	</table>
 	<table class='legend-table'>
 		<tr class='vl-avg'>
 			<td class='legend-td'>avg</td>
-			<td class='legend-td'>An averaged value (per postal code area, unit minutes) of the complete travel time with private car from origin YKR ID to all destination YKR IDs in the current postal code area.
+			<td class='legend-td'>An averaged value (per postal code area, unit minutes) of the complete travel time with private car from origin postal code area to the destination postal code area.
 			<ul>
 				<li>Formula: <code>car_x_t<sub>1</sub> + car_x_t<sub>2</sub> + ... + car_x_t<sub>n</sub> / n</code>, where x is <code>r</code>, <code>m</code>, or <code>sl</code>.</li>
 			</ul>
@@ -58,7 +53,7 @@
 		</tr>
 		<tr class='vl-drive-pct'>
 			<td class='legend-td'>drivetime</td>
-			<td class='legend-td'>The length of the driving part (value per postal code area, unit minutes) of the averaged complete travel time from origin YKR ID to the destination YKR IDs without searching for parking (TTM18 value) or walking to destination (TTM18 value).
+			<td class='legend-td'>The length of the driving part (value per postal code area, unit minutes) of the averaged complete travel time from origin postal code area to the destination postal code area without searching for parking (TTM18 value) or walking to destination (TTM18 value).
 			<ul>
 				<li>Formula: <code>ttm18_x_avg - ttm18_sfp - ttm18_wtd_avg</code>, where x is <code>r</code>, <code>m</code>, or <code>sl</code>.</li>
 			</ul>
@@ -84,7 +79,7 @@
 	<table class='legend-table lt-top-row vl-sfp-wtd'>
 		<tr>
 			<td class='legend-td'>sfp_avg</td>
-			<td class='legend-td'>Time consumed, on average, in searching for parking in different areas of Helsinki Capital Region, according to the thesis survey respondents. The values of thesis data variable <code>parktime</code> are averaged for the current postal code area.
+			<td class='legend-td'>Time consumed, on average, in searching for parking in a postal code area, according to the thesis survey respondents. The values of thesis data variable <code>parktime</code> are averaged for the current postal code area.
 			<ul>
 				<li>Formula: <code>parktime<sub>1</sub> + parktime<sub>2</sub> + ... + parktime<sub>n</sub> / n</code>, while postal code value is constant.</li>
 			</ul>
@@ -92,7 +87,7 @@
 		</tr>
 		<tr>
 			<td class='legend-td'>wtd_avg</td>
-			<td class='legend-td'>Average walking time from one's parked private car to the final destination in different areas of Helsinki Capital Region, according to the thesis survey respondents. The values of thesis data variable <code>walktime</code>are averaged for the current postal code area.
+			<td class='legend-td'>Average walking time from one's parked private car to the final destination in a postal code area, according to the thesis survey respondents. The values of thesis data variable <code>walktime</code>are averaged for the current postal code area.
 			<ul>
 				<li>Formula: <code>walktime<sub>1</sub> + walktime<sub>2</sub> + ... + walktime<sub>n</sub> / n</code>, while postal code value is constant.</li>
 			</ul>
@@ -102,7 +97,7 @@
 	<table class='legend-table vl-drive-pct'>
 		<tr>
 			<td class='legend-td'>drivetime</td>
-			<td class='legend-td'>The length of the driving part (value per postal code area, unit minutes) of the mean travel time from origin YKR ID to the destination YKR IDs, without searching for parking (thesis survey mean) or walking to destination (thesis survey mean).
+			<td class='legend-td'>The length of the driving part (value per postal code area, unit minutes) of the mean travel time from origin postal code area to the destination postal code area, without searching for parking (thesis survey mean) or walking to destination (thesis survey mean).
 			<ul>
 				<li>Formula: <code>ttm_x_avg - thesis_x_sfp - thesis_x_wtd</code>, where x is <code>r</code>, <code>m</code>, or <code>sl</code>.</li>
 			</ul>
@@ -175,5 +170,6 @@
 		<li><a href='https://hri.fi/data/dataset/paakaupunkiseudun-aluejakokartat'>Municipality subdivisions</a> (C) Helsingin, Espoon, Vantaan ja Kauniaisten mittausorganisaatiot 2011. Aineisto on muokkaamaton. License <a href='https://creativecommons.org/licenses/by/4.0/deed.en'>CC BY 4.0</a>.</li>
 		<li><a href='https://www.stat.fi/tup/paavo/index_en.html'>Postal code area boundaries</a> (C) Statistics Finland 2019. Retrieved 27.6.2019. License <a href='https://creativecommons.org/licenses/by/4.0/deed.en'>CC BY 4.0</a>.</li>
 		<li><a href='http://urn.fi/urn:nbn:fi:csc-kata00001000000000000226'>Regional population density 2012</a> (C) Statistics Finland 2019. Retrieved 13.3.2020. License <a href='http://www.nic.funet.fi/index/geodata/tilastokeskus/Tilastokeskus_terms_of_use_2018.pdf'>Other (Open)</a>.</li>
+		<li><a href='https://land.copernicus.eu/local/urban-atlas/urban-atlas-2012'>Urban Atlas 2012</a> (C) European Environment Agency 2016. Retrieved 27.6.2019. License <a href='https://land.copernicus.eu/local/urban-atlas/urban-atlas-2012?tab=metadata'>available at Copernicus.eu</a>.</li>
 	</ul>
 </div>

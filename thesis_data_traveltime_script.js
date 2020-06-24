@@ -124,10 +124,10 @@ $(document).on('shiny:idle', function(event) {
 });
 
 // this function only preserves integers of length 5 from the character string that is 
-// the tooltip inside the clicked polygon element. Postal code is included twice in the
-// tooltip, therefore "[0]".
+// the tooltip inside the clicked polygon element. A postal code is included three times 
+// in the tooltip, and we want the second one, therefore return [1].
 function clean(str) {
-	return str.match(/\d{5}/g)[0];
+	return str.match(/\d{5}/g)[1];
 }
 
 

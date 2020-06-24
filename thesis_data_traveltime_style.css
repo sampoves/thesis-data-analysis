@@ -2,7 +2,7 @@
 /* CSS style sheet of for the Travel time comparison app of my thesis results
 
 "Parking of private cars and spatial accessibility in Helsinki Capital Region" 
-by Sampo Vesanen, 13.6.2020 */
+by Sampo Vesanen, 24.6.2020 */
 
 html, body {
 	height: 100%;
@@ -263,7 +263,6 @@ performance solution */
 .tg tr:first-child th {
   border-top: 0;
 }
-#ttm-sfp td,
 #ttm-avg td,
 #thesis-drivetime td,
 #compare-drivetime td {
@@ -281,9 +280,6 @@ performance solution */
 	border-radius: 0px 0px 5px 5px;
 }
 /* coloured vertical line */
-.vl-car td:first-child {
-	border-left: 4px solid #20639b;
-}
 .vl-sfp-wtd td:first-child {
 	border-left: 4px solid #f6d55c;
 }
@@ -425,6 +421,14 @@ h4 .icon {
 	content: "\f362";
 	color: white;
 	margin: 0px 4px 0px 2px;
+}
+.hourglass-start::before {
+	content: "\f251";
+	margin-right: 4px;
+}
+.hourglass-end::before {
+	content: "\f253";
+	margin-right: 4px;
 }
 /*for dropdown menus*/
 .database-grey::before {

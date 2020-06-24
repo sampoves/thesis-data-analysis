@@ -1,16 +1,17 @@
  <!-- This is the HTML code for the travel time comparison app tooltip. -->
- <!-- for Sampo Vesanen's MSc thesis. 17.6.2020. -->
+ <!-- for Sampo Vesanen's MSc thesis. 24.6.2020. -->
 <div id='app-tooltip'>
 	<div>
-		<b>%s, %s</b> <!-- zipcode, nimi -->
+		<i class='icon hourglass-start'></i>%s, %s<br> <!-- from_zip, nimi[1] -->
+		<i class='icon hourglass-end'></i><b>%s, %s</b> <!-- zipcode, nimi -->
 	</div>
 	<hr class='tooltip-hr'>
 	 <!-- TTM18 data -->
 	<div>
 		<i class='icon database'></i>
-		<b>TTM18</b>
+		<b>Travel Time Matrix 2018</b>
 	</div>
-	 <!-- Individual YKR_IDs -->
+	 <!-- TTM18 zipcode averages -->
 	<table class='tg tg-header'>
 		<tr>
 			<th class='tg-cell'></th>
@@ -19,16 +20,7 @@
 			<th class='tg-cell'>sl</th>
 		</tr>
 	</table>
-	<table class='tg tg-flattop vl-car'>
-		<tr id='ttm-car'>
-			<td class='tg-cell'>car_x_t</td>
-			<td class='tg-cell'>%s</td> <!-- car_r_t -->
-			<td class='tg-cell'>%s</td> <!-- car_m_t -->
-			<td class='tg-cell'>%s</td> <!-- car_sl_t -->
-		</tr>
-	</table>
-	<!-- TTM18 zipcode averages -->
-	<table class='tg vl-sfp-wtd'>
+	<table class='tg tg-flattop vl-sfp-wtd'>
 		<tr id='ttm-sfp'>
 			<td class='tg-cell'>sfp</td>
 			<td class='tg-cell'>%s</td> <!-- ttm_sfp -->
@@ -75,6 +67,7 @@
 			<th class='tg-cell'>m</th>
 			<th class='tg-cell'>sl</th>
 		</tr>
+	</table>
 	<table class='tg tg-flattop vl-sfp-wtd'>
 		<tr id='thesis-sfp'>
 			<td class='tg-cell'>sfp_avg</td>
@@ -117,6 +110,7 @@
 			<th class='tg-cell'>m</th>
 			<th class='tg-cell'>sl</th>
 		</tr>
+	</table>
 	<table class='tg tg-compare tg-flattop vl-sfp-wtd'>
 		<tr id='compare-sfp'>
 			<td class='tg-cell'>sfp</td>

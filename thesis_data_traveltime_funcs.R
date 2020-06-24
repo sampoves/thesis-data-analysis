@@ -15,7 +15,6 @@
 # Java. Save some space and increase readability.
 `%+=%` = function(e1, e2) eval.parent(substitute(e1 <- e1 + e2))
 `%-=%` = function(e1, e2) eval.parent(substitute(e1 <- e1 - e2))
-`%notin%` <- Negate(`%in%`)
 
 
 
