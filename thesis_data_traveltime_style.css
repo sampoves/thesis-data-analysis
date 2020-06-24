@@ -101,6 +101,17 @@ form.well {
 	padding: 4px;
 	margin-bottom: 15px;
 }
+.fillcol-warning {
+	background-color: red;
+	-webkit-box-shadow: 0px 0px 15px rgba(255, 0, 0, 0.8);  
+	-moz-box-shadow: 0px 0px 15px rgba(255, 0, 0, 0.8); 
+	box-shadow: 0px 0px 15px rgba(255, 0, 0, 0.8);
+}
+.fillcol-warning::after {
+	font-weight: bold;
+	color: red;
+	content: "NB! Current symbology selection is origin postal code independent.";
+}
 #version-info {
 	font-size: 11px; 
 	color: grey; 

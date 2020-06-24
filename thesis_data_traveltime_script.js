@@ -131,17 +131,18 @@ function clean(str) {
 }
 
 
+
 // --------------------------------- //
 // Colorise active column in tooltip //
 // --------------------------------- //
-
+// 
 // This is carried out in a rather complicated manner. First, define two functions
 // which carry out the actual CSS property changes. Then, define a function that
 // runs the CSS property changes according to the current value in input$zipcode.
 // Finally, we have a document listening function that checks from the object
 // columnChangerCount if this is the first time the map is opened. Then it either
 // runs the first time option or any other time option.
-
+//
 // Highlight table column that is currently active in map fill
 // With the help from: https://stackoverflow.com/a/18487765/9455395
 // use :not selector to exempt td's of #legend-table from this functionality
@@ -149,7 +150,7 @@ $.fn.colorColumn = function(column) {
 	return this.find('tr').map(function() {
 		return $(this).find('td:not(.legend-td)').eq(column).css({
 			'font-weight': 'bold',
-			'background-color': '#008a27'
+			'background-color': '#616161'
 		});
     }).get();
 };
@@ -233,6 +234,16 @@ function columnColorize() {
 			} else if ("compare_r_pct,compare_m_pct,compare_sl_pct".includes(attr_val)) {
 				$('#compare-pct').addClass("selected");
 			}
+			
+			// clumsy colouring of the active visualising cell value
+			var thisSelectedRow = $('.tg-cell').parents('.selected');
+			if (attr_split === "r") {
+				$('.tg-cell').parents('.selected').children()[1].style.backgroundColor = '#008a27';
+			} else if (attr_split === "m") {
+				$('.tg-cell').parents('.selected').children()[2].style.backgroundColor = '#008a27';
+			} else if (attr_split === "sl") {
+				$('.tg-cell').parents('.selected').children()[3].style.backgroundColor = '#008a27';
+			}
 		});
 	}, 250);
 }
@@ -294,4 +305,19 @@ $(document).one('shiny:idle', function(event) {
 		$("#optlbl_1").prepend("<i class='icon poll-grey'></i>");
 		$("#optlbl_2").prepend("<i class='icon exchange-grey'></i>");
 	});
+});
+
+
+
+// ---------------------------------------------------- //
+// Signal when fill_column does not respond to a origin //
+// ---------------------------------------------------- //
+$(document).on('shiny:idle', function(event) {
+	
+	var fillcol = $("#fill_column").val();
+	if ("msc_r_sfp, msc_m_sfp, msc_sl_sfp, msc_r_wtd, msc_m_wtd, msc_sl_wtd, compare_r_sfp, compare_m_sfp, compare_sl_sfp, compare_r_wtd, compare_m_wtd, compare_sl_wtd".includes(fillcol)) {
+		$('.travelchain').addClass("fillcol-warning");
+	} else {
+		$('.travelchain').removeClass('fillcol-warning');
+	}
 });

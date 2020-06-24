@@ -12,6 +12,7 @@
 # - thesis drivetimes have negative values (this is a result in itself i think),
 #   deal with this with colouring or something
 # - verify download service products
+# - more helpful map fill??
 
 
 #### 1 Initialise --------------------------------------------------------------
@@ -36,7 +37,7 @@ library(ggnewscale)
 
 
 # App version
-app_v <- "0047.postal (24.6.2020)"
+app_v <- "0048.postal (24.6.2020)"
 
 # Working directory
 wd <- "C:/Sampon/Maantiede/Master of the Universe"
@@ -491,7 +492,8 @@ server <- function(input, output, session) {
     inputdata <- equalBreaksColumn()
     
     # Get the origin zipcode for mapping
-    originzip <<- postal_f[postal_f["zipcode"] == validate_zipcode(), ]
+    originzip <- postal_f[postal_f["zipcode"] == validate_zipcode(), ]
+    originname <- as.character(originzip$nimi[1])
     
     # Format legend labels (Equal breaks classes). Remove [, ], (, and ). Also 
     # add list dash. Create named vector for the origin zipcode legend entry
@@ -532,7 +534,7 @@ server <- function(input, output, session) {
                    fill = input$fill_column,
                    tooltip = substitute(
                      sprintf(tooltip_content,
-                             from_zip, "ds",
+                             from_zip, originname,
                              zipcode, nimi,
                              
                              ttm_sfp, ttm_sfp, ttm_sfp,
@@ -785,7 +787,7 @@ ui <- shinyUI(
         id = "sidebar",
         
         HTML("<label class='control-label'>Travel chain origin</label>",
-             "<div id='contents'>",
+             "<div class='travelchain' id='contents'>",
              "<div id='zip-flash'>"),
         textInput(
           inputId = "zipcode",
@@ -807,7 +809,7 @@ ui <- shinyUI(
         selectInput(
           inputId = "fill_column",
           label = "Visualise data (equal interval)",
-          selected = "compare_r_sfp",
+          selected = "ttm_r_avg",
           choices = list(
             `Travel Time Matrix 2018 private car data` = 
               c("ttm18_r_avg", "ttm18_m_avg", "ttm18_sl_avg",
