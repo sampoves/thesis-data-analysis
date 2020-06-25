@@ -2,7 +2,7 @@
 # Helsinki Region Travel Time comparison application
 # Helsinki Region Travel Time Matrix 2018 <--> My thesis survey results
 
-# 24.6.2020
+# 25.6.2020
 # Sampo Vesanen
 
 
@@ -12,7 +12,9 @@
 # - thesis drivetimes have negative values (this is a result in itself i think),
 #   deal with this with colouring or something
 # - verify download service products
-# - more helpful map fill??
+# - more helpful map fill color scale??
+# - percentage is "zero point" format in tooltip. This is misleading in the 
+#   legend
 
 
 #### 1 Initialise --------------------------------------------------------------
@@ -37,16 +39,17 @@ library(ggnewscale)
 
 
 # App version
-app_v <- "0048.postal (24.6.2020)"
+app_v <- "0049.postal (25.6.2020)"
 
 # Working directory
 wd <- "C:/Sampon/Maantiede/Master of the Universe"
 
 # Data directories
-munspath <- file.path(wd, "python/paavo/hcr_muns_clipped.shp")
+munspath <- file.path(wd, "python/paavo/hcr_muns.shp")
+othermunspath <- file.path(wd, "python/paavo/other_muns.shp")
 subdivpath <- file.path(wd, "python/suuralueet/PKS_suuralue.kml")
 waterpath <- file.path(wd, "python/FI001L3_HELSINKI/ua2012_water.shp")
-roadpath <- file.path(wd, "python/vayla/nopeusrajoitus_k_60.shp")
+roadpath <- file.path(wd, "python/vayla/mainroads.shp")
 
 # Thesis' processed data
 recordspath <- file.path(wd, "records_for_r.csv")
@@ -110,6 +113,12 @@ muns_f <-
                     as.data.frame(.) %>%
                       dplyr::mutate(id = as.character(dplyr::row_number() - 1)))} %>%
   dplyr::select(-c(namn, vaestontih, km2, vakiluku, kuntakoodi))
+
+# Bordering municipalities. Does not require any of the shapefile attribute data.
+othermuns_f <-
+  rgdal::readOGR(othermunspath, stringsAsFactors = TRUE) %>%
+  sp::spTransform(., app_crs) %>%
+  ggplot2::fortify(.)
 
 
 
@@ -186,6 +195,7 @@ subdiv_f <-
   
   dplyr::mutate(Name = factor(Name, levels = sort(levels(Name))))
 
+# Reorder dataframe by subdivision
 subdiv_f <- subdiv_f[order(subdiv_f$Name), ]
 
 
@@ -319,7 +329,7 @@ vis_cols <- c("ttm18_r_avg" = "ttm_r_avg",
 
 
 
-#### 4 Prepare reactive fetch of TTM18 data ----------------------------------
+#### 3 Prepare reactive fetch of TTM18 data ----------------------------------
 
 # NB! The execution of this code will fail at this point if TTM18 data is not 
 # converted to fst. Please make sure you have a local copy of the fst format
@@ -333,10 +343,10 @@ all_postal_fst <- list.files(path = fst_postal_fp,
 
 
 
-#### 6 Travel Time Comparison ShinyApp -----------------------------------------
+#### 4 Travel Time Comparison ShinyApp -----------------------------------------
 server <- function(input, output, session) {
 
-  #### 6.1 Reactive elements ---------------------------------------------------
+  #### 4.1 Reactive elements ---------------------------------------------------
 
   # Launch tooltip legend jQuery UI dialog
   shiny::observeEvent(input$info_dialog_btn, {
@@ -376,7 +386,7 @@ server <- function(input, output, session) {
   
   
   
-  #### 6.1.1 Reactive fetch of TTM18 data --------------------------------------
+  #### 4.1.1 Reactive fetch of TTM18 data --------------------------------------
   
   # This is the reactively built Helsinki Region Travel Time Matrix 2018 for the 
   # origin id inserted by the user. User's chosen YKR_ID value is 
@@ -483,9 +493,9 @@ server <- function(input, output, session) {
   })
   
   
-  #### 6.2 ShinyApp outputs ----------------------------------------------------
+  #### 4.2 ShinyApp outputs ----------------------------------------------------
   
-  #### 6.2.1 Da plot -----------------------------------------------------------
+  #### 4.2.1 Da plot -----------------------------------------------------------
   output$researcharea <- renderGirafe({
     
     # Reactive value: Insert equal breaks column for ggplot mapping.
@@ -524,7 +534,7 @@ server <- function(input, output, session) {
     
     
     
-    #### 6.2.1.1 Define ggplot obligatory elements ----
+    #### 4.2.1.1 Define ggplot obligatory elements ----
     g <- ggplot(data = inputdata) + 
       geom_polygon_interactive(
         color = alpha("black", input$postal_vis),
@@ -590,7 +600,7 @@ server <- function(input, output, session) {
     
     
     
-    #### 6.2.1.2 If statements for on-off switches ----
+    #### 4.2.1.2 If statements for on-off switches ----
     
     
     # Roads and water in case we want them mapped
@@ -603,22 +613,28 @@ server <- function(input, output, session) {
     }
     
     if(input$show_roads == TRUE) {
-      g <- g + geom_polygon(data = roads_f,
+      g <- g + geom_path(data = roads_f,
                             aes(long, lat, group = group),
-                            color = "#454545",
-                            fill = "NA",
-                            size = 0.7)
+                            color = "#757575",
+                            fill = NA,
+                            size = 0.9)
     }
     
     # Plot municipality boundaries on the map
     if(input$show_muns == TRUE) {
       
-      # Municipality boundaries
-      g <- g + geom_polygon(data = muns_f,
+      g <- g + geom_polygon(data = othermuns_f,
                             aes(long, lat, group = group),   
-                            color = alpha("black", 0.9), 
+                            color = alpha("black", 0.3), 
                             fill = "NA",
-                            size = 1.0)
+                            size = 0.8) +
+      
+      # Municipality boundaries
+      geom_polygon(data = muns_f,
+                   aes(long, lat, group = group),   
+                   color = alpha("black", 0.9), 
+                   fill = "NA",
+                   size = 1.0)
     }
     
     # ggnewscale makes it possible to map additional legends with same 
@@ -715,7 +731,7 @@ server <- function(input, output, session) {
     }
     
     
-    #### 6.2.1.3 Download and rendering ----
+    #### 4.2.1.3 Download and rendering ----
     
     # Prepare the downloadable interactive map. "interactive_out" is brought 
     # to global environment for download. Use larger fonts.
@@ -749,7 +765,7 @@ server <- function(input, output, session) {
   )
   
   
-  #### 6.2.2 Other outputs -----------------------------------------------------
+  #### 5.2.2 Other outputs -----------------------------------------------------
   
   # Helps user understand where their ykr_id is located
   output$zip_helper <- renderText({
@@ -758,14 +774,14 @@ server <- function(input, output, session) {
 }
 
 
-#### 6.3 ShinyApp UI -----------------------------------------------------------
+#### 5.3 ShinyApp UI -----------------------------------------------------------
 ui <- shinyUI(
   fluidPage(
     shinyjs::useShinyjs(),
     theme = shinytheme("slate"),
     
     
-    #### 6.4 ShinyApp header ---------------------------------------------------
+    #### 5.4 ShinyApp header ---------------------------------------------------
     tags$head(tags$link(rel = "stylesheet",
                         type = "text/css",
                         href = "https://use.fontawesome.com/releases/v5.13.0/css/all.css"),
@@ -780,7 +796,7 @@ ui <- shinyUI(
     tags$html(HTML(ReadAndClean(info_path))),
     
     
-    ### 6.5 Sidebar layout -----------------------------------------------------
+    ### 5.5 Sidebar layout -----------------------------------------------------
     titlePanel(NULL, windowTitle = "Sampo Vesanen's thesis: Travel time comparison"),
     sidebarLayout(
       sidebarPanel(
@@ -900,13 +916,13 @@ ui <- shinyUI(
         
         #### Switches for roads and water ---
         HTML("<div class='onoff-div'><b>Physical features</b><br>",
-             "<label class='control-label onoff-label' for='show_roads'>Roads</label>"),
+             "<label class='control-label onoff-label' for='show_roads'>Main roads</label>"),
         shinyWidgets::switchInput(
           inputId = "show_roads",
           size = "mini",
           value = FALSE),
         
-        HTML("<label class='control-label onoff-label' for='show_water'>Water</label>"),
+        HTML("<label class='control-label onoff-label' for='show_water'>Inland water</label>"),
         shinyWidgets::switchInput(
           inputId = "show_water", 
           size = "mini",
@@ -920,7 +936,7 @@ ui <- shinyUI(
         width = 1),
       
       
-      ### 6.6 Mainpanel layout -------------------------------------------------
+      ### 5.6 Mainpanel layout -------------------------------------------------
       mainPanel(
         
         HTML("<div class='rightside-toolbar'>"),
