@@ -91,7 +91,7 @@ form.well {
 	border-radius: 5px;
 	padding: 14px;
 	width: 235px;
-	z-index: 50;
+	z-index: 160;
 	scroll-behavior: smooth;
 }
 #contents {
@@ -124,7 +124,7 @@ form.well {
 /* Assorted buttons */
 .hidesidebar {
 	position: fixed;
-	z-index: 100;
+	z-index: 200;
 	margin-left: -5px;
 	margin-top: -5px;
 	background-color: rgba(0,0,0,0.3);
@@ -172,11 +172,14 @@ form.well {
 .rightside-toolbar {
 	position: fixed;
 	margin-left: 15px;
-	margin-top: 1px;
+	margin-top: 4px;
 	background-color: rgba(255,255,255,0.3);
 	border-radius: 5px;
 	padding: 0px 7px 2px 7px;
-	z-index: 100;
+	z-index: 150;
+}
+#info_dialog_btn {
+	margin-left: 7px;
 }
 #showhidebutton {
 	float: right;
@@ -409,13 +412,13 @@ h4 .icon {
 .file::before {
 	content: "\f56d";
 	color: #069;
-	font-size: 1.3em;
+	font-size: 1.75em;
 	margin: 0px 5px 0px 5px;
 }
 .info::before {
 	content: "\f129";
 	color: #069;
-	font-size: 1.3em;
+	font-size: 1.75em;
 	margin: 0px 8px 0px 8px;
 }
 .database::before {

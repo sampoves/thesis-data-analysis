@@ -2,19 +2,18 @@
 # Helsinki Region Travel Time comparison application
 # Helsinki Region Travel Time Matrix 2018 <--> My thesis survey results
 
-# 25.6.2020
+# 27.6.2020
 # Sampo Vesanen
 
 
 # Some decisions need decising:
 # - Remember arbitrary selection of timeofday in thesisdata! Triplecheck
-# - Remember to be sure about calculation of pct: from drivetime or avg?
 # - thesis drivetimes have negative values (this is a result in itself i think),
 #   deal with this with colouring or something
-# - verify download service products
 # - more helpful map fill color scale??
 # - percentage is "zero point" format in tooltip. This is misleading in the 
 #   legend
+# - infodialog jumps to bottom at start
 
 
 #### 1 Initialise --------------------------------------------------------------
@@ -36,10 +35,11 @@ library(shinyWidgets)
 library(ggsn)
 library(fst)
 library(ggnewscale)
+library(ggspatial)
 
 
 # App version
-app_v <- "0049.postal (25.6.2020)"
+app_v <- "0050.postal (27.6.2020)"
 
 # Working directory
 wd <- "C:/Sampon/Maantiede/Master of the Universe"
@@ -249,11 +249,9 @@ roads_f <-
   sp::spTransform(., app_crs) %>%
   ggplot2::fortify(.)
 
-# UA2012 inland water
-water_f <-
-  rgdal::readOGR(waterpath, stringsAsFactors = TRUE) %>%
-  sp::spTransform(., app_crs) %>%
-  ggplot2::fortify(.)
+# UA2012 inland water.  Use ggspatial to draw this, no fortify needed. ggplot2
+# would draw polygon holes (1 island in Espoo) wrong.
+water <- rgdal::readOGR(waterpath, stringsAsFactors = TRUE)
 
 
 
@@ -410,9 +408,9 @@ server <- function(input, output, session) {
       dplyr::mutate(ttm_r_drivetime = ttm_r_avg - ttm_sfp - ttm_wtd,
                     ttm_m_drivetime = ttm_m_avg - ttm_sfp - ttm_wtd,
                     ttm_sl_drivetime = ttm_sl_avg - ttm_sfp - ttm_wtd,
-                    ttm_r_pct = (ttm_sfp + ttm_wtd) / ttm_r_drivetime,
-                    ttm_m_pct = (ttm_sfp + ttm_wtd) / ttm_m_drivetime,
-                    ttm_sl_pct = (ttm_sfp + ttm_wtd) / ttm_sl_drivetime) %>%
+                    ttm_r_pct = (ttm_sfp + ttm_wtd) / ttm_r_avg,
+                    ttm_m_pct = (ttm_sfp + ttm_wtd) / ttm_m_avg,
+                    ttm_sl_pct = (ttm_sfp + ttm_wtd) / ttm_sl_avg) %>%
       dplyr::mutate_at(vars(ttm_r_pct, ttm_m_pct, ttm_sl_pct), ~round(., 2)) %>%
       
       # If zipcode is NA, then convert all calculated data to NA as well
@@ -605,19 +603,21 @@ server <- function(input, output, session) {
     
     # Roads and water in case we want them mapped
     if(input$show_water == TRUE) {
-      g <- g + geom_polygon(data = water_f,
-                   aes(long, lat, group = group),
-                   color = alpha("blue", 0.9),
-                   fill = "lightblue",
-                   size = 0.4)
+      g <- g + ggspatial::geom_spatial_polygon(
+        data = water,
+        crs = 3067,
+        aes(long, lat, group = group),
+        color = alpha("blue", 0.9),
+        fill = "lightblue",
+        size = 0.4)
     }
     
     if(input$show_roads == TRUE) {
-      g <- g + geom_path(data = roads_f,
-                            aes(long, lat, group = group),
-                            color = "#757575",
-                            fill = NA,
-                            size = 0.9)
+      g <- g + geom_path(
+        data = roads_f,
+        aes(long, lat, group = group),
+        color = "#757575",
+        size = 0.9)
     }
     
     # Plot municipality boundaries on the map
