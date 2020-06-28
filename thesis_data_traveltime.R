@@ -2,7 +2,7 @@
 # Helsinki Region Travel Time comparison application
 # Helsinki Region Travel Time Matrix 2018 <--> My thesis survey results
 
-# 27.6.2020
+# 28.6.2020
 # Sampo Vesanen
 
 
@@ -11,9 +11,6 @@
 # - thesis drivetimes have negative values (this is a result in itself i think),
 #   deal with this with colouring or something
 # - more helpful map fill color scale??
-# - percentage is "zero point" format in tooltip. This is misleading in the 
-#   legend
-# - infodialog jumps to bottom at start
 
 
 #### 1 Initialise --------------------------------------------------------------
@@ -39,7 +36,7 @@ library(ggspatial)
 
 
 # App version
-app_v <- "0050.postal (27.6.2020)"
+app_v <- "0051.postal (28.6.2020)"
 
 # Working directory
 wd <- "C:/Sampon/Maantiede/Master of the Universe"
@@ -243,7 +240,7 @@ thesisdata[, -1] <- data.frame(
 
 #### 2.6 Water and roads -------------------------------------------------------
 
-# # Digiroad
+# Main roads
 roads_f <-
   rgdal::readOGR(roadpath, stringsAsFactors = TRUE) %>%
   sp::spTransform(., app_crs) %>%
@@ -351,8 +348,12 @@ server <- function(input, output, session) {
     
     # the div id='abbr-info' is loaded in "6.4 ShinyApp header", the div itself 
     # is the separate html file indicated in variable "info_path". Dialog 
-    # window properties are located in .js
-    shinyjs::runjs("$('#abbr-info').dialog('open');")
+    # window properties are located in .js.
+    # NB! This contains a brutish solution to the dialog content jumping straight
+    # to bottom on open. Wait 300 ms (tested to be approx. lowest duration for
+    # this to work) after opening dialog, then jQuery scrollTop()
+    shinyjs::runjs("$('#abbr-info').dialog('open');
+                   setTimeout(function() {$('#abbr-info').scrollTop(0);}, 300);")
   })
   
   # Validate ykr-id in the numeric field
@@ -791,6 +792,10 @@ ui <- shinyUI(
                         href = "https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css"),
               htmltools::includeCSS(csspath)),
     htmltools::includeScript(path = jspath),
+    htmltools::htmlDependency(name = "svg.min.js", 
+                              version ="3.0.15", 
+                              src = c(href = "https://cdnjs.cloudflare.com/ajax/libs/svg.js/3.0.15/"), 
+                              script = "svg.min.js"),
     
     # jQuery UI dialog content
     tags$html(HTML(ReadAndClean(info_path))),
@@ -802,7 +807,7 @@ ui <- shinyUI(
       sidebarPanel(
         id = "sidebar",
         
-        HTML("<label class='control-label'>Travel chain origin</label>",
+        HTML("<label class='control-label'>Private car travel chain origin</label>",
              "<div class='travelchain' id='contents'>",
              "<div id='zip-flash'>"),
         textInput(

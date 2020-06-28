@@ -2,7 +2,7 @@
 // JavaScript for the travel time comparison app of my thesis results
 
 // "Parking of private cars and spatial accessibility in Helsinki Capital Region" 
-// by Sampo Vesanen, 17.6.2020
+// by Sampo Vesanen, 29.6.2020
 
 
 
@@ -35,6 +35,9 @@ $(function() {
 		width: 550,
 		maxWidth: 600,
 		maxHeight: 800,
+		open: function () {
+			$(this).scrollTop(0);
+		},
 		show: {
 			effect: 'fade',
 			duration: 300
@@ -45,8 +48,6 @@ $(function() {
 		}
 	});
 });
-
-
 
 // ----------------------- //
 // SidebarPanel operations //
@@ -321,3 +322,87 @@ $(document).on('shiny:idle', function(event) {
 		$('.travelchain').removeClass('fillcol-warning');
 	}
 });
+
+
+
+// --------------------------- //
+// Multi-part SVG highlighting //
+// --------------------------- //
+$(document).on('shiny:idle', function(event) {
+	
+	setTimeout(function() {
+		var pols = $('polygon[id^="svg_"]');
+
+		for(var i = 0; i < pols.length; i++) {
+			try {
+				var cleantitle = clean(pols[i].attributes.title.textContent);
+				pols[i].setAttribute("name", cleantitle);
+			} catch (error) {
+				continue;
+			}
+		};
+	}, 3000);
+	
+	setTimeout(function() {
+		$('polygon[name="00190"]').mouseenter(function() {
+			$('polygon[name="00190"]').css("fill", "#8950a1");
+		}).mouseleave(function() {
+			 $('polygon[name="00190"]').removeAttr('style');
+		});
+		
+		$('polygon[name="00200"]').mouseenter(function() {
+			$('polygon[name="00200"]').css("fill", "#8950a1");
+		}).mouseleave(function() {
+			 $('polygon[name="00200"]').removeAttr('style');
+		});
+		
+		$('polygon[name="00250"]').mouseenter(function() {
+			$('polygon[name="00250"]').css("fill", "#8950a1");
+		}).mouseleave(function() {
+			 $('polygon[name="00250"]').removeAttr('style');
+		});
+		
+		$('polygon[name="00330"]').mouseenter(function() {
+			$('polygon[name="00330"]').css("fill", "#8950a1");
+		}).mouseleave(function() {
+			 $('polygon[name="00330"]').removeAttr('style');
+		});
+		
+		$('polygon[name="00340"]').mouseenter(function() {
+			$('polygon[name="00340"]').css("fill", "#8950a1");
+		}).mouseleave(function() {
+			 $('polygon[name="00340"]').removeAttr('style');
+		});
+		
+		$('polygon[name="00570"]').mouseenter(function() {
+			$('polygon[name="00570"]').css("fill", "#8950a1");
+		}).mouseleave(function() {
+			 $('polygon[name="00570"]').removeAttr('style');
+		});
+		
+		$('polygon[name="00830"]').mouseenter(function() {
+			$('polygon[name="00830"]').css("fill", "#8950a1");
+		}).mouseleave(function() {
+			 $('polygon[name="00830"]').removeAttr('style');
+		});
+		
+		$('polygon[name="00890"]').mouseenter(function() {
+			$('polygon[name="00890"]').css("fill", "#8950a1");
+		}).mouseleave(function() {
+			 $('polygon[name="00890"]').removeAttr('style');
+		});
+		
+		$('polygon[name="02100"]').mouseenter(function() {
+			$('polygon[name="02100"]').css("fill", "#8950a1");
+		}).mouseleave(function() {
+			 $('polygon[name="02100"]').removeAttr('style');
+		});
+		
+		$('polygon[name="02380"]').mouseenter(function() {
+			$('polygon[name="02380"]').css("fill", "#8950a1");
+		}).mouseleave(function() {
+			 $('polygon[name="02380"]').removeAttr('style');
+		});
+	}, 3100);
+});
+
