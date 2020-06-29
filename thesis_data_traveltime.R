@@ -2,7 +2,7 @@
 # Helsinki Region Travel Time comparison application
 # Helsinki Region Travel Time Matrix 2018 <--> My thesis survey results
 
-# 28.6.2020
+# 29.6.2020
 # Sampo Vesanen
 
 
@@ -11,6 +11,8 @@
 # - thesis drivetimes have negative values (this is a result in itself i think),
 #   deal with this with colouring or something
 # - more helpful map fill color scale??
+# - change svg fill to stroke properties
+# - red cells for minus values?
 
 
 #### 1 Initialise --------------------------------------------------------------
@@ -36,7 +38,7 @@ library(ggspatial)
 
 
 # App version
-app_v <- "0051.postal (28.6.2020)"
+app_v <- "0052.postal (29.6.2020)"
 
 # Working directory
 wd <- "C:/Sampon/Maantiede/Master of the Universe"
@@ -793,8 +795,8 @@ ui <- shinyUI(
               htmltools::includeCSS(csspath)),
     htmltools::includeScript(path = jspath),
     htmltools::htmlDependency(name = "svg.min.js", 
-                              version ="3.0.15", 
-                              src = c(href = "https://cdnjs.cloudflare.com/ajax/libs/svg.js/3.0.15/"), 
+                              version ="3.0.16", 
+                              src = c(href = "https://cdnjs.cloudflare.com/ajax/libs/svg.js/3.0.16/"), 
                               script = "svg.min.js"),
     
     # jQuery UI dialog content
