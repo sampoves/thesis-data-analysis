@@ -2,7 +2,7 @@
 /* CSS style sheet of for the Travel time comparison app of my thesis results
 
 "Parking of private cars and spatial accessibility in Helsinki Capital Region" 
-by Sampo Vesanen, 28.6.2020 */
+by Sampo Vesanen, 1.7.2020 */
 
 html, body {
 	height: 100%;
@@ -246,7 +246,9 @@ polygon:not([name="02100"]):hover, polygon:not([name="02380"]):hover {
 	border-radius: 5px;
 	margin-bottom: 4px;
 	table-layout: fixed;
-	width: 215px;/*170px;*/
+	width: 215px;
+	white-space: nowrap;
+	overflow: hidden;
 }
 /* fake an invisible 4px vertical line to stabilise the table cell positioning. Not
 using this positions table headers disproportionately compared to the rows */
@@ -259,9 +261,7 @@ using this positions table headers disproportionately compared to the rows */
 .tg th {
 	border: 1px solid black;
 	font-weight: normal;
-	overflow: hidden;
 	padding: 2px 1px;
-	word-break: normal;
 }
 .tg th {
 	font-weight: bold;
@@ -269,6 +269,29 @@ using this positions table headers disproportionately compared to the rows */
 .tg .tg-cell {
 	text-align: left;
 	vertical-align: top;
+	position: relative;
+}
+/*defining the class "mover" and an inner div we can animate a long text inside the small
+table cells*/
+td.tg-cell.mover,
+th.tg-cell.mover {
+	overflow: hidden;
+}
+td.tg-cell.mover div {
+	animation: scrolling-td 45s 1;
+}
+th.tg-cell.mover div {
+	animation: scrolling-th 8s 1;
+}
+@keyframes scrolling-td {
+  100% {
+    transform: translateX(-475%);
+  }
+}
+@keyframes scrolling-th {
+  100% {
+    transform: translateX(-60%);
+  }
 }
 /* CSS properties set on active tooltip row, selected with visualise data input */
 .selected td {
@@ -284,7 +307,7 @@ performance solution */
 .tg tr > *:nth-child(4) { width: 24%; }
 /* remove top, right, and bottom borders from tooltip table */
 .tg tr:first-child th {
-  border-top: 0;
+	border-top: 0;
 }
 #ttm-avg td,
 #thesis-drivetime td,
@@ -292,11 +315,11 @@ performance solution */
 	border-top: 0;
 }
 .tg tr:last-child td {
-  border-bottom: 0;
+	border-bottom: 0;
 }
 .tg tr td:last-child,
 .tg tr th:last-child {
-  border-right: 0;
+	border-right: 0;
 }
 /* remove border-radius from rows below header rows */
 .tg-flattop {

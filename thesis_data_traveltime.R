@@ -2,7 +2,7 @@
 # Helsinki Region Travel Time comparison application
 # Helsinki Region Travel Time Matrix 2018 <--> My thesis survey results
 
-# 29.6.2020
+# 1.7.2020
 # Sampo Vesanen
 
 
@@ -11,8 +11,6 @@
 # - thesis drivetimes have negative values (this is a result in itself i think),
 #   deal with this with colouring or something
 # - more helpful map fill color scale??
-# - change svg fill to stroke properties
-# - red cells for minus values?
 
 
 #### 1 Initialise --------------------------------------------------------------
@@ -38,7 +36,7 @@ library(ggspatial)
 
 
 # App version
-app_v <- "0052.postal (29.6.2020)"
+app_v <- "0053.postal (1.7.2020)"
 
 # Working directory
 wd <- "C:/Sampon/Maantiede/Master of the Universe"
@@ -352,10 +350,10 @@ server <- function(input, output, session) {
     # is the separate html file indicated in variable "info_path". Dialog 
     # window properties are located in .js.
     # NB! This contains a brutish solution to the dialog content jumping straight
-    # to bottom on open. Wait 300 ms (tested to be approx. lowest duration for
+    # to bottom on open. Wait 310 ms (tested to be approx. lowest duration for
     # this to work) after opening dialog, then jQuery scrollTop()
     shinyjs::runjs("$('#abbr-info').dialog('open');
-                   setTimeout(function() {$('#abbr-info').scrollTop(0);}, 300);")
+                   setTimeout(function() {$('#abbr-info').scrollTop(0);}, 310);")
   })
   
   # Validate ykr-id in the numeric field
@@ -794,17 +792,14 @@ ui <- shinyUI(
                         href = "https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css"),
               htmltools::includeCSS(csspath)),
     htmltools::includeScript(path = jspath),
-    htmltools::htmlDependency(name = "svg.min.js", 
-                              version ="3.0.16", 
-                              src = c(href = "https://cdnjs.cloudflare.com/ajax/libs/svg.js/3.0.16/"), 
-                              script = "svg.min.js"),
     
     # jQuery UI dialog content
     tags$html(HTML(ReadAndClean(info_path))),
     
     
     ### 5.5 Sidebar layout -----------------------------------------------------
-    titlePanel(NULL, windowTitle = "Sampo Vesanen's thesis: Travel time comparison"),
+    titlePanel(NULL, 
+               windowTitle = "Sampo Vesanen's thesis: Private car travel time comparison in Helsinki Capital Region"),
     sidebarLayout(
       sidebarPanel(
         id = "sidebar",
@@ -832,7 +827,7 @@ ui <- shinyUI(
         selectInput(
           inputId = "fill_column",
           label = "Visualise data (equal interval)",
-          selected = "ttm_r_avg",
+          selected = "ttm18_m_avg",
           choices = list(
             `Travel Time Matrix 2018 private car data` = 
               c("ttm18_r_avg", "ttm18_m_avg", "ttm18_sl_avg",
