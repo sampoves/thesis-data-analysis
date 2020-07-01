@@ -2,7 +2,7 @@
 /* CSS style sheet of for the Travel time comparison app of my thesis results
 
 "Parking of private cars and spatial accessibility in Helsinki Capital Region" 
-by Sampo Vesanen, 1.7.2020 */
+by Sampo Vesanen, 2.7.2020 */
 
 html, body {
 	height: 100%;
@@ -323,30 +323,54 @@ td.tg-cell.mover,
 th.tg-cell.mover {
 	overflow: hidden;
 }
-/* disallow propagation of animation to children divs, where abbreviations are separated
-from explanations by a tabulator like whitespace */
-/*#ttm-avg td.tg-cell.mover div:not(.cell-abbr):not(.cell-expl) {
-	animation: scrolling-td 2s;
-	-webkit-animation: scrolling-td 2s;
-}*/
-td.tg-cell.mover div:not(.cell-abbr):not(.cell-expl) {
-	animation: scrolling-td 45s;
-	-webkit-animation: scrolling-td 45s;
+/* Using :not(), disallow propagation of animation to children divs, where abbreviations 
+are separated from explanations by a tabulator like whitespace */
+
+/* assign rows different animations based on the text length to scroll. This is a highly
+manual design choice: animation lengths and translateX() have been set to values where
+the three animations, short, mid and long, run with the same speed */
+/* animation syntax: @keyframes duration | timing-function | delay | iteration-count */
+#ttm-sfp td.tg-cell.mover div:not(.cell-abbr):not(.cell-expl),
+#ttm-avg td.tg-cell.mover div:not(.cell-abbr):not(.cell-expl),
+#compare-sfp td.tg-cell.mover div:not(.cell-abbr):not(.cell-expl),
+#compare-wtd td.tg-cell.mover div:not(.cell-abbr):not(.cell-expl) {
+	animation: scrolling-short 30s linear 3s 1;
+	-webkit-animation: scrolling-short 30s linear 3s 1;
+}
+#ttm-wtd td.tg-cell.mover div:not(.cell-abbr):not(.cell-expl),
+#thesis-sfp td.tg-cell.mover div:not(.cell-abbr):not(.cell-expl),
+#thesis-wtd td.tg-cell.mover div:not(.cell-abbr):not(.cell-expl) {
+	animation: scrolling-mid 40s linear 3s 1;
+	-webkit-animation: scrolling-mid 40s linear 3s 1;
+}
+#ttm-drivetime td.tg-cell.mover div:not(.cell-abbr):not(.cell-expl),
+#ttm-pct td.tg-cell.mover div:not(.cell-abbr):not(.cell-expl),
+#thesis-drivetime td.tg-cell.mover div:not(.cell-abbr):not(.cell-expl),
+#thesis-pct td.tg-cell.mover div:not(.cell-abbr):not(.cell-expl),
+#compare-drivetime td.tg-cell.mover div:not(.cell-abbr):not(.cell-expl),
+#compare-pct td.tg-cell.mover div:not(.cell-abbr):not(.cell-expl) {
+	animation: scrolling-long 60s linear 3s 1;
+	-webkit-animation: scrolling-long 60s linear 3s 1;
 }
 th.tg-cell.mover div:not(.cell-abbr):not(.cell-expl) {
-	animation: scrolling-th 8s;
-	-webkit-animation: scrolling-th 8s;
+	animation: scrolling-th 9s linear 3s 1;
+	-webkit-animation: scrolling-th 9s linear 3s 1;
 }
-td.tg-cell.mover div:not(.cell-abbr):not(.cell-expl),
-th.tg-cell.mover div:not(.cell-abbr):not(.cell-expl) {
-	animation-iteration-count: 1;
-	animation-delay: 3s;
+@keyframes scrolling-short {
+	90% { transform: translateX(-290%); }
+	100% { transform: translateX(-290%); }
 }
-@keyframes scrolling-td {
-  100% { transform: translateX(-475%); }
+@keyframes scrolling-mid {
+	90% { transform: translateX(-380%); }
+	100% { transform: translateX(-380%); }
+}
+@keyframes scrolling-long {
+	90% { transform: translateX(-575%); }
+	100% { transform: translateX(-575%); }
 }
 @keyframes scrolling-th {
-  100% { transform: translateX(-60%); }
+	90% { transform: translateX(-60%); }
+	100% { transform: translateX(-60%); }
 }
 .cell-abbr {
 	display: inline-block;

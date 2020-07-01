@@ -2,7 +2,7 @@
 // JavaScript for the travel time comparison app of my thesis results
 
 // "Parking of private cars and spatial accessibility in Helsinki Capital Region" 
-// by Sampo Vesanen, 29.6.2020
+// by Sampo Vesanen, 2.7.2020
 
 
 
@@ -196,6 +196,8 @@ function columnColorize() {
 		
 		// Apply CSS to correct table columns and add icons to comparison tables
 		$('polygon[id^="svg_"]').hover(function() {
+			
+			// Color columns
 			if (attr_split === "r") {
 				$('table.tg').colorColumn(1);
 				$('table.tg').addIconsToCompare(1);
@@ -207,6 +209,7 @@ function columnColorize() {
 				$('table.tg').addIconsToCompare(3);
 			}
 			
+			// Color rows
 			if ("ttm18_r_avg,ttm18_m_avg,ttm18_sl_avg".includes(attr_val)) {
 				$('#ttm-avg').addClass("selected");
 			} else if ("ttm18_r_drivetime,ttm18_m_drivetime,ttm18_sl_drivetime".includes(attr_val)) {
@@ -233,8 +236,9 @@ function columnColorize() {
 				$('#compare-pct').addClass("selected");
 			}
 			
-			// clumsy colouring of the active visualising cell value
+			// A clumsy colouring of the active visualising cell value
 			var thisSelectedRow = $('.tg-cell').parents('.selected');
+			
 			if (attr_split === "r") {
 				$('.tg-cell').parents('.selected').children()[1].style.backgroundColor = '#008a27';
 			} else if (attr_split === "m") {
@@ -262,6 +266,7 @@ $(document).ready(function() {
 		});
 	}
 });
+
 
 
 // Add icons to dropdown menu for user's aid or confusion. Need to reinitialise ids every 
@@ -360,19 +365,3 @@ $(document).on('shiny:idle', function(event) {
 		});
 	}, 3100);
 });
-
-// a script to pop up the selected svg polygon. Works but it is messy. Comment it, maybe
-// delete later.
-/* $(document).on('shiny:idle', function(event) {
-	
-	setTimeout(function() {
-		
-		$('polygon[id^="svg_"]').mouseenter(function() {
-			SVG($(this)[0]).front();
-		}).mouseleave(function(){
-			$('polyline').each(function(i, el) {
-				SVG(el).front();
-			})
-		});
-	}, 3000);
-}); */

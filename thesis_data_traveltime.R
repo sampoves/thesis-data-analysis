@@ -2,7 +2,7 @@
 # Helsinki Region Travel Time comparison application
 # Helsinki Region Travel Time Matrix 2018 <--> My thesis survey results
 
-# 1.7.2020
+# 2.7.2020
 # Sampo Vesanen
 
 
@@ -36,7 +36,7 @@ library(ggspatial)
 
 
 # App version
-app_v <- "0054.postal (1.7.2020)"
+app_v <- "0055.postal (2.7.2020)"
 
 # Working directory
 wd <- "C:/Sampon/Maantiede/Master of the Universe"
