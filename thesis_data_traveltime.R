@@ -36,7 +36,7 @@ library(ggspatial)
 
 
 # App version
-app_v <- "0053.postal (1.7.2020)"
+app_v <- "0054.postal (1.7.2020)"
 
 # Working directory
 wd <- "C:/Sampon/Maantiede/Master of the Universe"

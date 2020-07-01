@@ -271,28 +271,6 @@ using this positions table headers disproportionately compared to the rows */
 	vertical-align: top;
 	position: relative;
 }
-/*defining the class "mover" and an inner div we can animate a long text inside the small
-table cells*/
-td.tg-cell.mover,
-th.tg-cell.mover {
-	overflow: hidden;
-}
-td.tg-cell.mover div {
-	animation: scrolling-td 45s 1;
-}
-th.tg-cell.mover div {
-	animation: scrolling-th 8s 1;
-}
-@keyframes scrolling-td {
-  100% {
-    transform: translateX(-475%);
-  }
-}
-@keyframes scrolling-th {
-  100% {
-    transform: translateX(-60%);
-  }
-}
 /* CSS properties set on active tooltip row, selected with visualise data input */
 .selected td {
 	font-weight: bold;
@@ -334,6 +312,48 @@ performance solution */
 }
 .vl-drive-pct td:first-child {
 	border-left: 4px solid #3caea3;
+}
+
+/*---------------------*/
+/* Autoscrolling cells */
+/*---------------------*/
+/*defining the class "mover" and an inner div we can animate a long text inside the small
+table cells*/
+td.tg-cell.mover,
+th.tg-cell.mover {
+	overflow: hidden;
+}
+/* disallow propagation of animation to children divs, where abbreviations are separated
+from explanations by a tabulator like whitespace */
+/*#ttm-avg td.tg-cell.mover div:not(.cell-abbr):not(.cell-expl) {
+	animation: scrolling-td 2s;
+	-webkit-animation: scrolling-td 2s;
+}*/
+td.tg-cell.mover div:not(.cell-abbr):not(.cell-expl) {
+	animation: scrolling-td 45s;
+	-webkit-animation: scrolling-td 45s;
+}
+th.tg-cell.mover div:not(.cell-abbr):not(.cell-expl) {
+	animation: scrolling-th 8s;
+	-webkit-animation: scrolling-th 8s;
+}
+td.tg-cell.mover div:not(.cell-abbr):not(.cell-expl),
+th.tg-cell.mover div:not(.cell-abbr):not(.cell-expl) {
+	animation-iteration-count: 1;
+	animation-delay: 3s;
+}
+@keyframes scrolling-td {
+  100% { transform: translateX(-475%); }
+}
+@keyframes scrolling-th {
+  100% { transform: translateX(-60%); }
+}
+.cell-abbr {
+	display: inline-block;
+	width: 60px;
+}
+.cell-expl {
+	display: inline-block;
 }
 
 /*-------------------------*/
