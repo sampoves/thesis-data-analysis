@@ -11,6 +11,8 @@
 # - thesis drivetimes have negative values (this is a result in itself i think),
 #   deal with this with colouring or something
 # - more helpful map fill color scale??
+# - animation end on content end
+# - starting div "loading", shows only on start
 
 
 #### 1 Initialise --------------------------------------------------------------
@@ -36,7 +38,7 @@ library(ggspatial)
 
 
 # App version
-app_v <- "0055.postal (2.7.2020)"
+app_v <- "0056.postal (2.7.2020)"
 
 # Working directory
 wd <- "C:/Sampon/Maantiede/Master of the Universe"
@@ -949,6 +951,10 @@ ui <- shinyUI(
           inputId = "info_dialog_btn",
           label = HTML("<i class='icon info' title='Open tooltip abbreviations legend dialog'></i>")),
         HTML("</div>"),
+        
+        HTML("<div class='loadingdiv'>",
+             "Loading map view. Once finished, see <i class='icon info'></i> for more information.",
+             "</div>"),
         
         girafeOutput("researcharea"), 
         
