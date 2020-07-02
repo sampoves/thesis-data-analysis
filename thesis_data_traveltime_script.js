@@ -365,3 +365,48 @@ $(document).on('shiny:idle', function(event) {
 		});
 	}, 3100);
 });
+
+
+// This is a failed test to make cell autoscroll more intelligent. It works when launched
+// manually, but the scrollLeft propagates when inside the function structure
+/* function scroll(text, max) {
+	
+	text.scrollLeft(text.scrollLeft() + 1);
+	var left = text.scrollLeft();
+	if (left > max) {
+		max = left;
+		setTimeout(scroll, 60, text, max)
+	}
+	else {
+		setTimeout(function() { text.scrollLeft(0) }, 3000)
+	}
+}
+$(document).on('shiny:idle', function(event) {
+	
+	setTimeout(function() {
+		
+		$('polygon[id^="svg_"]').hover(function() {
+			
+			setTimeout(function() {
+				scroll($('.tg-cell.headerr'), 0);
+				scroll($('.tg-cell.headersl'), 0);
+				
+				scroll($('#ttm-sfp-move'), 0);
+				scroll($('#ttm-wtd-move'), 0);
+				scroll($('#ttm-avg-move'), 0);
+				scroll($('#ttm-drivetime-move'), 0);
+				scroll($('#ttm-pct-move'), 0);
+
+				scroll($('#thesis-sfp-move'), 0);
+				scroll($('#thesis-wtd-move'), 0);
+				scroll($('#thesis-drivetime-move'), 0);
+				scroll($('#thesis-pct-move'), 0);
+
+				scroll($('#compare-sfp-move'), 0);
+				scroll($('#compare-wtd-move'), 0);
+				scroll($('#compare-drivetime-move'), 0);
+				scroll($('#compare-pct-move'), 0);
+			}, 3000);
+		});
+	}, 3000);
+}); */

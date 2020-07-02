@@ -205,6 +205,21 @@ JavaScript */
 svg, img {
 	border-radius: 4px;
 }
+.loadingdiv {
+	pointer-events: none;
+	user-select: none; /* supported by Chrome and Opera */
+	-webkit-user-select: none; /* Safari */
+	-khtml-user-select: none; /* Konqueror HTML */
+	-moz-user-select: none; /* Firefox */
+	-ms-user-select: none; /* Internet Explorer/Edge */
+	text-align: center;
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translateX(-50%) translateY(-50%);
+	z-index: -10;
+	font-size: 20px;
+}
 
 /* This will re-enable zipcode tooltip on Interactive map when mouse hovers over svg 
 polygons or polylines that don't have a tooltip (attribute "title"). These are the label 
@@ -319,8 +334,8 @@ performance solution */
 /*---------------------*/
 /*defining the class "mover" and an inner div we can animate a long text inside the small
 table cells*/
-td.tg-cell.mover,
-th.tg-cell.mover {
+td.tg-cell,
+th.tg-cell {
 	overflow: hidden;
 }
 /* Using :not(), disallow propagation of animation to children divs, where abbreviations 
