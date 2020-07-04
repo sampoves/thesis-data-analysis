@@ -2,13 +2,13 @@
 // JavaScript for the travel time comparison app of my thesis results
 
 // "Parking of private cars and spatial accessibility in Helsinki Capital Region" 
-// by Sampo Vesanen, 2.7.2020
+// by Sampo Vesanen, 4.7.2020
 
 
 
 // Trigger application's first comparison map calculation
 $(document).one('shiny:idle', function(event) {
-	$("#calcZip").click();
+	$('#calcZip').click();
 });
 
 // use this counter to hopefully detect flow of code
@@ -79,7 +79,7 @@ $(document).ready(function() {
 	// margin-bottoms.
 	var onoff = $(".onoff-container").find(".form-group.shiny-input-container");
 	for(var i = 0; i < onoff.length; i++) {
-		onoff[i].style.marginBottom = "6px";
+		onoff[i].style.marginBottom = '6px';
 	};
 });
 
@@ -103,7 +103,7 @@ $(document).on('shiny:idle', function(event) {
 			// On click, change value in numeric input
 			var tooltip_content = $(this)[0].attributes.title.textContent;
 			var clean_zip = clean(tooltip_content);
-			$("#zipcode").val(clean_zip).change();
+			$('#zipcode').val(clean_zip).change();
 			
 			// Next, animate the numeric input to notify user
 			var flash_elem = document.getElementById("zip-flash");
@@ -165,7 +165,7 @@ $.fn.addIconsToCompare = function(column) {
 		var val = parseFloat($(this).text());
 		
 		// Attempt to prevent presence of multiple icons in one cell
-		$(this).find("i.icon").remove();
+		$(this).find('i.icon').remove();
 		
 		if (val < 1) {
 			return $(this).append('<i class="icon database-comp"></i>');
@@ -198,19 +198,19 @@ function columnColorize() {
 		$('polygon[id^="svg_"]').hover(function() {
 			
 			// Color columns
-			if (attr_split === "r") {
+			if (attr_split === 'r') {
 				$('table.tg').colorColumn(1);
 				$('table.tg').addIconsToCompare(1);
-			} else if (attr_split === "m") {
+			} else if (attr_split === 'm') {
 				$('table.tg').colorColumn(2);
 				$('table.tg').addIconsToCompare(2);
-			} else if (attr_split === "sl") {
+			} else if (attr_split === 'sl') {
 				$('table.tg').colorColumn(3);
 				$('table.tg').addIconsToCompare(3);
 			}
 			
 			// Color rows
-			if ("ttm18_r_avg,ttm18_m_avg,ttm18_sl_avg".includes(attr_val)) {
+			if ('ttm18_r_avg,ttm18_m_avg,ttm18_sl_avg'.includes(attr_val)) {
 				$('#ttm-avg').addClass("selected");
 			} else if ("ttm18_r_drivetime,ttm18_m_drivetime,ttm18_sl_drivetime".includes(attr_val)) {
 				$('#ttm-drivetime').addClass("selected");
@@ -269,15 +269,15 @@ $(document).ready(function() {
 
 
 
-// Add icons to dropdown menu for user's aid or confusion. Need to reinitialise ids every 
-// time the dropdown menu opens
+// Add icons to dropdown menu for user's aid or confusion. In this implementation we need 
+// to reinitialise ids every time the dropdown menu opens
 $(document).one('shiny:idle', function(event) {
 	
 	// Disable mobile keyboard on selectize.js dropdown menus
 	$('.selectize-input input').attr('readonly','readonly');
 	
-	$(".selectize-input").on("click", function (e) {
-		var drop_lbls = $(".selectize-dropdown").find(".option");
+	$('.selectize-input').on('click', function (e) {
+		var drop_lbls = $('.selectize-dropdown').find('.option');
 		
 		// Add ids for dropdown items
 		for(var i = 0; i < drop_lbls.length; i++) {
@@ -287,26 +287,24 @@ $(document).one('shiny:idle', function(event) {
 		// add coloured bars to the open dropdown menu
 		for(var i = 0; i < drop_lbls.length; i++) {
 			
-			var this_id = "#drop_" + i;
+			var this_id = '#drop_' + i;
 			if (i >= 0 && i <= 2) {
 				$(this_id).prepend("<i class='dropbar'></i>");
-			} else if (i >= 3 && i <= 5) {
-				$(this_id).prepend("<i class='dropbar dd-avg'></i>");
-			} else if (i >= 6 && i <= 11 || i >= 18 && i <= 23 || i >= 30 && i <= 35) {
+			} else if (i >= 3 && i <= 8 || i >= 15 && i <= 20 || i >= 27 && i <= 32) {
 				$(this_id).prepend("<i class='dropbar dd-drive-pct'></i>");
-			} else if (i >= 12 && i <= 17 || i >= 24 && i <= 29) {
+			} else if (i >= 9 && i <= 14 || i >= 21 && i <= 26) {
 				$(this_id).prepend("<i class='dropbar dd-sfp-wtd'></i>");
 			}
 		};
 		
 		// add icons to the open dropdown menu in the same fashion as above
-		var optgroup_lbls = $(".selectize-dropdown").find(".optgroup-header");
+		var optgroup_lbls = $('.selectize-dropdown').find('.optgroup-header');
 		for(var i = 0; i < optgroup_lbls.length; i++) {
 			optgroup_lbls[i].setAttribute("id", "optlbl_" + i);
 		};
-		$("#optlbl_0").prepend("<i class='icon database-grey'></i>");
-		$("#optlbl_1").prepend("<i class='icon poll-grey'></i>");
-		$("#optlbl_2").prepend("<i class='icon exchange-grey'></i>");
+		$('#optlbl_0').prepend("<i class='icon database-grey'></i>");
+		$('#optlbl_1').prepend("<i class='icon poll-grey'></i>");
+		$('#optlbl_2').prepend("<i class='icon exchange-grey'></i>");
 	});
 });
 
@@ -317,9 +315,9 @@ $(document).one('shiny:idle', function(event) {
 // ---------------------------------------------------- //
 $(document).on('shiny:idle', function(event) {
 	
-	var fillcol = $("#fill_column").val();
-	if ("msc_r_sfp, msc_m_sfp, msc_sl_sfp, msc_r_wtd, msc_m_wtd, msc_sl_wtd, compare_r_sfp, compare_m_sfp, compare_sl_sfp, compare_r_wtd, compare_m_wtd, compare_sl_wtd".includes(fillcol)) {
-		$('.travelchain').addClass("fillcol-warning");
+	var fillcol = $('#fill_column').val();
+	if ('msc_r_sfp, msc_m_sfp, msc_sl_sfp, msc_r_wtd, msc_m_wtd, msc_sl_wtd, compare_r_sfp, compare_m_sfp, compare_sl_sfp, compare_r_wtd, compare_m_wtd, compare_sl_wtd'.includes(fillcol)) {
+		$('.travelchain').addClass('fillcol-warning');
 	} else {
 		$('.travelchain').removeClass('fillcol-warning');
 	}
@@ -358,55 +356,10 @@ $(document).on('shiny:idle', function(event) {
 		arr.forEach(function (value) {
 			var $var = $('polygon[name="' + value +'"]');
 			$var.mouseenter(function() {
-				$var.css("fill", "#8950a1");
+				$var.css('fill', '#8950a1');
 			}).mouseleave(function() {
 				$var.removeAttr('style');
 			});
 		});
 	}, 3100);
 });
-
-
-// This is a failed test to make cell autoscroll more intelligent. It works when launched
-// manually, but the scrollLeft propagates when inside the function structure
-/* function scroll(text, max) {
-	
-	text.scrollLeft(text.scrollLeft() + 1);
-	var left = text.scrollLeft();
-	if (left > max) {
-		max = left;
-		setTimeout(scroll, 60, text, max)
-	}
-	else {
-		setTimeout(function() { text.scrollLeft(0) }, 3000)
-	}
-}
-$(document).on('shiny:idle', function(event) {
-	
-	setTimeout(function() {
-		
-		$('polygon[id^="svg_"]').hover(function() {
-			
-			setTimeout(function() {
-				scroll($('.tg-cell.headerr'), 0);
-				scroll($('.tg-cell.headersl'), 0);
-				
-				scroll($('#ttm-sfp-move'), 0);
-				scroll($('#ttm-wtd-move'), 0);
-				scroll($('#ttm-avg-move'), 0);
-				scroll($('#ttm-drivetime-move'), 0);
-				scroll($('#ttm-pct-move'), 0);
-
-				scroll($('#thesis-sfp-move'), 0);
-				scroll($('#thesis-wtd-move'), 0);
-				scroll($('#thesis-drivetime-move'), 0);
-				scroll($('#thesis-pct-move'), 0);
-
-				scroll($('#compare-sfp-move'), 0);
-				scroll($('#compare-wtd-move'), 0);
-				scroll($('#compare-drivetime-move'), 0);
-				scroll($('#compare-pct-move'), 0);
-			}, 3000);
-		});
-	}, 3000);
-}); */

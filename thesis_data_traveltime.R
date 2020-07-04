@@ -2,7 +2,7 @@
 # Helsinki Region Travel Time comparison application
 # Helsinki Region Travel Time Matrix 2018 <--> My thesis survey results
 
-# 2.7.2020
+# 3.7.2020
 # Sampo Vesanen
 
 
@@ -10,9 +10,6 @@
 # - Remember arbitrary selection of timeofday in thesisdata! Triplecheck
 # - thesis drivetimes have negative values (this is a result in itself i think),
 #   deal with this with colouring or something
-# - more helpful map fill color scale??
-# - animation end on content end
-# - starting div "loading", shows only on start
 
 
 #### 1 Initialise --------------------------------------------------------------
@@ -38,7 +35,7 @@ library(ggspatial)
 
 
 # App version
-app_v <- "0056.postal (2.7.2020)"
+app_v <- "0057.postal (4.7.2020)"
 
 # Working directory
 wd <- "C:/Sampon/Maantiede/Master of the Universe"
@@ -457,7 +454,9 @@ server <- function(input, output, session) {
                       if_else(is.na(thesis_sl_sfp), 0, thesis_sl_sfp) + 
                         if_else(is.na(thesis_sl_wtd), 0, thesis_sl_wtd)) / ttm_sl_avg) %>%
       
-      dplyr::mutate_at(vars(thesis_r_pct, thesis_m_pct, thesis_sl_pct), 
+      dplyr::mutate_at(vars(thesis_r_drivetime, thesis_m_drivetime, 
+                            thesis_sl_drivetime, thesis_r_pct, thesis_m_pct, 
+                            thesis_sl_pct), 
                        ~round(., 2)) %>%
       
       # Add TTM18/thesis comparison columns
@@ -500,7 +499,7 @@ server <- function(input, output, session) {
   output$researcharea <- renderGirafe({
     
     # Reactive value: Insert equal breaks column for ggplot mapping.
-    inputdata <- equalBreaksColumn()
+    inputdata <<- equalBreaksColumn()
     
     # Get the origin zipcode for mapping
     originzip <- postal_f[postal_f["zipcode"] == validate_zipcode(), ]
