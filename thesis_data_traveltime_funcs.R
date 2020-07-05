@@ -128,11 +128,7 @@ GetLegendName <- function(val, originzip) {
     thisUnit <- "(unit minutes)"
   }
   
-  if (grepl("_t", val)) {
-    description <- 
-      "The average total travel time to the destination postal code area"
-    
-  } else if (grepl("_avg", val)) {
+  if (grepl("_avg", val)) {
     description <- 
       "The mean total travel time to the destination postal code area"
     
@@ -203,30 +199,33 @@ GetSymbologyHelp <- function(val) {
     thisUnit <- "(unit minutes)"
   }
   
-  # Describe the data
-  if (grepl("_t", val)) {
-    description <- 
-      "The average total travel time to the destination postal code area"
-    
-  } else if (grepl("_avg", val)) {
+  # Describe the data. The p tag which defines a vertical bar in the final 
+  # product needs to be defined here. The tag opening is pasted together with 
+  # the tag closure other outputs below.
+  if (grepl("_avg", val)) {
     description <- 
       "The mean total travel time to the destination postal code area"
+    ptag <- "<p class='line lred'>"
     
   } else if (grepl("_drivetime", val)) {
     description <- 
       "The mean duration of the driving part of the total travel time, to the destination postal code area"
+    ptag <- "<p class='line lcyan'>"
     
   } else if (grepl("_pct", val)) {
     description <- 
       "The percentage of <i>searching for parking</i> and <i>walking to the destination</i> durations in the average total travel time"
+    ptag <- "<p class='line lcyan'>"
     
   } else if (grepl("_sfp", val)) {
     description <- 
       "The mean time consumed in searching for parking in the destination postal code area"
+    ptag <- "<p class='line lyellow'>"
     
   } else if (grepl("_wtd", val)) {
     description <- 
       "The mean duration to walk from one's parked car to the final destination of the travel chain, in the destination postal code area"
+    ptag <- "<p class='line lyellow'>"
   }
   
   # Time of day
@@ -242,7 +241,8 @@ GetSymbologyHelp <- function(val) {
       thisUnit)
   }
   
-  result <- paste(datasource, ":<br>", description, " ", timeofday, sep = "")
+  result <- paste(ptag, datasource, ":<br>", description, " ", timeofday, "</p>", 
+                  sep = "")
   
   return(result)
 }

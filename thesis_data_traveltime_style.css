@@ -108,6 +108,21 @@ form.well {
 	margin: 0 0 0px;
 	font-size: 13px;
 }
+.line {
+	border-radius: 3px;
+	padding-left: 3px;
+	height: 100%;
+	margin: 0 0 0px;
+}
+.lyellow {
+	border-left: 4px solid #f6d55c;
+}
+.lred {
+	border-left: 4px solid #ed553b;
+}
+.lcyan {
+	border-left: 4px solid #3caea3;
+}
 .fillcol-warning {
 	background-color: red;
 	-webkit-box-shadow: 0px 0px 15px rgba(255, 0, 0, 0.8);  

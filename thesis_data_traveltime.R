@@ -35,7 +35,7 @@ library(ggspatial)
 
 
 # App version
-app_v <- "0058.postal (5.7.2020)"
+app_v <- "0059.postal (5.7.2020)"
 
 # Working directory
 wd <- "C:/Sampon/Maantiede/Master of the Universe"
@@ -363,7 +363,7 @@ server <- function(input, output, session) {
       shiny::need(!is.na(as.numeric(input$zipcode)), "Can't contain letters") %then%
       shiny::need(nchar(input$zipcode) == 5, "Five digits pls") %then%
       shiny::need(input$zipcode %in% unique(ykrid_zipcodes$zipcode), 
-           "Not a valid postal code")
+                  "Not a valid postal code")
     )
     input$zipcode
   })
@@ -388,10 +388,10 @@ server <- function(input, output, session) {
     
     thisVal <- GetSymbologyHelp(input$fill_column)
     help_output <- paste(
-      "<p class='helper-div'>",
+      "<div class='helper-div'>",
       "<b>Current symbology selection key:</b><br>",
       thisVal,
-      "</p>", sep = "")
+      "</div>", sep = "")
     
     help_output
   })
@@ -783,12 +783,12 @@ server <- function(input, output, session) {
   
   #### 5.2.2 Other outputs -----------------------------------------------------
   
-  # Helps user understand where their ykr_id is located
+  # Helps user understand where their ykr_id is located and what the symbology 
+  # column name means
   output$zip_helper <- renderText({
     helper_output_zip()
   })
-  
-  # Helps understand what the symbology column name means
+
   output$sym_helper <- renderText({
     helper_output_symbology()
   })
