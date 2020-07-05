@@ -4,7 +4,7 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 24.6.2020
+# 5.7.2020
 
 
 
@@ -130,19 +130,19 @@ GetLegendName <- function(val, originzip) {
   
   if (grepl("_t", val)) {
     description <- 
-      "The total travel time to YKR_ID"
+      "The average total travel time to the destination postal code area"
     
   } else if (grepl("_avg", val)) {
     description <- 
-      "The mean total travel time to postal code area"
+      "The mean total travel time to the destination postal code area"
     
   } else if (grepl("_drivetime", val)) {
     description <- 
-      "The mean duration of the driving segment of the total travel time, to a postal code area"
+      "The mean duration of the driving segment of the total travel time, to the destination postal code area"
     
   } else if (grepl("_pct", val)) {
     description <- 
-      "The percentage of SFP and WTD in the total travel time"
+      "The percentage of SFP and WTD durations in the total travel time to the destination postal code area"
     
   } else if (grepl("_sfp", val)) {
     description <- 
@@ -177,6 +177,76 @@ GetLegendName <- function(val, originzip) {
                   timeofday, sep = "")
   return(result)
 }
+
+
+
+GetSymbologyHelp <- function(val) {
+  
+  # Get helpful text for the meaning of the cryptically named columns. 
+  # Functionally close to GetLegendName().
+  
+  if (grepl("ttm18_", val)) {
+    datasource <- "<i class='icon database'></i>TTM18 data"
+    
+  } else if (grepl("msc_", val)) {
+    datasource <- "<i class='icon poll'></i>Thesis data"
+    
+  } else if (grepl("compare_", val)) {
+    datasource <- "<i class='icon exchange-alt'></i>Comparison of data sources (thesis data / TTM18 data)"
+  }
+  
+  # thisUnit is minutes, except when datasource is "compare" or 
+  # description "_pct"
+  if (grepl("compare_", val) || grepl("_pct", val)) {
+    thisUnit <- "(unit percent, where 1 = 100 %)"
+  } else {
+    thisUnit <- "(unit minutes)"
+  }
+  
+  # Describe the data
+  if (grepl("_t", val)) {
+    description <- 
+      "The average total travel time to the destination postal code area"
+    
+  } else if (grepl("_avg", val)) {
+    description <- 
+      "The mean total travel time to the destination postal code area"
+    
+  } else if (grepl("_drivetime", val)) {
+    description <- 
+      "The mean duration of the driving part of the total travel time, to the destination postal code area"
+    
+  } else if (grepl("_pct", val)) {
+    description <- 
+      "The percentage of <i>searching for parking</i> and <i>walking to the destination</i> durations in the average total travel time"
+    
+  } else if (grepl("_sfp", val)) {
+    description <- 
+      "The mean time consumed in searching for parking in the destination postal code area"
+    
+  } else if (grepl("_wtd", val)) {
+    description <- 
+      "The mean duration to walk from one's parked car to the final destination of the travel chain, in the destination postal code area"
+  }
+  
+  # Time of day
+  if (grepl("_m_", val)) {
+    timeofday <- paste("during midday traffic", thisUnit)
+    
+  } else if (grepl("_r_", val)) {
+    timeofday <- paste("during rush hour traffic", thisUnit)
+    
+  } else if (grepl("_sl_", val)) {
+    timeofday <- paste(
+      "the route following speed limits without any additional impedances", 
+      thisUnit)
+  }
+  
+  result <- paste(datasource, ":<br>", description, " ", timeofday, sep = "")
+  
+  return(result)
+}
+
 
 
 GetCentroids <- function(fortified, unique_id, nominator) {

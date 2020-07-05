@@ -2,7 +2,7 @@
 # Helsinki Region Travel Time comparison application
 # Helsinki Region Travel Time Matrix 2018 <--> My thesis survey results
 
-# 3.7.2020
+# 5.7.2020
 # Sampo Vesanen
 
 
@@ -35,7 +35,7 @@ library(ggspatial)
 
 
 # App version
-app_v <- "0057.postal (4.7.2020)"
+app_v <- "0058.postal (5.7.2020)"
 
 # Working directory
 wd <- "C:/Sampon/Maantiede/Master of the Universe"
@@ -368,15 +368,29 @@ server <- function(input, output, session) {
     input$zipcode
   })
   
-  # Print helpful text for the user
+  # helper_output_zip() and helper_output_symbology(): Print helpful text for 
+  # the user
   helper_output_zip <- shiny::reactive({
     
     inputdata <- thisTTM()
     thisVal <- inputdata[inputdata$zipcode == validate_zipcode(), ][1, ]
     help_output <- paste(
-      "<p style='margin: 0 0 0px;'>",
+      "<p class='helper-div'>",
       "<b>Current origin postal code area:</b><br>",
+      "<i class='icon hourglass-start'></i>",
       thisVal[["zipcode"]], " ", thisVal[["nimi"]],
+      "</p>", sep = "")
+    
+    help_output
+  })
+  
+  helper_output_symbology <- shiny::reactive({
+    
+    thisVal <- GetSymbologyHelp(input$fill_column)
+    help_output <- paste(
+      "<p class='helper-div'>",
+      "<b>Current symbology selection key:</b><br>",
+      thisVal,
       "</p>", sep = "")
     
     help_output
@@ -499,7 +513,7 @@ server <- function(input, output, session) {
   output$researcharea <- renderGirafe({
     
     # Reactive value: Insert equal breaks column for ggplot mapping.
-    inputdata <<- equalBreaksColumn()
+    inputdata <- equalBreaksColumn()
     
     # Get the origin zipcode for mapping
     originzip <- postal_f[postal_f["zipcode"] == validate_zipcode(), ]
@@ -773,6 +787,11 @@ server <- function(input, output, session) {
   output$zip_helper <- renderText({
     helper_output_zip()
   })
+  
+  # Helps understand what the symbology column name means
+  output$sym_helper <- renderText({
+    helper_output_symbology()
+  })
 }
 
 
@@ -813,7 +832,7 @@ ui <- shinyUI(
           label = "Enter an origin postal code",
           value = "00100"), # Starting value Rautatientori, Ateneum
         HTML("</div>"),
-                   
+        
         actionButton(
           inputId = "calcZip",
           label = HTML("<i class='icon calculator'></i>Calculate a new comparison with this postal code")),
@@ -846,6 +865,10 @@ ui <- shinyUI(
                 "compare_r_wtd", "compare_m_wtd", "compare_sl_wtd",
                 "compare_r_drivetime", "compare_m_drivetime", "compare_sl_drivetime",
                 "compare_r_pct", "compare_m_pct", "compare_sl_pct"))),
+        
+        HTML("<div id='contents'>"),
+        htmlOutput("sym_helper"),
+        HTML("</div>"),
         
         sliderInput(
           inputId = "classIntervals_n",
