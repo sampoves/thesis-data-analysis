@@ -4,7 +4,7 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 5.7.2020
+# 7.7.2020
 
 
 
@@ -113,7 +113,7 @@ GetLegendName <- function(val, originzip) {
     datasource <- "Thesis data"
     
   } else if (grepl("compare_", val)) {
-    datasource <- "Compare data sources (thesis data / TTM18 data)"
+    datasource <- "Comparison of the data sources (thesis data / TTM18 data)"
   }
   # Automatically add newlines to the long datasource string
   datasource <- 
@@ -134,11 +134,11 @@ GetLegendName <- function(val, originzip) {
     
   } else if (grepl("_drivetime", val)) {
     description <- 
-      "The mean duration of the driving segment of the total travel time, to the destination postal code area"
+      "The duration of the driving segment in the total travel chain, to the destination postal code area"
     
   } else if (grepl("_pct", val)) {
     description <- 
-      "The percentage of SFP and WTD durations in the total travel time to the destination postal code area"
+      "The percentage of SFP and WTD durations in the mean total travel time to the destination postal code area"
     
   } else if (grepl("_sfp", val)) {
     description <- 
@@ -146,7 +146,7 @@ GetLegendName <- function(val, originzip) {
     
   } else if (grepl("_wtd", val)) {
     description <- 
-      "The mean duration to walk from one's parked car to the destination, in the destination postal code area"
+      "The mean duration to walk from one's parked car to the final destination of the travel chain in the destination postal code area"
   }
   description <- 
     strwrap(description, 22, prefix = "\n") %>%
@@ -188,7 +188,7 @@ GetSymbologyHelp <- function(val) {
     datasource <- "<i class='icon poll'></i>Thesis data"
     
   } else if (grepl("compare_", val)) {
-    datasource <- "<i class='icon exchange-alt'></i>Comparison of data sources (thesis data / TTM18 data)"
+    datasource <- "<i class='icon exchange-alt'></i>Comparison of the data sources (thesis data / TTM18 data)"
   }
   
   # thisUnit is minutes, except when datasource is "compare" or 
@@ -209,22 +209,22 @@ GetSymbologyHelp <- function(val) {
     
   } else if (grepl("_drivetime", val)) {
     description <- 
-      "The mean duration of the driving part of the total travel time, to the destination postal code area"
+      "The duration of the driving segment in the total travel chain to the destination postal code area"
     ptag <- "<p class='line lcyan'>"
     
   } else if (grepl("_pct", val)) {
     description <- 
-      "The percentage of <i>searching for parking</i> and <i>walking to the destination</i> durations in the average total travel time"
+      "The percentage of <i>searching for parking</i> and <i>walking to the destination</i> durations in the mean total travel time"
     ptag <- "<p class='line lcyan'>"
     
   } else if (grepl("_sfp", val)) {
     description <- 
-      "The mean time consumed in searching for parking in the destination postal code area"
+      "The mean time consumed in <i>searching for parking</i> in the destination postal code area"
     ptag <- "<p class='line lyellow'>"
     
   } else if (grepl("_wtd", val)) {
     description <- 
-      "The mean duration to walk from one's parked car to the final destination of the travel chain, in the destination postal code area"
+      "The mean duration to <i>walk from one's parked car to the final destination</i> of the travel chain in the destination postal code area"
     ptag <- "<p class='line lyellow'>"
   }
   
@@ -241,8 +241,8 @@ GetSymbologyHelp <- function(val) {
       thisUnit)
   }
   
-  result <- paste(ptag, datasource, ":<br>", description, " ", timeofday, "</p>", 
-                  sep = "")
+  result <- paste(ptag, datasource, ":<br>", description, ",<br>", timeofday, 
+                  "</p>", sep = "")
   
   return(result)
 }

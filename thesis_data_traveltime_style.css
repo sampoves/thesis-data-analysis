@@ -2,7 +2,7 @@
 /* CSS style sheet of for the Travel time comparison app of my thesis results
 
 "Parking of private cars and spatial accessibility in Helsinki Capital Region" 
-by Sampo Vesanen, 5.7.2020 */
+by Sampo Vesanen, 7.7.2020 */
 
 html, body {
 	height: 100%;
@@ -17,7 +17,7 @@ html, body {
 hr {
 	margin-left: 0px;
 }
-/* code tag adjustments to fit the app */
+/* code tag adjustments to fit the application */
 code {
 	color: white;
 	background-color: #222324;
@@ -42,7 +42,7 @@ text {
 }
 ::-webkit-scrollbar {
 	width: 14px;
-	background-color: #272b30;
+	background-color: transparent;
 }
 ::-webkit-scrollbar:horizontal {
 	height: 14px;
@@ -56,7 +56,7 @@ text {
    background-color: #515c69;
 }
 ::-webkit-scrollbar-corner { 
-	background: #272b30; 
+	background-color: transparent; 
 }
 /* sidebar scrollbar */
 #sidebar::-webkit-scrollbar {
@@ -242,7 +242,6 @@ svg, img {
 	z-index: -10;
 	font-size: 20px;
 }
-
 /* This will re-enable zipcode tooltip on Interactive map when mouse hovers over svg 
 polygons or polylines that don't have a tooltip (attribute "title"). These are the label 
 background boxes and boundaries for municipalities and subdivisions. */
@@ -258,9 +257,14 @@ polygon:not([name="00830"]):hover, polygon:not([name="00890"]):hover,
 polygon:not([name="02100"]):hover, polygon:not([name="02380"]):hover {
 	fill: #8950a1;
 }
-
-/* Custom tooltip properties */
+/* Additional tooltip properties. ggiraph has some pre-existing properties set for the
+tooltip. */
 #app-tooltip {
+	max-height: 80vh;
+	overflow-y: auto;
+	overflow-x: hidden;
+	scroll-behavior: smooth;
+	-webkit-overflow-scrolling: touch;
 	font-size: 13px;
 	width: 215px;
 }
@@ -367,18 +371,18 @@ are separated from explanations by a tabulator like whitespace */
 manual design choice: animation lengths and translateX() have been set to values where
 the three animations, short, mid and long, run with the same speed */
 /* animation syntax: @keyframes duration | timing-function | delay | iteration-count */
-#ttm-sfp td.tg-cell.mover div:not(.cell-abbr):not(.cell-expl),
-#ttm-avg td.tg-cell.mover div:not(.cell-abbr):not(.cell-expl),
-#compare-sfp td.tg-cell.mover div:not(.cell-abbr):not(.cell-expl),
-#compare-wtd td.tg-cell.mover div:not(.cell-abbr):not(.cell-expl) {
-	animation: scrolling-short 25s linear 3s 1;
-	-webkit-animation: scrolling-short 25s linear 3s 1;
+#ttm-sfp td.tg-cell.mover div:not(.cell-abbr):not(.cell-expl) {
+	animation: scrolling-short 18s linear 3s 1;
+	-webkit-animation: scrolling-short 18s linear 3s 1;
 }
+#ttm-avg td.tg-cell.mover div:not(.cell-abbr):not(.cell-expl),
 #ttm-wtd td.tg-cell.mover div:not(.cell-abbr):not(.cell-expl),
 #thesis-sfp td.tg-cell.mover div:not(.cell-abbr):not(.cell-expl),
-#thesis-wtd td.tg-cell.mover div:not(.cell-abbr):not(.cell-expl) {
-	animation: scrolling-mid 33s linear 3s 1;
-	-webkit-animation: scrolling-mid 33s linear 3s 1;
+#thesis-wtd td.tg-cell.mover div:not(.cell-abbr):not(.cell-expl),
+#compare-sfp td.tg-cell.mover div:not(.cell-abbr):not(.cell-expl),
+#compare-wtd td.tg-cell.mover div:not(.cell-abbr):not(.cell-expl) {
+	animation: scrolling-mid 30s linear 3s 1;
+	-webkit-animation: scrolling-mid 30s linear 3s 1;
 }
 #ttm-drivetime td.tg-cell.mover div:not(.cell-abbr):not(.cell-expl),
 #ttm-pct td.tg-cell.mover div:not(.cell-abbr):not(.cell-expl),
@@ -386,8 +390,8 @@ the three animations, short, mid and long, run with the same speed */
 #thesis-pct td.tg-cell.mover div:not(.cell-abbr):not(.cell-expl),
 #compare-drivetime td.tg-cell.mover div:not(.cell-abbr):not(.cell-expl),
 #compare-pct td.tg-cell.mover div:not(.cell-abbr):not(.cell-expl) {
-	animation: scrolling-long 50s linear 3s 1;
-	-webkit-animation: scrolling-long 50s linear 3s 1;
+	animation: scrolling-long 49s linear 3s 1;
+	-webkit-animation: scrolling-long 49s linear 3s 1;
 }
 th.tg-cell.mover div:not(.cell-abbr):not(.cell-expl) {
 	animation: scrolling-th 10s linear 3s 1;
@@ -398,12 +402,12 @@ th.tg-cell.mover div:not(.cell-abbr):not(.cell-expl) {
 	100% { transform: translateX(-290%); }
 }
 @keyframes scrolling-mid {
-	90% { transform: translateX(-380%); }
-	100% { transform: translateX(-380%); }
+	90% { transform: translateX(-475%); }
+	100% { transform: translateX(-475%); }
 }
 @keyframes scrolling-long {
-	90% { transform: translateX(-575%); }
-	100% { transform: translateX(-575%); }
+	90% { transform: translateX(-775%); }
+	100% { transform: translateX(-775%); }
 }
 @keyframes scrolling-th {
 	80% { transform: translateX(-60%); }

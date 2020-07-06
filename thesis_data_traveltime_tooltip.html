@@ -1,5 +1,5 @@
  <!-- This is the HTML code for the travel time comparison app tooltip. -->
- <!-- for Sampo Vesanen's MSc thesis. 5.7.2020. -->
+ <!-- for Sampo Vesanen's MSc thesis. 7.7.2020. -->
 <div id='app-tooltip'>
 	<div>
 		<i class='icon hourglass-start'></i>%s, %s<br> <!-- from_zip, nimi[1] -->
@@ -36,7 +36,7 @@
 			<td class='tg-cell mover'>
 				<div>
 					<div class='cell-abbr'>wtd_avg</div>
-					<div class='cell-expl'>walk to destination, average (min)</div>
+					<div class='cell-expl'>walk to destination, mean (min)</div>
 				</div>
 			</td>
 			<td class='tg-cell'>%s</td> <!-- ttm_wtd -->
@@ -49,7 +49,7 @@
 			<td class='tg-cell mover'>
 				<div>
 					<div class='cell-abbr'>avg</div>
-					<div class='cell-expl'>total travel time (min)</div>
+					<div class='cell-expl'>mean duration of the total travel chain (min)</div>
 				</div>
 			</td>
 			<td class='tg-cell'>%s</td> <!-- ttm_r_avg -->
@@ -60,7 +60,7 @@
 			<td class='tg-cell mover'>
 				<div>
 					<div class='cell-abbr'>drivetime</div>
-					<div class='cell-expl'>duration of driving in the total travel time (min)</div>
+					<div class='cell-expl'>duration of the driving segment in the mean total travel chain (min)</div>
 				</div>
 			</td>
 			<td class='tg-cell'>%s</td> <!-- ttm_r_drivetime -->
@@ -71,7 +71,7 @@
 			<td class='tg-cell mover'>
 				<div>
 					<div class='cell-abbr'>pct</div>
-					<div class='cell-expl'>share of the parking process in the total travel time (%%)</div>
+					<div class='cell-expl'>share of the parking process in the total duration of the travel chain (%%)</div>
 				</div>
 			</td>
 			<td class='tg-cell'>%s</td> <!-- ttm_r_pct -->
@@ -98,7 +98,7 @@
 			<td class='tg-cell mover'>
 				<div>
 					<div class='cell-abbr'>sfp_avg</div>
-					<div class='cell-expl'>searching for parking, average (min)</div>
+					<div class='cell-expl'>searching for parking, mean (min)</div>
 				</div>
 			</td>
 			<td class='tg-cell'>%s</td> <!-- thesis_r_sfp -->
@@ -109,7 +109,7 @@
 			<td class='tg-cell mover'>
 				<div>
 					<div class='cell-abbr'>wtd_avg</div>
-					<div class='cell-expl'>walk to destination, average (min)</div>
+					<div class='cell-expl'>walk to destination, mean (min)</div>
 				</div>
 			</td>
 			<td class='tg-cell'>%s</td> <!-- thesis_r_wtd -->
@@ -122,7 +122,7 @@
 			<td class='tg-cell mover'>
 				<div>
 					<div class='cell-abbr'>drivetime</div>
-					<div class='cell-expl'>duration of driving in the total travel time (min)</div>
+					<div class='cell-expl'>duration of the driving segment in the mean total travel chain (min)</div>
 				</div>
 			</td>
 			<td class='tg-cell'>%s</td> <!-- thesis_r_drivetime -->
@@ -133,7 +133,7 @@
 			<td class='tg-cell mover'>
 				<div>
 					<div class='cell-abbr'>pct</div>
-					<div class='cell-expl'>share of the parking process in the total travel time (%%)</div>
+					<div class='cell-expl'>share of the parking process in the total travel chain (%%)</div>
 				</div>
 			</td>
 			<td class='tg-cell'>%s</td> <!-- thesis_r_pct -->
@@ -161,7 +161,7 @@
 			<td class='tg-cell mover'>
 				<div>
 					<div class='cell-abbr'>sfp</div>
-					<div class='cell-expl'>searching for parking (%%)</div>
+					<div class='cell-expl'>compare datasets: searching for parking (%%)</div>
 				</div>
 			</td>
 			<td class='tg-cell compcol1'>%s</td> <!-- comp_r_sfp -->
@@ -172,7 +172,7 @@
 			<td class='tg-cell mover'>
 				<div>
 					<div class='cell-abbr'>wtd</div>
-					<div class='cell-expl'>walk to destination (%%)</div>
+					<div class='cell-expl'>compare datasets: walk to destination (%%)</div>
 				</div>
 			</td>
 			<td class='tg-cell compcol1'>%s</td> <!-- comp_r_wtd -->
@@ -185,7 +185,7 @@
 			<td class='tg-cell mover'>
 				<div>
 					<div class='cell-abbr'>drivetime</div>
-					<div class='cell-expl'>duration of driving in the total travel time (%%)</div>
+					<div class='cell-expl'>compare durations of the driving segments in the two datasets (%%)</div>
 				</div>
 			</td>
 			<td class='tg-cell compcol1'>%s</td> <!-- comp_r_drivetime -->
@@ -196,7 +196,7 @@
 			<td class='tg-cell mover'>
 				<div>
 					<div class='cell-abbr'>pct</div>
-					<div class='cell-expl'>share of the parking process in the total travel time (%%)</div>
+					<div class='cell-expl'>compare the significances of the parking processes in the two datasets (%%)</div>
 				</div>
 			</td>
 			<td class='tg-cell compcol1'>%s</td> <!-- comp_r_pct -->
