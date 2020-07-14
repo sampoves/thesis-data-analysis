@@ -43,7 +43,7 @@ grid_path = r"python\MetropAccess_YKR_grid_EurefFIN.shp"
 resarea_path = r"python\paavo\pno_dissolve.shp"
 postal_path = r"python\paavo\2019\pno_tilasto_2019.shp"
 ykr_path = r"yhdyskuntarakenteenvyoh17\YKRVyohykkeet2017.shp"
-ua_forest_path = r"python\FI001L3_HELSINKI\ua2012_research_area.shp"
+artificial_path = r"clc2018_fi20m\clc2018_level1_dissolve.shp"
 ttm_path = r"HelsinkiTravelTimeMatrix2018\{0}xxx\travel_times_to_ {1}.txt"
 
 # Import functions and lists of zipcodes. Has to be done after inserting 
@@ -67,16 +67,16 @@ visitors = pd.read_csv(visitors_data, index_col=[0])
 grid = gpd.read_file(grid_path, encoding="utf-8")
 postal = gpd.read_file(postal_path, encoding="utf-8")
 
+# CORINE land cover 2018, 25ha, use only level 1, artificial surfaces. This
+# script uses a shapefile preprocessed in QGIS.
+artificial = gpd.read_file(artificial_path, encoding="utf-8")
+
 # Import urban zones shapefile and select only relevant area for this study
 resarea = gpd.read_file(resarea_path, encoding="utf-8").buffer(500).unary_union
 ykr_vyoh = gpd.read_file(ykr_path, encoding="utf-8")
 ykr_vyoh = gpd.overlay(ykr_vyoh,
                        gpd.GeoDataFrame(geometry=[resarea], crs=ykr_vyoh.crs), 
                        how="intersection")
-
-# From Urban Atlas 2012 Helsinki area preserve only forests
-forest = gpd.read_file(ua_forest_path, encoding="utf-8")
-forest = forest[forest.ITEM2012 == "Forests"]
 
 
 
@@ -377,7 +377,7 @@ print("\n", illegal_df[["parktime", "walktime"]])
 
 # At this point, one may choose to not delete illegal answers by commenting
 # the next line of code. This is to save DataFrame records, with illegal 
-# answers and all, for analysis in R. In records Shiny app users can control 
+# answers and all, for analysis in R. In Analysis shinyapp users can control 
 # the threshold for illegal answers by themselves, with 59 minutes as default 
 # setting. That will produce the same data as would be done here.
 
@@ -390,7 +390,7 @@ print("\n", illegal_df[["parktime", "walktime"]])
 invalid = 6 + len(illegal_df)
 
 # Use indices of "illegal_df" to drop rows from "records"
-records = records.drop(illegal_df.index).reset_index(drop=True)
+#records = records.drop(illegal_df.index).reset_index(drop=True)
 
 
 
@@ -419,7 +419,7 @@ postal["ykr_joukkoliik"] = 0
 postal["ykr_alakesk_jalan"] = 0
 postal["ykr_autovyoh"] = 0
 postal["ykr_novalue"] = 0
-postal["ua_forest"] = 0
+postal["artificial"] = 0
 
 
 
@@ -441,20 +441,20 @@ calcs = records.groupby("zipcode").agg(
     parktime_median=("parktime", "median"),
     walktime_mean=("walktime", roundmean),
     walktime_median=("walktime", "median"))
-        
+
 postal = postal.join(calcs, on="zipcode")
 
-# Prepare annotation of Polygon features
+# Prepare the annotation of Polygon features
 postal["coords"] = polygonCoordsToTuple(postal)
 
 
 
-### D) Calculate percentage of YKR zones in each zip code area
+### D) Calculate percentage of YKR zones in each postal code area
 
 # Overlay "yhdyskuntarakenteen vyöhykkeet" on DataFrame "postal"  and see the 
 # percentage how much of each zone is included in the zipcode in question. 
-# Together with checking out how much forest is there in research area we 
-# could find some interesting results in the statistical analysis.
+# Together with checking out how much artificial surface is there in research 
+# area we could find some interesting results in the statistical analysis.
 
 # Dictionary key to help allocation of values
 dictKey = {"keskustan jalankulkuvyöhyke": "ykr_kesk_jalan", 
@@ -498,7 +498,7 @@ for row in postal.itertuples():
             # placement then use dictKey dictionary to tell which column to 
             # append in. Finally append current value v
             postal.loc[postal.zipcode == row.zipcode, dictKey[k]] = v
-  
+
 # Calculate column "ykr_novalue"
 postal["ykr_novalue"] = postal.apply(
         lambda row: 1 - (row.ykr_kesk_jalan + row.ykr_kesk_reuna +
@@ -510,74 +510,75 @@ postal.loc[postal["ykr_novalue"] < 0, "ykr_novalue"] = 0
 
 
 
-### E) Calculate percentage of Urban Atlas 2012 forest in each zipcode area
+### E) Calculate percentage of CORINE land cover artificial surface in each 
+#      zipcode area
 
 # Reproject the geometries by replacing the values with projected ones
-forest = forest.to_crs(epsg=3067)
-crs = forest.crs
+artificial = artificial.to_crs(epsg=3067)
+crs = artificial.crs
 
 # Employ GeoPandas spatial index. We will reduce the extent to process
 # the intersections and this will greatly trim down the time needed for the
 # calculation.
-forest_sindex = forest.sindex
+artificial_sindex = artificial.sindex
 
 for row in postal.itertuples():
     
     thisPol = gpd.GeoDataFrame(geometry=[row.geometry], crs=crs)
     thisGeom = thisPol.loc[0, "geometry"]
-    precise_matches = spatialIndexFunc(forest_sindex, forest, thisGeom)
+    precise_matches = spatialIndexFunc(artificial_sindex, artificial, thisGeom)
     
     # precise_matches may be empty, so check for that
     if precise_matches.empty == False:
         thisIntersect = gpd.overlay(thisPol, precise_matches, how="intersection")
-    
+        
         if thisIntersect.empty == False:
-            forestpercent = thisIntersect.unary_union.area / thisPol.area
+            artific_percent = thisIntersect.unary_union.area / thisPol.area
             
-            # append forest data to column "ua_forest"
-            postal.loc[postal.zipcode == row.zipcode, "ua_forest"] = round(
-                    forestpercent[0], 3)
+            # append artificial surface data to column "artificial"
+            postal.loc[postal.zipcode == row.zipcode, "artificial"] = round(
+                    artific_percent[0], 3)
 
 
 
-### 5 MERGE YKR ZONES, FOREST AND SUBDIV INTO RECORDS -------------------------
+### 5 MERGE YKR ZONES, ARTIFICIAL AND SUBDIV INTO RECORDS -------------------------
 
-# Add generalised values of "ykr_vyoh" and "ua_forest" into records for further
+# Add generalised values of "ykr_vyoh" and "artificial" into records for further
 # statistical analysis (this helps ggplot2, the plotting library in R). Also 
 # add subdivision data.
 
 
-### A) Urban Atlas 2012 Forest
+### A) CORINE Land Cover 2018 artificial surface
 
-# Merge ua_forest data from "postal", then rename to differentiate numerical
-# data "ua_forest_vals" and Jenks classified "ua_forest"
-records = pd.merge(records, postal[["zipcode", "ua_forest"]], on="zipcode")
-records = records.rename(columns={"ua_forest": "ua_forest_vals"})
+# Merge artificial surface data from "postal", then rename to differentiate 
+# numerical data "artificial_vals" and Jenks classified "artificial"
+records = pd.merge(records, postal[["zipcode", "artificial"]], on="zipcode")
+records = records.rename(columns={"artificial": "artificial_vals"})
 
-# Calculate jenks breaks for ua_forest. Use breaks to reclassify values
+# Calculate jenks breaks for "artificial". Use breaks to reclassify values
 # in records. We will use code created by GitHub user Drewda. This is now
 # commented because calculation time takes about 20 seconds
-#breaks = getJenksBreaks(records.ua_forest.tolist(), 5)
+#breaks = getJenksBreaks(records.artificial_vals.tolist(), 5)
 
 # See the breaks on plot
 #plt.figure(figsize=(10, 8))
-#hist = plt.hist(records.ua_forest, bins=20, align="left", color="g")
+#hist = plt.hist(records.artificial_vals, bins=20, align="left", color="g")
 #for b in breaks:
 #    plt.vlines(b, ymin=0, ymax=max(hist[0]))
 
 # Reclassify using this clumsy nested np.where(). Use values calculated in
 # getJenksBreaks()
-records["ua_forest"] = np.where(
-        records.ua_forest_vals < 0.062,
-        "Scarce forest", 
-        (np.where(records.ua_forest_vals < 0.167,
-                  "Some forest", 
-                  (np.where(records.ua_forest_vals < 0.288, 
-                            "Moderate forest", 
-                            (np.where(records.ua_forest_vals < 0.495, 
-                                      "Mostly forest", 
-                                      (np.where(records.ua_forest_vals < 1, 
-                                                "Predominantly forest",
+records["artificial"] = np.where(
+        records.artificial_vals < 0.385,
+        "Scarcely built", 
+        (np.where(records.artificial_vals < 0.647,
+                  "Some built", 
+                  (np.where(records.artificial_vals < 0.815, 
+                            "Moderately built", 
+                            (np.where(records.artificial_vals < 0.927, 
+                                      "Predominantly built", 
+                                      (np.where(records.artificial_vals < 1, 
+                                                "Fully built",
                                                 "novalue"))))))))).tolist()
 
 
@@ -652,6 +653,13 @@ statistics.calculateStats()
 
 ### UTILISE TRAVEL-TIME MATRIX 2018 -------------------------------------------
 
+# This feature is now entirely outdated as I have developed the visualised
+# shinyapp tool for viewing survey results and Travel Time Matrix 2018 data.
+# I fully expect to remove this tool in a future commit.
+# The most glaring problem with this tool is that it uses the YKR-id scale of
+# TTM18 while using postal code area scale survey data. I view this as a
+# problem.
+
 # Test how TTM18 data and my thesis results compare.
 
 # - Searching for parking lasts 0.42 min in TTM18. 
@@ -668,14 +676,14 @@ l = []
 i = 0
 
 # Generate tuples of origin and destination points
-while i < 100000:
+while i < 3:
     vals = random.sample(valuerange, 2)
     l.append(tuple(vals))
     i += 1
 
 #l2 = [("5985086", "5866836"), ("5981923", "5980266")]
-traveltime = travelTimeComparison(grid, forest, postal, records, l, ttm_path, 
-                                  printStats=False, plotIds=False)
+traveltime = travelTimeComparison(grid, artificial, postal, records, l, ttm_path, 
+                                  printStats=False, plotIds=True)
 
 # get means for all columns, see differences
 print("Searching for parking, mean, minutes\n", 
@@ -706,7 +714,7 @@ parkingPlot(postal[postal.kunta == "091"], "answer_count", 0) #amount for Hki
 parkingPlot(postal, "walktime_mean", 1) # plot walktime mean
 parkingPlot(postal, "parktime_mean", 1) # plot parktime mean
 parkingPlot(postal, "parktime_median", 1) # plot parktime median
-parkingPlot(postal, "ua_forest", 1) # plot forest
+parkingPlot(postal, "artificial", 1) # plot artificial surface
 
 # Get mean-std-min-max-quantiles of municipalities
 descri_postal = postal.iloc[:, [4, 113, 114, 115, 116, 117]] #does not contain walktime
@@ -720,8 +728,8 @@ descri_postal[postal.kunta == "049"].describe() #van
 
 ### EXPORT TO SHP -------------------------------------------------------------
 
-# Postal data to QGIS for thesis visualisation. Ignore last column, "coords",
-# GeoPandas does not like the tuple format
+# Postal data to QGIS for thesis visualisation. Ignore the last column, 
+# "coords", GeoPandas does not like the tuple format
 #postal.iloc[:, :-1].to_file("postal_for_qgis.shp")
 
 
@@ -732,8 +740,9 @@ descri_postal[postal.kunta == "049"].describe() #van
 #records.to_csv("records_for_r.csv", encoding="Windows-1252")
 #postal.to_csv("postal_for_r.csv", encoding="Windows-1252")
 #visitors.to_csv("visitors_for_r.csv", encoding="Windows-1252")
+#grid.iloc[:,[0, 4]].to_csv("grid_for_r.csv", encoding="Windows-1252")
 
-# Data export for Shinyapps.io. There are huge problems with character encoding 
+# Data export for shinyapps.io. There are huge problems with character encoding 
 # down the line if Ascii-UTF-8 conversion is not done here.
 #import unicodedata
 #records["subdiv"] = records.subdiv.apply(lambda val: unicodedata.normalize("NFKD", val).encode("ascii", "ignore").decode())
