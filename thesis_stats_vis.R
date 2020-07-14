@@ -4,7 +4,7 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 5.6.2020
+# 15.7.2020
 #
 # This is an interactive tool for analysing the results of my research survey.
 
@@ -93,7 +93,7 @@ postal_path <- file.path(wd, "postal_for_r.csv")
 # Spatial data paths
 suuraluepath <- file.path(wd, "python/suuralueet/PKS_suuralue.kml")
 munsclippedpath <- file.path(wd, "python/paavo/hcr_muns_clipped.shp")
-munspath <- file.path(wd, "python/paavo/hcr_muns.shp")
+munspath <- file.path(wd, "python/paavo/hcr_muns_sea.shp")
 
 # CSS data
 csspath <- file.path(wd, "python/thesis_stats_vis_style.css")
@@ -108,7 +108,7 @@ source(file.path(wd, "python/thesis_stats_vis_funcs.R"))
 
 # These variables are used to subset dataframe thesisdata inside ShinyApp
 continuous <- c("parktime", "walktime")
-ordinal <- c("likert", "parkspot", "timeofday", "ua_forest", "ykr_zone", 
+ordinal <- c("likert", "parkspot", "timeofday", "artificial", "ykr_zone", 
              "subdiv")
 supportcols <- c("id", "timestamp", "ip")
 int_cols <- c("n", "Min", "Max", "NA")
@@ -123,7 +123,7 @@ thesisdata <-
            colClasses = c(timestamp = "POSIXct", zipcode = "character", 
                           ip = "character", timeofday = "factor", 
                           parkspot = "factor", likert = "factor",
-                          ua_forest = "factor", ykr_zone = "factor", 
+                          artificial = "factor", ykr_zone = "factor", 
                           subdiv = "factor"),
            stringsAsFactors = TRUE) %>%
   
@@ -150,13 +150,13 @@ thesisdata <-
                   `3` = "Weekend",
                   `4` = "Can't specify, no usual time"),
                 
-                ua_forest = forcats::fct_relevel(
-                  ua_forest, 
-                  c("Predominantly forest", 
-                    "Mostly forest", 
-                    "Moderate forest",
-                    "Some forest", 
-                    "Scarce forest")),
+                artificial = forcats::fct_relevel(
+                  artificial,
+                  c("Fully built", 
+                    "Predominantly built", 
+                    "Moderately built",
+                    "Some built", 
+                    "Scarcely built")),
                 
                 # SYKE does not provide official translations for 
                 # "Yhdyskuntarakenteen vyohykkeet".
@@ -270,7 +270,7 @@ zips <- unique(thesisdata$zipcode)
 
 # Get postal code area data calculated in Python. It contains some interesting
 # variables for visualisation. Select essential columns and multiply column 
-# "ua_forest" with 100 for easier to view plotting
+# "artificial" with 100 for easier to view plotting
 postal <- 
   read.csv(file = postal_path,
            header = TRUE, 
@@ -278,7 +278,7 @@ postal <-
            colClasses = c(zipcode = "factor", kunta = "factor"),
            stringsAsFactors = TRUE) %>%
   dplyr::select(c(2, 3, 6, 108:121)) %>%
-  dplyr::mutate(ua_forest = ua_forest * 100)
+  dplyr::mutate(artificial = artificial * 100)
 
 # Create the column in "postal" which reports the largest ykr zone in each postal 
 # code area
@@ -296,7 +296,7 @@ row.names(postal) <- postal[, 1]
 data_f <- sp::SpatialPolygonsDataFrame(
   sp::SpatialPolygons(unlist(lapply(sp_tmp_ID, function(x) x@polygons)),
                       proj4string = app_crs), data = postal) %>%
-
+  
   # Fortify and preserve Polygon attribute data
   {dplyr::left_join(ggplot2::fortify(.),
                     as.data.frame(.) %>%
@@ -346,7 +346,7 @@ server <- function(input, output, session){
   # currentdata() is the currently active rows of the original thesisdata 
   # DataFrame. Use currentdata() in the rest of the application to not interfere
   # with the original dataset.
-  currentdata <- reactive(
+  currentdata <- shiny::reactive(
 
     # Use ! negation to remove checkGroup and subdivGroup inputs from 
     # thesisdata.
@@ -362,7 +362,7 @@ server <- function(input, output, session){
   # medians for the values currently active in currentdata(). This is needed to 
   # make the interactive map tooltip values responsive to changes. In this phase,
   # we calculate the required data, the actual mapping part is in current_data_f()
-  currentpostal <- reactive({
+  currentpostal <- shiny::reactive({
     
     currentdata <- currentdata()
     
@@ -400,13 +400,13 @@ server <- function(input, output, session){
                     
                     # this enables turning off subdivs and the result being
                     # visible on interactive map
-                    ua_forest = currentdata %>%
+                    artificial = currentdata %>%
                       dplyr::group_by(zipcode) %>%
-                      dplyr::summarise(mean(ua_forest_vals)) %>%
+                      dplyr::summarise(mean(artificial_vals)) %>%
                       tidyr::complete(zipcode = zips, fill = list(n = NA)) %>%
                       dplyr::pull()) %>%
       
-      dplyr::mutate(ua_forest = ua_forest * 100)
+      dplyr::mutate(artificial = artificial * 100)
     
     result$parktime_mean <- sapply(result[, "parktime_mean"], round, 2)
     result$walktime_mean <- sapply(result[, "walktime_mean"], round, 2)
@@ -417,7 +417,7 @@ server <- function(input, output, session){
   # current_data_f() produces the currently needed interactive map out of the
   # data contained in currentpostal(). This is a copy of the code above, seen
   # in "Interactive map for ShinyApp". Please See code comments in the original.
-  current_data_f <- reactive({
+  current_data_f <- shiny::reactive({
 
     currentpostal <- currentpostal()
 
@@ -437,7 +437,7 @@ server <- function(input, output, session){
   })
   
   
-  observe({
+  shiny::observe({
     # 5.1.3 Detect changes in selectInput to modify available check boxes ------
     x <- input$expl
 
@@ -452,7 +452,7 @@ server <- function(input, output, session){
     # 5.1.4 Determine availability of barplot ----------------------------------
     
     # aka availability of "Distribution of ordinal variables"
-    available <- c("likert", "parkspot", "timeofday", "ua_forest", "ykr_zone", 
+    available <- c("likert", "parkspot", "timeofday", "artificial", "ykr_zone", 
                    "subdiv")
     updateSelectInput(
       session, 
@@ -477,8 +477,8 @@ server <- function(input, output, session){
     # 5.1.6 A clumsy implementation to listen for too large Jenks breaks -------
     inputpostal <- postal[!postal$kunta %in% c(input$kunta), ]
 
-    if(input$karttacol == "jenks_ua_forest") {
-      datacol <- "ua_forest"
+    if(input$karttacol == "jenks_artificial") {
+      datacol <- "artificial"
     } else if (input$karttacol == "jenks_walk_median") {
       datacol <- "walktime_median"
     } else if (input$karttacol == "jenks_park_median") {
@@ -495,7 +495,8 @@ server <- function(input, output, session){
     # Suppress warnings in the test.
     if(nrow(inputpostal) > 1) {
       classes_test <- suppressWarnings(
-        classInt::classIntervals(inputpostal[, datacol], n = input$jenks_n, style = "jenks"))
+        classInt::classIntervals(inputpostal[, datacol], n = input$jenks_n, 
+                                 style = "jenks"))
       
       # Object returned from classIntervals() has an attribute nobs which I
       # use to detect cases where too large input$jenks_n is inputted to
@@ -1035,10 +1036,10 @@ server <- function(input, output, session){
     maxlon <- plyr::round_any(max(inputdata$lon), 1000, f = ceiling)
     
     # Set properties for interactive map for each input$karttacol value
-    if(input$karttacol == "jenks_ua_forest") {
-      datacol <- "ua_forest"
+    if(input$karttacol == "jenks_artificial") {
+      datacol <- "artificial"
       brewerpal <- "YlGn"
-      legendname <- "Forest amount (%)"
+      legendname <- "Built surface (%)"
       
     } else if (input$karttacol == "jenks_park_mean") {
       datacol <- "parktime_mean"
@@ -1064,6 +1065,13 @@ server <- function(input, output, session){
       datacol <- "answer_count"
       brewerpal <- "Reds"
       legendname <- "Answer count"
+    }
+    
+    # Direction of the color gradient, needed for artificial surfaces
+    if(input$karttacol == "jenks_artificial") {
+      brewer_direction <- 1
+    } else {
+      brewer_direction <- -1
     }
     
     # Create Jenks breaks columns here so that user gets the control of Jenks
@@ -1104,7 +1112,7 @@ server <- function(input, output, session){
       "Parktime, median: %s</div>",
       "<div id='tooltip-div'>Walktime, mean: %s</br>",
       "Walktime, median: %s</div>",
-      "<div id='tooltip-div'>Forest (%%): %s</div>",
+      "<div id='tooltip-div'>Built surface (%%): %s</div>",
       "<div style='padding-top: 3px; line-height: 1.2;'>Largest YKR<br/>zone (%%): %s</div>",
       "</div>")
     
@@ -1119,11 +1127,11 @@ server <- function(input, output, session){
                    fill = input$karttacol,
                    tooltip = substitute(sprintf(tooltip_content,
                       id, nimi, answer_count, parktime_mean, parktime_median, 
-                      walktime_mean, walktime_median, ua_forest, largest_ykr)))) +
+                      walktime_mean, walktime_median, artificial, largest_ykr)))) +
       
       # Jenks classes colouring and labels
       scale_fill_brewer(palette = brewerpal,
-                        direction = -1,
+                        direction = brewer_direction,
                         name = legendname,
                         labels = labels,
                         na.value = "#ebebeb") +
@@ -1351,7 +1359,7 @@ ui <- shinyUI(fluidPage(
         HTML("Response (continuous)"),
         names(thesisdata[continuous])),
       
-      # likert, parkspot, timeofday, ua_forest, ykr_zone, subdiv
+      # likert, parkspot, timeofday, artificial, ykr_zone, subdiv
       selectInput(
         "expl",
         "Explanatory (ordinal)", 
@@ -1445,7 +1453,7 @@ ui <- shinyUI(fluidPage(
         "karttacol",
         HTML("Jenks breaks parameter"),
         c("jenks_answer_count", "jenks_park_mean", "jenks_park_median", 
-          "jenks_walk_mean", "jenks_walk_median", "jenks_ua_forest")),
+          "jenks_walk_mean", "jenks_walk_median", "jenks_artificial")),
       
       sliderInput(
         "jenks_n",
@@ -1496,7 +1504,7 @@ ui <- shinyUI(fluidPage(
            "</div>",
            "</div>",
            "</div>",
-           "<p id='version-info'>Analysis app version 5.6.2020</p>"),
+           "<p id='version-info'>Analysis app version 15.7.2020</p>"),
       
       width = 3
     ),
@@ -1658,9 +1666,9 @@ ui <- shinyUI(fluidPage(
            "(C) Statistics Finland 2019. Retrieved 13.3.2020. License ",
            "<a href='http://www.nic.funet.fi/index/geodata/tilastokeskus/Tilastokeskus_terms_of_use_2018.pdf'>Other (Open)</a>.",
            
-           "<br><a href='https://land.copernicus.eu/local/urban-atlas/urban-atlas-2012'>Urban Atlas 2012</a>",
-           "(C) European Environment Agency 2016. Retrieved 27.6.2019. License ",
-           "<a href='https://land.copernicus.eu/local/urban-atlas/urban-atlas-2012?tab=metadata'>available at Copernicus.eu</a>.",
+           "<br><a href='http://metatieto.ymparisto.fi:8080/geoportal/catalog/search/resource/details.page?uuid={26EEEBBB-FB5C-4045-B6DF-439F9B7D5C46}'>Corine Land Cover 2018</a>",
+           "(C) Finnish Environment Institute 2018. Retrieved 13.7.2020. License ",
+           "<a href='https://creativecommons.org/licenses/by/4.0/deed.en'>CC BY 4.0</a>.",
            
            "<br><a href='http://metatieto.ymparisto.fi:8080/geoportal/catalog/search/resource/details.page?uuid={B374BBB2-1EDF-4CF6-B11B-04E0017E9A26}'>Yhdyskuntarakenteen vyöhykkeet 2017</a>",
            "(C) Finnish Environment Institute 2019. Retrieved 27.6.2019. License ",
