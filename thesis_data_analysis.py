@@ -577,7 +577,7 @@ records["artificial"] = np.where(
                             "Moderately built", 
                             (np.where(records.artificial_vals < 0.927, 
                                       "Predominantly built", 
-                                      (np.where(records.artificial_vals < 1, 
+                                      (np.where(records.artificial_vals <= 1, 
                                                 "Fully built",
                                                 "novalue"))))))))).tolist()
 
@@ -705,7 +705,8 @@ print("Percentage of the parking process of the entire travel time, mean, %\n",
 
 ### VISUALISE & DESCRIBE ------------------------------------------------------
 
-# These visualisations are obsolete. Better visual mapping is now done in R.
+# These visualisations are obsolete. More flexible visual mapping is now done 
+# in R.
 
 # PLOT AMOUNT OF RECORDS
 # Plot with layers as function
