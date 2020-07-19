@@ -221,8 +221,7 @@ suuralue_f <- suuralue_f[order(suuralue_f$Name), ]
 
 #### 3.2 Municipality borders --------------------------------------------------
 
-# Get municipality borders from shapefile. Remove unnecessary columns to save 
-# memory
+# Get municipality borders from shapefile.
 # Shapefile data is Regional population density 2012, Statistics Finland.
 # http://urn.fi/urn:nbn:fi:csc-kata00001000000000000226.
 muns_f <- 
@@ -230,8 +229,7 @@ muns_f <-
   sp::spTransform(., app_crs) %>%
   {dplyr::left_join(ggplot2::fortify(.), 
                     as.data.frame(.) %>%
-                      dplyr::mutate(id = as.character(dplyr::row_number() - 1)))} %>%
-  dplyr::select(-c(namn, vaestontih, km2, vakiluku))
+                      dplyr::mutate(id = as.character(dplyr::row_number() - 1)))}
 
 # Islands in Helsinki Capital Region that are unreachable by car in PAAVO dataset
 unreachable_f <-
