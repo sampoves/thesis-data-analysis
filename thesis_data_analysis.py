@@ -121,6 +121,10 @@ if diff != 0:
 
 ### B) Paavo postal area code data
 
+# This process is rather unnecessarily complicated. In hindsight I would
+# just create the layer in QGIS, but as this is already a finished script,
+# we shall use it.
+
 # Process Helsinki Capital Region GeoDataFrame from PAAVO data
 muns = ["091", "049", "092", "235"]
 postal = postal[postal.kunta.isin(muns)]
@@ -139,7 +143,7 @@ postal = postal.rename(columns={"posti_alue": "zipcode"})
 
 # Preserve largest includes island postal code areas
 preserveLargest = ["00210", "00860", "00840", "00850", "00870", "00590"]
-preserveTwoLargest = ["00830", "00340", "00200", "00890"]
+preserveTwoLargest = ["00340", "00200", "00890"]
 preserveAll = ["00330", "00570", "02100"]
 
 # Suvisaaristo needs special attention. Define a Polygon to help detect 
@@ -171,37 +175,43 @@ for idx, geom in enumerate(postal.geometry):
             largest = geom
         mainland = mainland.union(largest)
     
-    # Case Munkkiniemi, Tapiola and Kulosaari, preserve entire 
-    # MultiPolygon
+    # Case Munkkiniemi 00330, Tapiola 02100 and Kulosaari 00570, preserve the 
+    # entire MultiPolygon
     if postal.loc[idx, "zipcode"] in preserveAll:
         thisGeom = postal.loc[idx, "geometry"]
         mainland = mainland.union(thisGeom)
     
-    # Case Suvisaaristo
+    # Case Suvisaaristo 02380
     if postal.loc[idx, "zipcode"] == "02380":
         match = postal.loc[idx, "geometry"]
         preserve = MultiPolygon(
                 [geom for geom in match if geom.intersects(suvisaar)])
         mainland = mainland.union(preserve)
         
-    # Case Taka-Töölö, preserve Rajasaari (3rd largest feature)
+    # Case Taka-Töölö 00250, preserve Rajasaari (third largest feature)
     if postal.loc[idx, "zipcode"] == "00250":
         thisGeom = postal.loc[idx, "geometry"]
         thisGeom = sorted(thisGeom, key=lambda a: a.area, reverse=True)
         thisGeom = MultiPolygon([thisGeom[0], thisGeom[2]])
         mainland = mainland.union(thisGeom)
         
-    # Case Kuusisaari-Lehtisaari, preserve three largest Polygons. Remove
-    # Mustasaari and Leppäluoto
+    # Case Kuusisaari-Lehtisaari 00340, preserve three largest Polygons. 
+    # Remove Mustasaari and Leppäluoto
     if postal.loc[idx, "zipcode"] == "00340":
         thisGeom = preserve_nlargest(postal.loc[idx], 3)
         mainland = mainland.union(thisGeom)
     
-    # Case Suomenlinna, preserve four largest Polygons (remove Lonna)
+    # Case Suomenlinna 00190, preserve four largest Polygons (remove Lonna)
     if postal.loc[idx, "zipcode"] == "00190":
         thisGeom = preserve_nlargest(postal.loc[idx], 4)
         mainland = mainland.union(thisGeom)
 
+    # Case Tammisalo 00830, preserve only the second largest Polygon
+    if postal.loc[idx, "zipcode"] == "00830":
+        thisGeom = postal.loc[idx, "geometry"]
+        thisGeom = sorted(thisGeom, key=lambda a: a.area, reverse=True)
+        thisGeom = Polygon(thisGeom[1])
+        mainland = mainland.union(thisGeom)
 
 # Replace postal geometries with geometries without islands
 # NB! postal.at[idx, "geometry"] = thisGeom seems to raise ValueError in
@@ -562,9 +572,9 @@ records = records.rename(columns={"artificial": "artificial_vals"})
 
 # See the breaks on plot
 #plt.figure(figsize=(10, 8))
-#hist = plt.hist(records.artificial_vals, bins=20, align="left", color="g")
+#hist1 = plt.hist(records.artificial_vals, bins=40, align="left", color="g")
 #for b in breaks:
-#    plt.vlines(b, ymin=0, ymax=max(hist[0]))
+#    plt.vlines(b, ymin=0, ymax=max(hist1[0]))
 
 # Reclassify using this clumsy nested np.where(). Use values calculated in
 # getJenksBreaks()
