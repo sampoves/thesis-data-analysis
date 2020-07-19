@@ -568,6 +568,14 @@ h4 .icon {
 	content: "\f253";
 	margin-right: 4px;
 }
+.search::before {
+	content: "\f002";
+	margin: 0px 2px 0px 2px;
+}
+.expand-arrows-alt::before {
+	content: "\f31e";
+	margin: 0px 2px 0px 2px;
+}
 /*for dropdown menus*/
 .database-grey::before {
 	content: "\f1c0";
@@ -666,7 +674,7 @@ h4 .icon {
 	body, p, b, button, label, span, 
 	span.irs-min, span.irs-max, span.irs-single, span.irs-grid-text, p.helper-div, 
 	div.optgroup-header, 
-	p#version-info, input#zipcode, input#postal_label_choice, button#calcZip {
+	p#version-info, input#zipcode, button#calcZip {
 		font-size: 1vw;
 	}
 	.selectize-input {
@@ -716,7 +724,7 @@ h4 .icon {
 	body, p, b, button, label, span, 
 	span.irs-min, span.irs-max, span.irs-single, span.irs-grid-text, p.helper-div, 
 	div.optgroup-header, 
-	p#version-info, input#zipcode, input#postal_label_choice, button#calcZip {
+	p#version-info, input#zipcode, button#calcZip {
 		font-size: 1.6vw;
 	}
 	b {
