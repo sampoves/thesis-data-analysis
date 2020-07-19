@@ -2,7 +2,7 @@
 /* CSS style sheet of for the Travel time comparison app of my thesis results
 
 "Parking of private cars and spatial accessibility in Helsinki Capital Region" 
-by Sampo Vesanen, 9.7.2020 */
+by Sampo Vesanen, 19.7.2020 */
 
 html, body {
 	height: 100%;
@@ -133,7 +133,7 @@ form.well {
 .fillcol-warning::after {
 	font-weight: bold;
 	color: red;
-	content: "NB! Current symbology selection is origin postal code independent.";
+	content: "NB! Current symbology selection is origin postal code independent. Origin postal code choice will not affect the map visualisation.";
 }
 #version-info {
 	font-size: 11px; 
@@ -666,7 +666,7 @@ h4 .icon {
 	body, p, b, button, label, span, 
 	span.irs-min, span.irs-max, span.irs-single, span.irs-grid-text, p.helper-div, 
 	div.optgroup-header, 
-	p#version-info, input#zipcode, button#calcZip {
+	p#version-info, input#zipcode, input#postal_label_choice, button#calcZip {
 		font-size: 1vw;
 	}
 	.selectize-input {
@@ -716,7 +716,7 @@ h4 .icon {
 	body, p, b, button, label, span, 
 	span.irs-min, span.irs-max, span.irs-single, span.irs-grid-text, p.helper-div, 
 	div.optgroup-header, 
-	p#version-info, input#zipcode, button#calcZip {
+	p#version-info, input#zipcode, input#postal_label_choice, button#calcZip {
 		font-size: 1.6vw;
 	}
 	b {

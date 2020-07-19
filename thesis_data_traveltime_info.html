@@ -1,5 +1,5 @@
  <!-- This is the HTML code for the travel time comparison information dialog -->
- <!-- for Sampo Vesanen's MSc thesis. 7.7.2020. -->
+ <!-- for Sampo Vesanen's MSc thesis. 18.7.2020. -->
 <div id='abbr-info' title='Travel time comparison app' style='display:none;'>
 	<h3>Parking of private car in Helsinki Capital Region: compare Helsinki Region Travel Time Matrix 2018 and thesis survey results of Sampo Vesanen</h3>
 	<p>Focusing on private cars, this application visualises the parking time differences between Helsinki Region Travel Time Matrix 2018 (Tenkanen et al. 2018) and the survey data carried out for the master's thesis of Sampo Vesanen. All input data is aggregated to the level of postal code areas.</p>
@@ -12,16 +12,16 @@
 			<th>Description</th>
 		</tr>
 		<tr>
-			<td class='legend-td'>r</td>
+			<td class='legend-td'>rush hour</td>
 			<td class='legend-td'>Rush hour traffic (09:00&ndash;11.00, 15.00&ndash;17.00)</td>
 		</tr>
 		<tr>
-			<td class='legend-td'>m</td>
+			<td class='legend-td'>midday</td>
 			<td class='legend-td'>Midday traffic (09.00&ndash;15.00)</td>
 		</tr>
 		<tr>
-			<td class='legend-td'>sl</td>
-			<td class='legend-td'>Route following speed limits without any additional impedances. <b>NB!</b> For thesis data, this consists of timeofday: weekend data.</td>
+			<td class='legend-td'>all, average</td>
+			<td class='legend-td'>An average of all available data. For <b>TTM18</b>, these are <i>Rush hour traffic</i>, <i>Midday traffic</i>, and <i>Route following speed limits without any additional impedances</i>. For <b>thesis survey data</b>, these are the values of the survey question <code>timeofday</code>: <i>Weekday, rush hour</i>, <i>Weekday, other than rush hour</i>, <i>Weekend</i>, and <i>Can't specify, no usual time</i>.</td>
 		</tr>
 	</table>
 	
@@ -47,7 +47,7 @@
 			<td class='legend-td'>avg</td>
 			<td class='legend-td'>A mean duration (per postal code area, unit minutes) of the complete travel chain with private car from origin postal code area to the destination postal code area.
 			<ul>
-				<li>Formula: <code>car_x_t<sub>1</sub> + car_x_t<sub>2</sub> + ... + car_x_t<sub>n</sub> / n</code>, where x is <code>r</code>, <code>m</code>, or <code>sl</code>. <code>car_</code> represents unchanged TTM18 data columns.</li>
+				<li>Formula: <code>car_x_t<sub>1</sub> + car_x_t<sub>2</sub> + ... + car_x_t<sub>n</sub> / n</code>, where x is <code>r</code>, <code>m</code>, or <code>all</code>. <code>car_</code> represents unchanged TTM18 data columns.</li>
 			</ul>
 			</td>
 		</tr>
@@ -55,7 +55,7 @@
 			<td class='legend-td'>drivetime</td>
 			<td class='legend-td'>The length of the driving segment (unit minutes) of the mean duration of the complete travel chain from origin postal code area to the destination postal code area without searching for parking (using the TTM18 value) or walking to the final destination of the travel chain (TTM18 value).
 			<ul>
-				<li>Formula: <code>ttm_x_avg - ttm_sfp - ttm_wtd_avg</code>, where x is <code>r</code>, <code>m</code>, or <code>sl</code>.</li>
+				<li>Formula: <code>ttm_x_avg - ttm_sfp - ttm_wtd_avg</code>, where x is <code>r</code>, <code>m</code>, or <code>all</code>.</li>
 			</ul>
 			</td>
 		</tr>
@@ -63,7 +63,7 @@
 			<td class='legend-td'>pct</td>
 			<td class='legend-td'>How much does searching for parking and walking from one's parked car to the final destination of the travel chain constitute of the mean duration of the complete travel chain? Value per postal code area, unit percent, where 1 equals 100 %.
 			<ul>
-				<li>Formula: <code>(ttm_sfp + ttm_wtd_avg) / ttm_x_avg</code>, where x is <code>r</code>, <code>m</code>, or <code>sl</code>.</li>
+				<li>Formula: <code>(ttm_sfp + ttm_wtd_avg) / ttm_x_avg</code>, where x is <code>r</code>, <code>m</code>, or <code>all</code>.</li>
 			</ul>
 			</td>
 		</tr>
@@ -99,7 +99,7 @@
 			<td class='legend-td'>drivetime</td>
 			<td class='legend-td'>The length of the driving segment (value per postal code area, unit minutes) of the mean duration of the complete travel chain (TTM18 data) from the origin postal code area to the destination postal code area, without searching for parking (thesis survey mean) or walking to destination (thesis survey mean).
 			<ul>
-				<li>Formula: <code>ttm_x_avg - thesis_x_sfp - thesis_x_wtd</code>, where x is <code>r</code>, <code>m</code>, or <code>sl</code>.</li>
+				<li>Formula: <code>ttm_x_avg - thesis_x_sfp - thesis_x_wtd</code>, where x is <code>r</code>, <code>m</code>, or <code>all</code>.</li>
 			</ul>
 			</td>
 		</tr>
@@ -107,7 +107,7 @@
 			<td class='legend-td'>pct</td>
 			<td class='legend-td'>How much do the thesis mean values for searching for parking and walking from one's parked car to the final destination constitute of the mean duration of the complete travel chain (calculated from TTM18 data)? Value per postal code area, unit percent, where 1 equals 100 %.
 			<ul>
-				<li>Formula: <code>(thesis_x_sfp + thesis_x_wtd) / ttm_x_avg</code>, where x is <code>r</code>, <code>m</code>, or <code>sl</code>.</li>
+				<li>Formula: <code>(thesis_x_sfp + thesis_x_wtd) / ttm_x_avg</code>, where x is <code>r</code>, <code>m</code>, or <code>all</code>.</li>
 			</ul>
 			</td>
 		</tr>
@@ -130,7 +130,7 @@
 			<td class='legend-td'>sfp</td>
 			<td class='legend-td'>Compare TTM18 and thesis survey values for searching for parking. If this comparison value is smaller than one, searching for parking takes longer in TTM18. If value is larger than one, searching for parking takes longer in thesis data.
 			<ul>
-				<li>Formula: <code>thesis_x_sfp / ttm_sfp</code>, where x is <code>r</code>, <code>m</code>, or <code>sl</code>.</li>
+				<li>Formula: <code>thesis_x_sfp / ttm_sfp</code>, where x is <code>r</code>, <code>m</code>, or <code>all</code>.</li>
 			</ul>
 			</td>
 		</tr>
@@ -138,7 +138,7 @@
 			<td class='legend-td'>wtd</td>
 			<td class='legend-td'>Compare TTM18 and thesis survey values for the duration to walk from one's parked car to the final destination of the travel chain. 
 			<ul>
-				<li>Formula: <code>thesis_x_wtd / ttm_wtd_avg</code>, where x is <code>r</code>, <code>m</code>, or <code>sl</code>.</li>
+				<li>Formula: <code>thesis_x_wtd / ttm_wtd_avg</code>, where x is <code>r</code>, <code>m</code>, or <code>all</code>.</li>
 			</ul>
 			</td>
 		</tr>
@@ -146,7 +146,7 @@
 			<td class='legend-td'>drivetime</td>
 			<td class='legend-td'>Compare the driving time segment of the mean duration of the complete travel chain in TTM18 and thesis data.
 			<ul>
-				<li>Formula: <code>thesis_x_drivetime / ttm_x_drivetime</code>, where x is <code>r</code>, <code>m</code>, or <code>sl</code>.</li>
+				<li>Formula: <code>thesis_x_drivetime / ttm_x_drivetime</code>, where x is <code>r</code>, <code>m</code>, or <code>all</code>.</li>
 			</ul>
 			</td>
 		</tr>
@@ -154,7 +154,7 @@
 			<td class='legend-td'>pct</td>
 			<td class='legend-td'>Compare the percentual value of the significance of searching for parking and walking to one's final destination of the mean duration of the complete travel chain in TTM18 and thesis data.
 			<ul>
-				<li>Formula: <code>thesis_x_pct / ttm_x_pct</code>, where x is <code>r</code>, <code>m</code>, or <code>sl</code>.</li>
+				<li>Formula: <code>thesis_x_pct / ttm_x_pct</code>, where x is <code>r</code>, <code>m</code>, or <code>all</code>.</li>
 			</ul>
 			</td>
 		</tr>

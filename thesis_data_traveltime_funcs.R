@@ -158,9 +158,9 @@ GetLegendName <- function(val, originzip) {
   } else if (grepl("_r_", val)) {
     timeofday <- paste("during rush hour traffic", thisUnit)
     
-  } else if (grepl("_sl_", val)) {
+  } else if (grepl("_all_", val)) {
     timeofday <- paste(
-      "the route following speed limits without any additional impedances", 
+      "using an average of all temporal choices", 
       thisUnit)
   }
   timeofday <- 
@@ -235,9 +235,9 @@ GetSymbologyHelp <- function(val) {
   } else if (grepl("_r_", val)) {
     timeofday <- paste("during rush hour traffic", thisUnit)
     
-  } else if (grepl("_sl_", val)) {
+  } else if (grepl("_all_", val)) {
     timeofday <- paste(
-      "the route following speed limits without any additional impedances", 
+      "using an average of all temporal choices", 
       thisUnit)
   }
   

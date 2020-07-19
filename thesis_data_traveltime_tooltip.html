@@ -1,5 +1,5 @@
  <!-- This is the HTML code for the travel time comparison app tooltip. -->
- <!-- for Sampo Vesanen's MSc thesis. 7.7.2020. -->
+ <!-- for Sampo Vesanen's MSc thesis. 18.7.2020. -->
 <div id='app-tooltip'>
 	<div>
 		<i class='icon hourglass-start'></i>%s, %s<br> <!-- from_zip, nimi[1] -->
@@ -17,7 +17,7 @@
 			<th class='tg-cell'></th>
 			<th class='tg-cell mover'><div>rush hour</div></th>
 			<th class='tg-cell'>midday</th>
-			<th class='tg-cell mover'><div>speed limits</div></th>
+			<th class='tg-cell mover'><div>all, average</div></th>
 		</tr>
 	</table>
 	<table class='tg tg-flattop vl-sfp-wtd'>
@@ -54,7 +54,7 @@
 			</td>
 			<td class='tg-cell'>%s</td> <!-- ttm_r_avg -->
 			<td class='tg-cell'>%s</td> <!-- ttm_m_avg -->
-			<td class='tg-cell'>%s</td> <!-- ttm_sl_avg -->
+			<td class='tg-cell'>%s</td> <!-- ttm_all_avg -->
 		</tr>
 		<tr class='tg vl-drive-pct' id='ttm-drivetime'>
 			<td class='tg-cell mover'>
@@ -65,7 +65,7 @@
 			</td>
 			<td class='tg-cell'>%s</td> <!-- ttm_r_drivetime -->
 			<td class='tg-cell'>%s</td> <!-- ttm_m_drivetime -->
-			<td class='tg-cell'>%s</td> <!-- ttm_sl_drivetime -->
+			<td class='tg-cell'>%s</td> <!-- ttm_all_drivetime -->
 		</tr>
 		<tr class='tg vl-drive-pct' id='ttm-pct'>
 			<td class='tg-cell mover'>
@@ -76,7 +76,7 @@
 			</td>
 			<td class='tg-cell'>%s</td> <!-- ttm_r_pct -->
 			<td class='tg-cell'>%s</td> <!-- ttm_m_pct -->
-			<td class='tg-cell'>%s</td> <!-- ttm_sl_pct -->
+			<td class='tg-cell'>%s</td> <!-- ttm_all_pct -->
 		</tr>
 	</table>
 	<hr class='tooltip-hr'>
@@ -90,7 +90,7 @@
 			<th class='tg-cell'></th>
 			<th class='tg-cell mover'><div>rush hour</div></th>
 			<th class='tg-cell'>midday</th>
-			<th class='tg-cell mover'><div>speed limits</div></th>
+			<th class='tg-cell mover'><div>all, average</div></th>
 		</tr>
 	</table>
 	<table class='tg tg-flattop vl-sfp-wtd'>
@@ -103,7 +103,7 @@
 			</td>
 			<td class='tg-cell'>%s</td> <!-- thesis_r_sfp -->
 			<td class='tg-cell'>%s</td> <!-- thesis_m_sfp -->
-			<td class='tg-cell'>%s</td> <!-- thesis_sl_sfp -->
+			<td class='tg-cell'>%s</td> <!-- thesis_all_sfp -->
 		</tr>
 		<tr id='thesis-wtd'>
 			<td class='tg-cell mover'>
@@ -114,7 +114,7 @@
 			</td>
 			<td class='tg-cell'>%s</td> <!-- thesis_r_wtd -->
 			<td class='tg-cell'>%s</td> <!-- thesis_m_wtd -->
-			<td class='tg-cell'>%s</td> <!-- thesis_sl_wtd -->
+			<td class='tg-cell'>%s</td> <!-- thesis_all_wtd -->
 		</tr>
 	</table>
 	<table class='tg vl-drive-pct'>
@@ -127,7 +127,7 @@
 			</td>
 			<td class='tg-cell'>%s</td> <!-- thesis_r_drivetime -->
 			<td class='tg-cell'>%s</td> <!-- thesis_m_drivetime -->
-			<td class='tg-cell'>%s</td> <!-- thesis_sl_drivetime -->
+			<td class='tg-cell'>%s</td> <!-- thesis_all_drivetime -->
 		</tr>
 		<tr id='thesis-pct'>
 			<td class='tg-cell mover'>
@@ -138,7 +138,7 @@
 			</td>
 			<td class='tg-cell'>%s</td> <!-- thesis_r_pct -->
 			<td class='tg-cell'>%s</td> <!-- thesis_m_pct -->
-			<td class='tg-cell'>%s</td> <!-- thesis_sl_pct -->
+			<td class='tg-cell'>%s</td> <!-- thesis_all_pct -->
 		</tr>
 	</table>
 	<hr class='tooltip-hr'>
@@ -153,7 +153,7 @@
 			<th class='tg-cell'></th>
 			<th class='tg-cell mover'><div>rush hour</div></th>
 			<th class='tg-cell'>midday</th>
-			<th class='tg-cell mover'><div>speed limits</div></th>
+			<th class='tg-cell mover'><div>all, average</div></th>
 		</tr>
 	</table>
 	<table class='tg tg-compare tg-flattop vl-sfp-wtd'>
@@ -166,7 +166,7 @@
 			</td>
 			<td class='tg-cell compcol1'>%s</td> <!-- comp_r_sfp -->
 			<td class='tg-cell compcol2'>%s</td> <!-- comp_m_sfp -->
-			<td class='tg-cell compcol3'>%s</td> <!-- comp_sl_sfp -->
+			<td class='tg-cell compcol3'>%s</td> <!-- comp_all_sfp -->
 		</tr>
 		<tr id='compare-wtd'>
 			<td class='tg-cell mover'>
@@ -177,7 +177,7 @@
 			</td>
 			<td class='tg-cell compcol1'>%s</td> <!-- comp_r_wtd -->
 			<td class='tg-cell compcol2'>%s</td> <!-- comp_m_wtd -->
-			<td class='tg-cell compcol3'>%s</td> <!-- comp_sl_wtd -->
+			<td class='tg-cell compcol3'>%s</td> <!-- comp_all_wtd -->
 		</tr>
 	</table>
 	<table class='tg tg-compare vl-drive-pct'>
@@ -190,7 +190,7 @@
 			</td>
 			<td class='tg-cell compcol1'>%s</td> <!-- comp_r_drivetime -->
 			<td class='tg-cell compcol2'>%s</td> <!-- comp_m_drivetime -->
-			<td class='tg-cell compcol3'>%s</td> <!-- comp_sl_drivetime -->
+			<td class='tg-cell compcol3'>%s</td> <!-- comp_all_drivetime -->
 		</tr>
 		<tr id='compare-pct'>
 			<td class='tg-cell mover'>
@@ -201,7 +201,7 @@
 			</td>
 			<td class='tg-cell compcol1'>%s</td> <!-- comp_r_pct -->
 			<td class='tg-cell compcol2'>%s</td> <!-- comp_m_pct -->
-			<td class='tg-cell compcol3'>%s</td> <!-- comp_sl_pct -->
+			<td class='tg-cell compcol3'>%s</td> <!-- comp_all_pct -->
 		</tr>
 	</table>
 </div>

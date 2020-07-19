@@ -2,12 +2,11 @@
 # Helsinki Region Travel Time comparison application
 # Helsinki Region Travel Time Matrix 2018 <--> My thesis survey results
 
-# 9.7.2020
+# 19.7.2020
 # Sampo Vesanen
 
 
-# Some decisions need decising:
-# - Remember arbitrary selection of timeofday in thesisdata! Triplecheck
+# Notes:
 # - thesis drivetimes have negative values (this is a result in itself i think),
 #   deal with this with colouring or something
 
@@ -35,7 +34,7 @@ library(ggspatial)
 
 
 # App version
-app_v <- "0061.postal (9.7.2020)"
+app_v <- "0062.postal (19.7.2020)"
 
 # Working directory
 wd <- "C:/Sampon/Maantiede/Master of the Universe"
@@ -107,8 +106,7 @@ muns_f <-
   sp::spTransform(., app_crs) %>%
   {dplyr::left_join(ggplot2::fortify(.),
                     as.data.frame(.) %>%
-                      dplyr::mutate(id = as.character(dplyr::row_number() - 1)))} %>%
-  dplyr::select(-c(namn, vaestontih, km2, vakiluku, kuntakoodi))
+                      dplyr::mutate(id = as.character(dplyr::row_number() - 1)))}
 
 # Bordering municipalities. Does not require any of the shapefile attribute data.
 othermuns_f <-
@@ -212,21 +210,20 @@ thesisdata <-
   dplyr::group_by(zipcode) %>%
   
   # Select timings for thesis_ columns
-  # TODO: Double check equality with TTM data
   dplyr::mutate(r_sfp = case_when(timeofday == 1 ~ parktime, TRUE ~ NA_integer_),
                 m_sfp = case_when(timeofday == 2 ~ parktime, TRUE ~ NA_integer_),
-                sl_sfp = case_when(timeofday == 4 ~ parktime, TRUE ~ NA_integer_),
+                all_sfp = parktime,
                 r_wtd = case_when(timeofday == 1 ~ walktime, TRUE ~ NA_integer_),
                 m_wtd = case_when(timeofday == 2 ~ walktime, TRUE ~ NA_integer_),
-                sl_wtd = case_when(timeofday == 4 ~ walktime, TRUE ~ NA_integer_)) %>%
+                all_wtd = walktime) %>%
   
   # Calculate summaries by zipcode, then round to two decimals
   dplyr::summarise(thesis_r_sfp = mean(r_sfp, na.rm = TRUE),
                    thesis_m_sfp = mean(m_sfp, na.rm = TRUE),
-                   thesis_sl_sfp = mean(sl_sfp, na.rm = TRUE),
+                   thesis_all_sfp = mean(all_sfp, na.rm = TRUE),
                    thesis_r_wtd = mean(r_wtd, na.rm = TRUE),
                    thesis_m_wtd = mean(m_wtd, na.rm = TRUE),
-                   thesis_sl_wtd = mean(sl_wtd, na.rm = TRUE),
+                   thesis_all_wtd = mean(all_wtd, na.rm = TRUE),
                    vals_in_zip = length(zipcode)) %>%
   dplyr::mutate_if(is.numeric, round, 2)
 
@@ -287,39 +284,39 @@ subdiv_lbl["Suur-Matinkylä", "lat"] %-=% 500
 # was calculated from.
 vis_cols <- c("ttm18_r_avg" = "ttm_r_avg",
               "ttm18_m_avg" = "ttm_m_avg",
-              "ttm18_sl_avg" = "ttm_sl_avg",
+              "ttm18_all_avg" = "ttm_all_avg",
               "ttm18_r_drivetime" = "ttm_r_drivetime",
               "ttm18_m_drivetime" = "ttm_m_drivetime",
-              "ttm18_sl_drivetime" = "ttm_sl_drivetime",
+              "ttm18_all_drivetime" = "ttm_all_drivetime",
               "ttm18_r_pct" = "ttm_r_pct",
               "ttm18_m_pct" = "ttm_m_pct",
-              "ttm18_sl_pct" = "ttm_sl_pct",
+              "ttm18_all_pct" = "ttm_all_pct",
               
               "msc_r_sfp" = "thesis_r_sfp",
               "msc_m_sfp" = "thesis_m_sfp",
-              "msc_sl_sfp" = "thesis_sl_sfp",
+              "msc_all_sfp" = "thesis_all_sfp",
               "msc_r_wtd" = "thesis_r_wtd",
               "msc_m_wtd" = "thesis_m_wtd",
-              "msc_sl_wtd" = "thesis_sl_wtd",
+              "msc_all_wtd" = "thesis_all_wtd",
               "msc_r_drivetime" = "thesis_r_drivetime",
               "msc_m_drivetime" = "thesis_m_drivetime",
-              "msc_sl_drivetime" = "thesis_sl_drivetime",
+              "msc_all_drivetime" = "thesis_all_drivetime",
               "msc_r_pct" = "thesis_r_pct",
               "msc_m_pct" = "thesis_m_pct",
-              "msc_sl_pct" = "thesis_sl_pct",
+              "msc_all_pct" = "thesis_all_pct",
               
               "compare_r_sfp" = "comp_r_sfp",
               "compare_m_sfp" = "comp_m_sfp",
-              "compare_sl_sfp" = "comp_sl_sfp",
+              "compare_all_sfp" = "comp_all_sfp",
               "compare_r_wtd" = "comp_r_wtd",
               "compare_m_wtd" = "comp_m_wtd",
-              "compare_sl_wtd" = "comp_sl_wtd",
+              "compare_all_wtd" = "comp_all_wtd",
               "compare_r_drivetime" = "comp_r_drivetime",
               "compare_m_drivetime" = "comp_m_drivetime",
-              "compare_sl_drivetime" = "comp_sl_drivetime",
+              "compare_all_drivetime" = "comp_all_drivetime",
               "compare_r_pct" = "comp_r_pct",
               "compare_m_pct" = "comp_m_pct",
-              "compare_sl_pct" = "comp_sl_pct")
+              "compare_all_pct" = "comp_all_pct")
 
 
 
@@ -418,28 +415,32 @@ server <- function(input, output, session) {
       dplyr::left_join(., thesisdata, by = "zipcode") %>%
       dplyr::left_join(postal_f, ., by = "zipcode") %>%
       
-      # Generate drivetime (min) and pct (%) columns for TTM18 data
-      dplyr::mutate(ttm_r_drivetime = ttm_r_avg - ttm_sfp - ttm_wtd,
+      # Generate drivetime (min) and pct (%) columns for TTM18 data. 
+      # NB! Use a mean of r, m, and sl for all the columns "sl".
+      dplyr::mutate(ttm_all_avg = rowMeans(select(., c(ttm_r_avg, ttm_m_avg, ttm_sl_avg))),
+                    ttm_r_drivetime = ttm_r_avg - ttm_sfp - ttm_wtd,
                     ttm_m_drivetime = ttm_m_avg - ttm_sfp - ttm_wtd,
-                    ttm_sl_drivetime = ttm_sl_avg - ttm_sfp - ttm_wtd,
+                    ttm_all_drivetime = ttm_all_avg - ttm_sfp - ttm_wtd,
                     ttm_r_pct = (ttm_sfp + ttm_wtd) / ttm_r_avg,
                     ttm_m_pct = (ttm_sfp + ttm_wtd) / ttm_m_avg,
-                    ttm_sl_pct = (ttm_sfp + ttm_wtd) / ttm_sl_avg) %>%
-      dplyr::mutate_at(vars(ttm_r_pct, ttm_m_pct, ttm_sl_pct), ~round(., 2)) %>%
+                    ttm_all_pct = (ttm_sfp + ttm_wtd) / ttm_all_avg) %>%
+      dplyr::mutate_at(vars(ttm_all_avg, ttm_all_drivetime, ttm_r_pct, ttm_m_pct, ttm_all_pct), 
+                       ~round(., 2)) %>%
       
       # If zipcode is NA, then convert all calculated data to NA as well
       dplyr::mutate(ttm_r_avg = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_r_avg),
                     ttm_m_avg = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_m_avg),
                     ttm_sl_avg = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_sl_avg),
+                    ttm_all_avg = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_all_avg),
                     ttm_sfp = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_sfp),
                     ttm_wtd = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_wtd),
                     ttm_r_drivetime = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_r_drivetime),
                     ttm_m_drivetime = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_m_drivetime),
-                    ttm_sl_drivetime = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_sl_drivetime),
+                    ttm_all_drivetime = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_all_drivetime),
                     ttm_r_pct = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_r_pct),
                     ttm_m_pct = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_m_pct),
-                    ttm_sl_pct = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_sl_pct)) %>%
-      dplyr::mutate_at(vars(ttm_r_avg, ttm_m_avg, ttm_sl_avg),
+                    ttm_all_pct = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_all_pct)) %>%
+      dplyr::mutate_at(vars(ttm_r_avg, ttm_m_avg, ttm_all_avg, ttm_all_avg),
                        ~dplyr::na_if(., -1)) %>%
       
       # Add the rest of thesis_ columns. with if_else() change possible NA's to 
@@ -452,9 +453,9 @@ server <- function(input, output, session) {
                       if_else(is.na(thesis_m_sfp), 0, thesis_m_sfp) - 
                       if_else(is.na(thesis_m_wtd), 0, thesis_m_wtd),
                     
-                    thesis_sl_drivetime = ttm_sl_avg - 
-                      if_else(is.na(thesis_sl_sfp), 0, thesis_sl_sfp) - 
-                      if_else(is.na(thesis_sl_wtd), 0, thesis_sl_wtd),
+                    thesis_all_drivetime = ttm_all_avg - 
+                      if_else(is.na(thesis_all_sfp), 0, thesis_all_sfp) - 
+                      if_else(is.na(thesis_all_wtd), 0, thesis_all_wtd),
                     
                     thesis_r_pct = (
                       if_else(is.na(thesis_r_sfp), 0, thesis_r_sfp) + 
@@ -464,32 +465,32 @@ server <- function(input, output, session) {
                       if_else(is.na(thesis_m_sfp), 0, thesis_m_sfp) + 
                         if_else(is.na(thesis_m_wtd), 0, thesis_m_wtd)) / ttm_m_avg,
                     
-                    thesis_sl_pct = (
-                      if_else(is.na(thesis_sl_sfp), 0, thesis_sl_sfp) + 
-                        if_else(is.na(thesis_sl_wtd), 0, thesis_sl_wtd)) / ttm_sl_avg) %>%
+                    thesis_all_pct = (
+                      if_else(is.na(thesis_all_sfp), 0, thesis_all_sfp) + 
+                        if_else(is.na(thesis_all_wtd), 0, thesis_all_wtd)) / ttm_all_avg) %>%
       
       dplyr::mutate_at(vars(thesis_r_drivetime, thesis_m_drivetime, 
-                            thesis_sl_drivetime, thesis_r_pct, thesis_m_pct, 
-                            thesis_sl_pct), 
+                            thesis_all_drivetime, thesis_r_pct, thesis_m_pct, 
+                            thesis_all_pct), 
                        ~round(., 2)) %>%
       
       # Add TTM18/thesis comparison columns
       dplyr::mutate(comp_r_sfp = thesis_r_sfp / ttm_sfp,
                     comp_m_sfp = thesis_m_sfp / ttm_sfp,
-                    comp_sl_sfp = thesis_sl_sfp / ttm_sfp,
+                    comp_all_sfp = thesis_all_sfp / ttm_sfp,
                     comp_r_wtd = thesis_r_wtd / ttm_wtd,
                     comp_m_wtd = thesis_m_wtd / ttm_wtd,
-                    comp_sl_wtd = thesis_sl_wtd / ttm_wtd,
+                    comp_all_wtd = thesis_all_wtd / ttm_wtd,
                     comp_r_drivetime = thesis_r_drivetime / ttm_r_drivetime,
                     comp_m_drivetime = thesis_m_drivetime / ttm_m_drivetime,
-                    comp_sl_drivetime = thesis_sl_drivetime / ttm_sl_drivetime,
+                    comp_all_drivetime = thesis_all_drivetime / ttm_all_drivetime,
                     comp_r_pct = thesis_r_pct / ttm_r_pct,
                     comp_m_pct = thesis_m_pct / ttm_m_pct,
-                    comp_sl_pct = thesis_sl_pct / ttm_sl_pct) %>%
-      dplyr::mutate_at(vars(comp_r_sfp, comp_m_sfp, comp_sl_sfp, comp_r_wtd,
-                            comp_m_wtd, comp_sl_wtd, comp_r_drivetime, 
-                            comp_m_drivetime, comp_sl_drivetime, comp_r_pct,
-                            comp_m_pct, comp_sl_pct), 
+                    comp_all_pct = thesis_all_pct / ttm_all_pct) %>%
+      dplyr::mutate_at(vars(comp_r_sfp, comp_m_sfp, comp_all_sfp, comp_r_wtd,
+                            comp_m_wtd, comp_all_wtd, comp_r_drivetime, 
+                            comp_m_drivetime, comp_all_drivetime, comp_r_pct,
+                            comp_m_pct, comp_all_pct), 
                        ~round(., 2))
     result
   })
@@ -563,20 +564,20 @@ server <- function(input, output, session) {
                              
                              ttm_sfp, ttm_sfp, ttm_sfp,
                              ttm_wtd, ttm_wtd, ttm_wtd,
-                             ttm_r_avg, ttm_m_avg, ttm_sl_avg,
-                             ttm_r_drivetime, ttm_m_drivetime, ttm_sl_drivetime,
-                             ttm_r_pct, ttm_m_pct, ttm_sl_pct,
+                             ttm_r_avg, ttm_m_avg, ttm_all_avg,
+                             ttm_r_drivetime, ttm_m_drivetime, ttm_all_drivetime,
+                             ttm_r_pct, ttm_m_pct, ttm_all_pct,
                              
                              zipcode, vals_in_zip,
-                             thesis_r_sfp, thesis_m_sfp, thesis_sl_sfp,
-                             thesis_r_wtd, thesis_m_wtd, thesis_sl_wtd,
-                             thesis_r_drivetime, thesis_m_drivetime, thesis_sl_drivetime,
-                             thesis_r_pct, thesis_m_pct, thesis_sl_pct,
+                             thesis_r_sfp, thesis_m_sfp, thesis_all_sfp,
+                             thesis_r_wtd, thesis_m_wtd, thesis_all_wtd,
+                             thesis_r_drivetime, thesis_m_drivetime, thesis_all_drivetime,
+                             thesis_r_pct, thesis_m_pct, thesis_all_pct,
                              
-                             comp_r_sfp, comp_m_sfp, comp_sl_sfp,
-                             comp_r_wtd, comp_m_wtd, comp_sl_wtd,
-                             comp_r_drivetime, comp_m_drivetime, comp_sl_drivetime,
-                             comp_r_pct, comp_m_pct, comp_sl_pct))
+                             comp_r_sfp, comp_m_sfp, comp_all_sfp,
+                             comp_r_wtd, comp_m_wtd, comp_all_wtd,
+                             comp_r_drivetime, comp_m_drivetime, comp_all_drivetime,
+                             comp_r_pct, comp_m_pct, comp_all_pct))
                    )) +
       
       # Jenks classes colouring and labels. drop = FALSE is very important in
@@ -695,14 +696,34 @@ server <- function(input, output, session) {
     }
     
     # Plot postal code area labels
-    if(input$show_postal_labels == TRUE) {
+    if(input$postal_label_choice != "Off") {
+      
+      if(input$postal_label_choice == "Current symbology") {
+        
+        # Fetch current symbology values. For the join there has to be a column
+        # of same name in both dataframes, therefore mutate() one into thisTTM.
+        this_zipcode_lbl <- 
+          dplyr::left_join(zipcode_lbl,
+                           thisTTM() %>%
+                             dplyr::mutate(label = as.character(zipcode)) %>%
+                             dplyr::select(label, zipcode,
+                                           !!rlang::sym(vis_cols[[input$fill_column]])),
+                           by = "label") %>%
+          dplyr::mutate(label = !!rlang::sym(vis_cols[[input$fill_column]])) %>%
+          dplyr::distinct(zipcode, .keep_all = TRUE) %>%
+          dplyr::select(c(long, lat, label))
+        
+      } else {
+        # if "Postal codes", use the object "zipcode_lbl" produced in 2.7.
+        this_zipcode_lbl <- zipcode_lbl
+      }
       
       # Add zipcode labels
-      g <- g + with(zipcode_lbl,
-                    annotate(geom = "label", 
-                             x = long, 
-                             y = lat, 
-                             label = label, 
+      g <- g + with(this_zipcode_lbl,
+                    annotate(geom = "label",
+                             x = long,
+                             y = lat,
+                             label = label,
                              label.size = NA,
                              fill = alpha("white", 0.5),
                              size = 4))
@@ -710,7 +731,6 @@ server <- function(input, output, session) {
     
     # Plot postal code area labels
     if(input$show_muns_labels == TRUE) {
-      
       
       # Disable Kauniainen label on subdiv when muns labels visible
       if(input$show_subdiv_labels == TRUE) {
@@ -830,7 +850,7 @@ ui <- shinyUI(
         textInput(
           inputId = "zipcode",
           label = "Enter an origin postal code",
-          value = "00100"), # Starting value Rautatientori, Ateneum
+          value = "00100"), # Starting value Helsinki Keskusta - Etu-Töölö
         HTML("</div>"),
         
         actionButton(
@@ -850,21 +870,21 @@ ui <- shinyUI(
           selected = "ttm18_m_avg",
           choices = list(
             `Travel Time Matrix 2018 private car data` = 
-              c("ttm18_r_avg", "ttm18_m_avg", "ttm18_sl_avg",
-                "ttm18_r_drivetime", "ttm18_m_drivetime", "ttm18_sl_drivetime",
-                "ttm18_r_pct", "ttm18_m_pct", "ttm18_sl_pct"),
+              c("ttm18_r_avg", "ttm18_m_avg", "ttm18_all_avg",
+                "ttm18_r_drivetime", "ttm18_m_drivetime", "ttm18_all_drivetime",
+                "ttm18_r_pct", "ttm18_m_pct", "ttm18_all_pct"),
             
             `Thesis survey results` = 
-              c("msc_r_sfp", "msc_m_sfp", "msc_sl_sfp",
-                "msc_r_wtd", "msc_m_wtd", "msc_sl_wtd",
-                "msc_r_drivetime", "msc_m_drivetime", "msc_sl_drivetime",
-                "msc_r_pct", "msc_m_pct", "msc_sl_pct"),
+              c("msc_r_sfp", "msc_m_sfp", "msc_all_sfp",
+                "msc_r_wtd", "msc_m_wtd", "msc_all_wtd",
+                "msc_r_drivetime", "msc_m_drivetime", "msc_all_drivetime",
+                "msc_r_pct", "msc_m_pct", "msc_all_pct"),
             
             `Compare TTM18 and thesis survey results` = 
-              c("compare_r_sfp", "compare_m_sfp", "compare_sl_sfp",
-                "compare_r_wtd", "compare_m_wtd", "compare_sl_wtd",
-                "compare_r_drivetime", "compare_m_drivetime", "compare_sl_drivetime",
-                "compare_r_pct", "compare_m_pct", "compare_sl_pct"))),
+              c("compare_r_sfp", "compare_m_sfp", "compare_all_sfp",
+                "compare_r_wtd", "compare_m_wtd", "compare_all_wtd",
+                "compare_r_drivetime", "compare_m_drivetime", "compare_all_drivetime",
+                "compare_r_pct", "compare_m_pct", "compare_all_pct"))),
         
         HTML("<div id='contents'>"),
         htmlOutput("sym_helper"),
@@ -895,10 +915,13 @@ ui <- shinyUI(
           step = 0.1),
         
         HTML("<label class='control-label onoff-label' for='show_postal_labels'>Labels</label>"),
-        shinyWidgets::switchInput(
-          inputId = "show_postal_labels", 
-          size = "mini",
-          value = FALSE),
+        
+        selectInput(
+          inputId = "postal_label_choice",
+          label = NULL,
+          selected = "Off",
+          choices = c("Off", "Postal codes", "Current symbology")),
+        
         HTML("</div>"),
         
         #### Walking center switch ---
