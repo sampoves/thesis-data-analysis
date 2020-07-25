@@ -5,8 +5,8 @@ Python code tested with Anaconda Personal Distribution 2020.02 (Python 3.7.6, Pa
 
 Code not tested on R 4.0.0. However, explicit ``stringsAsFactors = TRUE`` has been added to all ``read.csv()`` and ``readOGR()`` calls.
 
-## Records and visitors analysis apps on Shinyapps.io
-You may view and explore my research data with these two ShinyApps deployed on Shinyapps.io. These are the same tools as I used to analyse the results of my thesis. Please note that these apps are pretty wonky on mobile because of limited screen space. Access on desktop for full functionality.
+## Records and visitors analysis apps on shinyapps.io
+You may view and explore my research data with these two Shiny apps deployed on shinyapps.io. These are the same tools as I used to analyse the results of my thesis. Please note that these apps are pretty wonky on mobile because of limited screen space. Access on desktop for full functionality.
 
 * https://sampoves.shinyapps.io/analysis/
 * https://sampoves.shinyapps.io/visitors/
