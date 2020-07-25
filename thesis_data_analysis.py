@@ -637,7 +637,7 @@ records["ykr_zone"] = records.ykr_zone.map(dictKey)
 
 # View further information about subdivisions in the script 
 # "thesis_data_zipcodes.py".
-            
+
 # Create column for subdivision name in DataFrame "records"
 records["subdiv"] = 0
 
@@ -654,86 +654,10 @@ for varname, fullname in subdiv_dict.items():
 
 
 
-### SHOW STATISTICS ---------------------------------------------------------
+### PRELIMINARY STATISTICS ----------------------------------------------------
     
 statistics = Stats(records, postal, visitors, invalid)
 statistics.calculateStats()
-
-
-
-### UTILISE TRAVEL-TIME MATRIX 2018 -------------------------------------------
-
-# This feature is now entirely outdated as I have developed the visualised
-# shinyapp tool for viewing survey results and Travel Time Matrix 2018 data.
-# I fully expect to remove this tool in a future commit.
-# The most glaring problem with this tool is that it uses the YKR-id scale of
-# TTM18 while using postal code area scale survey data. I view this as a
-# problem.
-
-# Test how TTM18 data and my thesis results compare.
-
-# - Searching for parking lasts 0.42 min in TTM18. 
-# - Walking time from car to main destination is 2.5 min (180 meters) in 
-#   Helsinki center in TTM18
-# - Walking time from car to main destination in other areas is 2.0 min
-#   (130 meters) in TTM18.
-# Walking times from Kurri, J. & Laakso, J.-M. Parking policy measures and 
-# their effects in the Helsinki metropolitan area (2002). 
-
-# In "valuerange" make sure no grid cells outside research area are accepted
-valuerange = set(grid.YKR_ID.astype(str)) - set(list(map(str, notPresent)))
-l = []
-i = 0
-
-# Generate tuples of origin and destination points
-while i < 3:
-    vals = random.sample(valuerange, 2)
-    l.append(tuple(vals))
-    i += 1
-
-#l2 = [("5985086", "5866836"), ("5981923", "5980266")]
-traveltime = travelTimeComparison(grid, artificial, postal, records, l, ttm_path, 
-                                  printStats=False, plotIds=True)
-
-# get means for all columns, see differences
-print("Searching for parking, mean, minutes\n", 
-      round(traveltime[["ttm_sfp", "thesis_r_sfp", "thesis_m_sfp", 
-                  "thesis_sl_sfp"]].mean(axis=0), 2).to_string(), "\n", sep="")
-print("Walking to destination, mean, minutes\n",
-      round(traveltime[["ttm_wtd", "thesis_r_wtd", "thesis_m_wtd", 
-                  "thesis_sl_wtd"]].mean(axis=0), 2).to_string(), "\n", sep="")
-print("Drivetime without parking process, mean, minutes\n",
-      round(traveltime[["ttm_r_drivetime", "ttm_m_drivetime", "ttm_sl_drivetime", 
-                  "thesis_r_drivetime", "thesis_m_drivetime", 
-                  "thesis_sl_drivetime"]].mean(axis=0), 2).to_string(), "\n", sep="")
-print("Percentage of the parking process of the entire travel time, mean, %\n",
-      round(traveltime[["ttm_r_pct", "ttm_m_pct", "ttm_sl_pct", 
-                  "thesis_r_pct","thesis_m_pct", "thesis_sl_pct"]]
-            .mean(axis=0), 2).to_string(), sep="")
-
-
-
-### VISUALISE & DESCRIBE ------------------------------------------------------
-
-# These visualisations are obsolete. More flexible visual mapping is now done 
-# in R.
-
-# PLOT AMOUNT OF RECORDS
-# Plot with layers as function
-parkingPlot(postal, "answer_count", 0) 
-parkingPlot(postal[postal.kunta == "091"], "answer_count", 0) #amount for Hki
-parkingPlot(postal, "walktime_mean", 1) # plot walktime mean
-parkingPlot(postal, "parktime_mean", 1) # plot parktime mean
-parkingPlot(postal, "parktime_median", 1) # plot parktime median
-parkingPlot(postal, "artificial", 1) # plot artificial surface
-
-# Get mean-std-min-max-quantiles of municipalities
-descri_postal = postal.iloc[:, [4, 113, 114, 115, 116, 117]] #does not contain walktime
-descri_postal.describe()
-descri_postal[postal.kunta == "091"].describe() #hki
-descri_postal[postal.kunta == "092"].describe() #esp
-descri_postal[postal.kunta == "235"].describe() #kau
-descri_postal[postal.kunta == "049"].describe() #van
 
 
 
