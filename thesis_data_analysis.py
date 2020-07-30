@@ -568,26 +568,26 @@ records = records.rename(columns={"artificial": "artificial_vals"})
 # Calculate jenks breaks for "artificial". Use breaks to reclassify values
 # in records. We will use code created by GitHub user Drewda. This is now
 # commented because calculation time takes about 20 seconds
-#breaks = getJenksBreaks(records.artificial_vals.tolist(), 5)
+breaks = getJenksBreaks(records.artificial_vals.tolist(), 5)
 
 # See the breaks on plot
-#plt.figure(figsize=(10, 8))
-#hist1 = plt.hist(records.artificial_vals, bins=40, align="left", color="g")
-#for b in breaks:
-#    plt.vlines(b, ymin=0, ymax=max(hist1[0]))
+plt.figure(figsize=(10, 8))
+hist1 = plt.hist(records.artificial_vals, bins=40, align="left", color="g")
+for b in breaks:
+    plt.vlines(b, ymin=0, ymax=max(hist1[0]))
 
 # Reclassify using this clumsy nested np.where(). Use values calculated in
 # getJenksBreaks()
 records["artificial"] = np.where(
-        records.artificial_vals < 0.385,
+        records.artificial_vals < breaks[1],
         "Scarcely built", 
-        (np.where(records.artificial_vals < 0.647,
+        (np.where(records.artificial_vals < breaks[2],
                   "Some built", 
-                  (np.where(records.artificial_vals < 0.815, 
+                  (np.where(records.artificial_vals < breaks[3], 
                             "Moderately built", 
-                            (np.where(records.artificial_vals < 0.927, 
+                            (np.where(records.artificial_vals < breaks[4], 
                                       "Predominantly built", 
-                                      (np.where(records.artificial_vals <= 1, 
+                                      (np.where(records.artificial_vals <= breaks[5], 
                                                 "Fully built",
                                                 "novalue"))))))))).tolist()
 
