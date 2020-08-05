@@ -2,7 +2,7 @@
 // JavaScript for the travel time comparison app of my thesis results
 
 // "Parking of private cars and spatial accessibility in Helsinki Capital Region" 
-// by Sampo Vesanen, 19.7.2020
+// by Sampo Vesanen, 5.8.2020
 
 
 
@@ -139,7 +139,7 @@ $(document).on('shiny:idle', function(event) {
 				delta = e0.wheelDelta || -e0.detail;
 			
 			// Use the delta value of the current svg to scroll #app-tooltip. This produces
-			// a clammy scrolling experience, but it works. 
+			// an uneven scrolling experience, but it works. 
 			var scrollThis = document.getElementById('app-tooltip');
 			scrollThis.scrollTop += (delta < 0 ? 1 : -1) * 120;
 			
@@ -301,6 +301,41 @@ $(document).ready(function() {
 // to reinitialise ids every time the dropdown menu opens
 $(document).one('shiny:idle', function(event) {
 	
+	// Define tooltip texts for drop down menu items
+	var symbology_arr = ['Travel Time Matrix 2018, rush hour, total travel chain', 
+	'Travel Time Matrix 2018, midday, total travel chain', 
+	'Travel Time Matrix 2018, all values, total travel chain', 
+	'Travel Time Matrix 2018, rush hour, driving time', 
+	'Travel Time Matrix 2018, midday, driving time', 
+	'Travel Time Matrix 2018, all values, driving time', 
+	'Travel Time Matrix 2018, rush hour, percentage', 
+	'Travel Time Matrix 2018, midday, percentage', 
+	'Travel Time Matrix 2018, all values, percentage', 
+	'Thesis survey data, rush hour, searching for parking',
+	'Thesis survey data, midday, searching for parking',
+	'Thesis survey data, all values, searching for parking',
+	'Thesis survey data, rush hour, walking to destination',
+	'Thesis survey data, midday, walking to destination',
+	'Thesis survey data, all values, walking to destination',
+	'Thesis survey data, rush hour, driving time',
+	'Thesis survey data, midday, driving time',
+	'Thesis survey data, all values, driving time',
+	'Thesis survey data, rush hour, percentage',
+	'Thesis survey data, midday, percentage',
+	'Thesis survey data, all values, percentage',
+	'Compare datasets, rush hour, searching for parking',
+	'Compare datasets, midday, searching for parking',
+	'Compare datasets, all values, searching for parking',
+	'Compare datasets, rush hour, walking to destination',
+	'Compare datasets, midday, walking to destination',
+	'Compare datasets, all values, walking to destination',
+	'Compare datasets, rush hour, driving time',
+	'Compare datasets, midday, driving time',
+	'Compare datasets, all values, driving time',
+	'Compare datasets, rush hour, percentage',
+	'Compare datasets, midday, percentage',
+	'Compare datasets, all values, percentage'];
+	
 	// Disable mobile keyboard on selectize.js dropdown menus
 	$('.selectize-input input').attr('readonly','readonly');
 	
@@ -317,6 +352,11 @@ $(document).one('shiny:idle', function(event) {
 		for(var i = 0; i < drop_lbls.length; i++) {
 			
 			var this_id = '#drop_' + i;
+
+			// these attributes add tooltips to dropdown items.
+			$(this_id).attr("data-placement", "right");
+			$(this_id).attr("title", symbology_arr[i]);
+			
 			if (i >= 0 && i <= 2) {
 				$(this_id).prepend("<i class='dropbar'></i>");
 			} else if (i >= 3 && i <= 8 || i >= 15 && i <= 20 || i >= 27 && i <= 32) {

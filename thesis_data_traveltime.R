@@ -2,15 +2,20 @@
 # Helsinki Region Travel Time comparison application
 # Helsinki Region Travel Time Matrix 2018 <--> My thesis survey results
 
-# 30.7.2020
+# 5.8.2020
 # Sampo Vesanen
 
-
 # Notes:
-# - thesis drivetimes have negative values (this is a result in itself i think),
-#   deal with this with colouring or something
-# - minor importance: postal_label_choice does not scale with window size
-# DRIVETIME CHANGE IN THESISDATA! REMEMBER ALL REQUIRED CHANGES IN THESIS AND OTHER FILES!
+# - Minor importance: select#postal_label_choice does not scale with window size
+# - There is a rare issue where the application complains about non-unique 
+#   breaks. This occurs inside CreateJenksColumn_b(), where a column presumably
+#   does not have enough unique values to create the amount of symbology classes
+#   the app requests. To counter this, reactive object checkSliderInput() is
+#   created. This handles the error, but not before the map view dissappears
+#   and the error message is shown in top left corner. For now, I do not intend
+#   to fix this outcome which lasts on the user's screen maybe 15 seconds. The 
+#   only erroneous combination I've discovered so far is 02860 Lakisto, 
+#   ttm18_all_pct and 9-11 symbology classes.
 
 
 #### 1 Initialise --------------------------------------------------------------
@@ -36,7 +41,7 @@ library(ggspatial)
 
 
 # App version
-app_v <- "0063.postal (30.7.2020)"
+app_v <- "0064.postal (5.8.2020)"
 
 # Working directory
 wd <- "C:/Sampon/Maantiede/Master of the Universe"
@@ -354,6 +359,36 @@ server <- function(input, output, session) {
                    setTimeout(function() {$('#abbr-info').scrollTop(0);}, 310);")
   })
   
+  # this reactive object is created to enable listening of multiple inputs user
+  # can trigger. Triggering an input may require lowering the classes breaks
+  # inside the function CreateJenksColumn_b(), otherwise we will get an error
+  # ""
+  checkSliderInput <- reactive({
+    list(input$classIntervals_n, input$calcZip, input$fill_column)
+  })
+  
+  shiny::observeEvent(checkSliderInput(), {
+    
+    # Test classInt::classIntervals() and change classIntervals_n SliderInput 
+    # value if statement holds. Suppress warnings in the test.
+    inputdf <- thisTTM()
+    
+    classes_test <- suppressWarnings(
+      classInt::classIntervals(inputdf[, vis_cols[[input$fill_column]]], 
+                               n = input$classIntervals_n, 
+                               style = "equal"))
+    
+    # Object returned from classIntervals() has an attribute "nobs" which I
+    # use to detect cases where too large input$classIntervals_n is inputted to
+    # CreateJenksColumn_b() function.
+    # The minus one should prevent the breaks error from showing.
+    if(attributes(classes_test)$nobs - 1 < input$classIntervals_n) {
+      updateSliderInput(session,
+                        "classIntervals_n",
+                        value = attributes(classes_test)$nobs - 1)
+    }
+  })
+  
   # Validate ykr-id in the numeric field
   validate_zipcode <- shiny::eventReactive(input$calcZip, {
     
@@ -502,12 +537,41 @@ server <- function(input, output, session) {
   # detected on input$fill_column. Use the named vector "vis_cols".
   equalBreaksColumn <- reactive({
     
-    inputdata <- thisTTM()
-    res <- CreateJenksColumn_b(inputdata, inputdata, 
+    inputdata <<- thisTTM()
+    res <<- CreateJenksColumn_b(inputdata, 
                                vis_cols[[input$fill_column]], 
                                input$fill_column, input$classIntervals_n)
     res
   })
+
+  
+  # DEBUG
+  # classes <- suppressWarnings(
+  #   classInt::classIntervals(inputdata[, vis_cols[["ttm18_all_pct"]]], n = 11, style = "equal"))
+  # 
+  # # Make note that breaks are rounded to two decimal places. In some cases the
+  # # rounding would create non-unique breaks and this breaks the map view for the
+  # # active symbology. If two decimals is not enough, use three.
+  # result <- tryCatch({
+  #   inputdata %>%
+  #     dplyr::mutate(ttm18_all_pct := cut(!!rlang::sym("ttm_all_pct"),
+  #                                       unique(round(classes$brks, 2)),
+  #                                       include.lowest = T))
+  # },
+  # warning = function(cond) {
+  #   # The error that brings us here is:
+  #   # "Warning: Error in cut.default: 'breaks' are not unique"
+  #   return(
+  #     inputdata %>%
+  #       dplyr::mutate(ttm18_all_pct := cut(!!rlang::sym("ttm_all_pct"),
+  #                                         unique(round(classes$brks, 3)),
+  #                                         include.lowest = T))
+  #     )
+  #   }
+  # )
+  
+  
+  
   
   
   #### 4.2 ShinyApp outputs ----------------------------------------------------
@@ -791,11 +855,13 @@ server <- function(input, output, session) {
   
   # Actual download functionality
   output$dl_compare <- downloadHandler(
-    filename = paste("ttm18-thesis-compare_",
-                     "mapfill-", input$fill_column, "_fromzip-", input$zipcode, "_",
-                     format(Sys.time(), "%d-%m-%Y"), 
-                     ".png",
-                     sep = ""),
+    filename = function() {
+      paste("compare_traveltimes_",
+            "mapfill-", input$fill_column, "_fromzip-", input$zipcode, "_",
+            format(Sys.time(), "%d-%m-%Y"), 
+            ".png",
+            sep = "")
+      },
     
     content = function(file) {
       ggsave(plot = compare_out, file, width = 21, height = 14, dpi = 175)

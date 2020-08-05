@@ -4,7 +4,7 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 7.7.2020
+# 19.7.2020
 
 
 
@@ -33,8 +33,7 @@ ReadAndClean <- function(fp) {
 
 
 
-CreateJenksColumn_b <- function(fortified, inputDf, datacol, newcolname, 
-                                classes_n = 11) {
+CreateJenksColumn_b <- function(inputDf, datacol, newcolname, classes_n = 11) {
   
   # Function name _b refers to this function being the variant B of the function
   # CreateJenksColumn in thesis_data_vis.R.
@@ -51,12 +50,13 @@ CreateJenksColumn_b <- function(fortified, inputDf, datacol, newcolname,
   classes <- suppressWarnings(
     classInt::classIntervals(inputDf[, datacol], n = classes_n, style = "equal"))
   
-  # classes$brk has to be wrapped with unique(), otherwise we can't get more
-  # than six classes for parktime_median or walktime_median. Make note that 
-  # breaks are rounded to two decimal places.
-  result <- fortified %>%
+  # Make note that breaks are rounded to two decimal places. In some cases the 
+  # rounding would create non-unique breaks and this breaks the map view for the 
+  # active symbology. If two decimals is not enough, use three.
+  result <- 
+    inputDf %>%
     dplyr::mutate(!!newcolname := cut(!!rlang::sym(datacol), 
-                                      round(unique(classes$brks), 2), 
+                                      unique(round(classes$brks, 2)), 
                                       include.lowest = T))
   return(result)
 }
@@ -75,7 +75,7 @@ AddLevelCounts <- function(thisDf, datacol, newcolname, classes_n,
     classInt::classIntervals(thisDf[, datacol], n = classes_n, style = "equal"))
   
   # Breaks are rounded to two decimal places
-  interv_codes <- cut(thisDf[, datacol], 
+  interv_codes <- cut(thisDf[, datacol],
                       round(unique(intervals$brks), 2),
                       include.lowest = T)
   input_levels <- levels(thisDf[, newcolname])
