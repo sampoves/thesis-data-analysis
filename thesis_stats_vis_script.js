@@ -2,7 +2,7 @@
 // JavaScript for the analysis app of my thesis results
 
 // "Parking of private cars and spatial accessibility in Helsinki Capital Region" 
-// by Sampo Vesanen, 21.5.2020
+// by Sampo Vesanen, 6.8.2020
 
 
 // This JS function checks the state of the display parameter of inputted div "shrink_me"
@@ -46,11 +46,11 @@ $(function() {
 	$('.well').after("<div class='hidesidebar'><button id='showhidebutton' onclick='show_hide_sb()'><i class='icon eyeslash' title='Hide sidebar'></i></button></div>");
 	
 	// Make ggiraph outputs untouchable
-	$("#hist").addClass('noselect');
-	$("#barplot_ord").addClass('noselect');
-	$("#boxplot").addClass('noselect');
-	$("#map").addClass('noselect');
-	$("#interactive").addClass('noselect');
+	$('#hist').addClass('noselect');
+	$('#barplot_ord').addClass('noselect');
+	$('#boxplot').addClass('noselect');
+	$('#map').addClass('noselect');
+	$('#interactive').addClass('noselect');
 });
 
 // Insert significance element right after table element so that overflow-x: auto;
@@ -61,7 +61,7 @@ $(document).one('shiny:idle', function(event) {
 	
 	setTimeout(function() {
 		// Disable mobile keyboard on dropdown menus
-		$('.selectize-input input').attr('readonly','readonly');
+		$('.selectize-input input').attr('readonly', 'readonly');
 		
 		$('#levene table').after(sig);
 		$('#anova table').after(sig);
@@ -77,7 +77,7 @@ $(function() {
 	
 	var timesClicked = 0;
 	
-	$("a").on("click", function() {
+	$('a').on('click', function() {
 		timesClicked++;
 		var dest_id = $(this)[0].hash;
 		var dest = dest_id.replace('#', '');
@@ -123,40 +123,40 @@ $(function() {
 // crude function to programmatically click all correct subdivision buttons.
 function munClick(id) {
 	if(id === 1) { 
-		$("#subdiv_0").click(); // Espoo
-		$("#subdiv_1").click();
-		$("#subdiv_2").click();
-		$("#subdiv_3").click();
-		$("#subdiv_4").click();
-		$("#subdiv_5").click();
-		$("#subdiv_6").click();
+		$('#subdiv_0').click(); // Espoo
+		$('#subdiv_1').click();
+		$('#subdiv_2').click();
+		$('#subdiv_3').click();
+		$('#subdiv_4').click();
+		$('#subdiv_5').click();
+		$('#subdiv_6').click();
 	} if (id === 2) {
-		$("#subdiv_7").click(); // Helsinki
-		$("#subdiv_8").click();
-		$("#subdiv_9").click();
-		$("#subdiv_10").click();
-		$("#subdiv_11").click();
-		$("#subdiv_12").click();
-		$("#subdiv_13").click();
-		$("#subdiv_14").click();
+		$('#subdiv_7').click(); // Helsinki
+		$('#subdiv_8').click();
+		$('#subdiv_9').click();
+		$('#subdiv_10').click();
+		$('#subdiv_11').click();
+		$('#subdiv_12').click();
+		$('#subdiv_13').click();
+		$('#subdiv_14').click();
 	} if (id === 3) {
-		$("#subdiv_15").click(); // Kauniainen
+		$('#subdiv_15').click(); // Kauniainen
 	} if (id === 4) {
-		$("#subdiv_16").click(); // Vantaa
-		$("#subdiv_17").click();
-		$("#subdiv_18").click();
-		$("#subdiv_19").click();
-		$("#subdiv_20").click();
-		$("#subdiv_21").click();
-		$("#subdiv_22").click();
+		$('#subdiv_16').click(); // Vantaa
+		$('#subdiv_17').click();
+		$('#subdiv_18').click();
+		$('#subdiv_19').click();
+		$('#subdiv_20').click();
+		$('#subdiv_21').click();
+		$('#subdiv_22').click();
 	}
 };
 
 $(document).ready(function() {
 	// Add identifiers to subdivGroup checkboxes
-	var checkboxes = $("#subdivGroup").find(".checkbox input");
+	var checkboxes = $('#subdivGroup').find('.checkbox input');
 	for(var i = 0; i < checkboxes.length; i++) {
-		checkboxes[i].setAttribute("id", "subdiv_" + i);
+		checkboxes[i].setAttribute('id', 'subdiv_' + i);
 	};
 	
 	// Add switches after subdivGroup
@@ -170,30 +170,77 @@ $(document).ready(function() {
 	$('#subdivGroup div.shiny-options-group').after(buttonCol);
 	
 	// Move "reset subdivisions" action button inside the new button container
-	$("#resetSubdivs").appendTo($(".mun-btn-container"));
+	$('#resetSubdivs').appendTo($('.mun-btn-container'));
 });
 
 // Attribute and CSS operations in sidebar
 $(document).ready(function() {
 	// Remove "for" attributes from slider inputs in this crude way. It seems that 
-	// if for points to a non-existent value, the sidebar scrolls to top. Somewhat 
-	// annoying, get rid of it.
+	// if for points to a non-existent value, the sidebar scrolls to top. It is 	annoying, 
+	// get rid of it.
 	
 	// Add identifiers to all labels in sidebar
-	var all_labels = $("#sidebar").find("label.control-label");
+	var all_labels = $('#sidebar').find('label.control-label');
 	for(var i = 0; i < all_labels.length; i++) {
 		all_labels[i].setAttribute("id", "lbl_" + i);
 	};
 	// Remove for's
-	$("label#lbl_0").removeAttr("for");
-	$("label#lbl_1").removeAttr("for");
-	$("label#lbl_5").removeAttr("for");
-	$("label#lbl_10").removeAttr("for");
+	$('label#lbl_0').removeAttr('for');
+	$('label#lbl_1').removeAttr('for');
+	$('label#lbl_5').removeAttr('for');
+	$('label#lbl_10').removeAttr('for');
 	
 	// Additionally, find all on-off switches in Layer options and reduce their
 	// margin-bottoms.
-	var onoff = $(".onoff-container").find(".form-group.shiny-input-container");
+	var onoff = $('.onoff-container').find('.form-group.shiny-input-container');
 	for(var i = 0; i < onoff.length; i++) {
-		onoff[i].style.marginBottom = "6px";
+		onoff[i].style.marginBottom = '6px';
 	};
+});
+
+// Add tooltips to all items in all selectize dropdown menus. Do not provide tooltips for
+// "Y axis for barplot" dropdown menu for the reason its content fluctuates with user's
+// choices and that would make the implementation harder. Settle for this scope.
+$(document).one('shiny:idle', function(event) {
+	
+	// Define tooltip texts for dropdown menu items
+	var resp_arr = ['Searching for parking', 'Walking to destination'];
+	var expl_arr = ['Survey question: "How familiar are you with this postal code area?"', 
+	'Survey question: "What kind of parking spot do you usually take in this postal code area?"', 
+	'Survey question: "At what time of the day do you usually park in this postal code area?"', 
+	'Spatial data: "Artificial surfaces"', 
+	'Spatial data: "Zones of urban structure"', 
+	'Spatial data: "Subdivisions of municipalities"'];
+	var intmap_arr = ['Answer count', 
+	'Searching for parking, mean', 
+	'Searching for parking, median', 
+	'Walking to destination, mean', 
+	'Walking to destination, median', 
+	'Artificial surfaces'];
+	
+	$('.selectize-control').on('click', function (e) {
+
+		// Find the current dropdown menu
+		var drop_labels = $(this).children(1).find('.option');
+
+		// Add tooltip content to dropdown menu items
+		for(var j = 0; j < drop_labels.length; j++) {
+
+			var textcontent = drop_labels[j].innerHTML;
+			drop_labels[j].setAttribute('data-placement', 'right');
+			
+			if (drop_labels.length === 2) {
+				drop_labels[j].setAttribute('title', resp_arr[j]);
+				
+			} else if (!textcontent.includes('jenks') && drop_labels.length === 6) {
+				// Explanatory (ordinal) variable dropdown menu
+				drop_labels[j].setAttribute('title', expl_arr[j]);
+				
+			} else if (textcontent.includes('jenks') && drop_labels.length === 6) {
+				// Interactive map dropdown menu
+				drop_labels[j].setAttribute('title', intmap_arr[j]);
+			}
+			
+		};
+	});
 });
