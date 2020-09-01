@@ -2,7 +2,7 @@
 # Helsinki Region Travel Time comparison application
 # Helsinki Region Travel Time Matrix 2018 <--> My thesis survey results
 
-# 5.8.2020
+# 1.9.2020
 # Sampo Vesanen
 
 # Notes:
@@ -11,10 +11,10 @@
 #   breaks. This occurs inside CreateJenksColumn_b(), where a column presumably
 #   does not have enough unique values to create the amount of symbology classes
 #   the app requests. To counter this, reactive object checkSliderInput() is
-#   created. This handles the error, but not before the map view dissappears
+#   created. This handles the error, but not before the map view disappears
 #   and the error message is shown in top left corner. For now, I do not intend
 #   to fix this outcome which lasts on the user's screen maybe 15 seconds. The 
-#   only erroneous combination I've discovered so far is 02860 Lakisto, 
+#   only erroneous combination I've discovered so far is 02860 Siikajärvi, 
 #   ttm18_all_pct and 9-11 symbology classes.
 
 
@@ -494,13 +494,10 @@ server <- function(input, output, session) {
                       if_else(is.na(thesis_all_sfp), 0, thesis_all_sfp) - 
                       if_else(is.na(thesis_all_wtd), 0, thesis_all_wtd),
                     
-                    thesis_r_pct = (
-                      if_else(is.na(thesis_r_sfp), 0, thesis_r_sfp) + 
-                        if_else(is.na(thesis_r_wtd), 0, thesis_r_wtd)) / ttm_r_drivetime,
-                    
-                    thesis_m_pct = (
-                      if_else(is.na(thesis_m_sfp), 0, thesis_m_sfp) + 
-                        if_else(is.na(thesis_m_wtd), 0, thesis_m_wtd)) / ttm_m_drivetime,
+                    # Forgo if_else() here so that if thesis results sfp or wtd
+                    # are missing for a postal code, pct value also gets NA
+                    thesis_r_pct = (thesis_r_sfp + thesis_r_wtd) / ttm_r_drivetime,
+                    thesis_m_pct = (thesis_m_sfp + thesis_m_wtd) / ttm_m_drivetime,
                     
                     thesis_all_pct = (
                       if_else(is.na(thesis_all_sfp), 0, thesis_all_sfp) + 
@@ -537,40 +534,12 @@ server <- function(input, output, session) {
   # detected on input$fill_column. Use the named vector "vis_cols".
   equalBreaksColumn <- reactive({
     
-    inputdata <<- thisTTM()
-    res <<- CreateJenksColumn_b(inputdata, 
+    inputdata <- thisTTM()
+    res <- CreateJenksColumn_b(inputdata, 
                                vis_cols[[input$fill_column]], 
                                input$fill_column, input$classIntervals_n)
     res
   })
-
-  
-  # DEBUG
-  # classes <- suppressWarnings(
-  #   classInt::classIntervals(inputdata[, vis_cols[["ttm18_all_pct"]]], n = 11, style = "equal"))
-  # 
-  # # Make note that breaks are rounded to two decimal places. In some cases the
-  # # rounding would create non-unique breaks and this breaks the map view for the
-  # # active symbology. If two decimals is not enough, use three.
-  # result <- tryCatch({
-  #   inputdata %>%
-  #     dplyr::mutate(ttm18_all_pct := cut(!!rlang::sym("ttm_all_pct"),
-  #                                       unique(round(classes$brks, 2)),
-  #                                       include.lowest = T))
-  # },
-  # warning = function(cond) {
-  #   # The error that brings us here is:
-  #   # "Warning: Error in cut.default: 'breaks' are not unique"
-  #   return(
-  #     inputdata %>%
-  #       dplyr::mutate(ttm18_all_pct := cut(!!rlang::sym("ttm_all_pct"),
-  #                                         unique(round(classes$brks, 3)),
-  #                                         include.lowest = T))
-  #     )
-  #   }
-  # )
-  
-  
   
   
   
