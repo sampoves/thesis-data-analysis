@@ -566,15 +566,19 @@ records = pd.merge(records, postal[["zipcode", "artificial"]], on="zipcode")
 records = records.rename(columns={"artificial": "artificial_vals"})
 
 # Calculate jenks breaks for "artificial". Use breaks to reclassify values
-# in records. We will use code created by GitHub user Drewda. This is now
-# commented because calculation time takes about 20 seconds
-breaks = getJenksBreaks(records.artificial_vals.tolist(), 5)
+# in records. We will use code created by GitHub user Drewda. We will 
+# generate the breaks with postal, so that postal code values are not 
+# repeated over and over in the calculation.
+breaks = getJenksBreaks(postal.artificial.tolist(), 5)
 
 # See the breaks on plot
 plt.figure(figsize=(10, 8))
-hist1 = plt.hist(records.artificial_vals, bins=40, align="left", color="g")
+hist1 = plt.hist(postal.artificial, bins=100, align="left", color="g")
 for b in breaks:
     plt.vlines(b, ymin=0, ymax=max(hist1[0]))
+
+# new n=167: [0, 0.166, 0.443, 0.69, 0.896, 1.0]
+# old, sheesh, n=5216: [0, 0.385, 0.647, 0.815, 0.927, 1.0]
 
 # Reclassify using this clumsy nested np.where(). Use values calculated in
 # getJenksBreaks()
