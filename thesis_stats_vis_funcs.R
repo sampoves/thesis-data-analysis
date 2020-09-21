@@ -4,7 +4,7 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 23.5.2020
+# 21.9.2020
 
 # Initialise
 library(onewaytests)
