@@ -4,7 +4,7 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 21.9.2020
+# 23.9.2020
 #
 # This is an interactive tool for analysing the results of my research survey.
 
@@ -673,6 +673,7 @@ server <- function(input, output, session){
       theme(legend.title = element_text(size = 16),
             legend.text = element_text(size = 15),
             legend.spacing.y = unit(0.3, "cm"),
+            legend.position = c(0.94, 0.84),
             axis.text = element_text(size = 13),
             axis.title = element_text(size = 15),
             text = element_text(size = 13)) +
@@ -1173,7 +1174,7 @@ server <- function(input, output, session){
                      height = 0.01, 
                      transform = FALSE) +
       ggsn::north(inputdata, 
-                  location = "topright", 
+                  location = "topleft", 
                   scale = 0.04, 
                   symbol = 10)
     
@@ -1271,6 +1272,7 @@ server <- function(input, output, session){
       # Legend and caption settings
       theme(legend.title = element_text(size = 15),
             legend.text = element_text(size = 14),
+            legend.position = c(0.94, 0.84),
             plot.caption = element_text(size = 13, hjust = 0.5, face = "italic"))
     
 
@@ -1546,7 +1548,7 @@ ui <- shinyUI(fluidPage(
            "</div>",
            "</div>",
            "</div>",
-           "<p id='version-info'>Analysis app version 21.9.2020</p>"),
+           "<p id='version-info'>Analysis app version 23.9.2020</p>"),
       
       width = 3
     ),
