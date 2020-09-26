@@ -2,7 +2,7 @@
 // JavaScript for the travel time comparison app of my thesis results
 
 // "Parking of private cars and spatial accessibility in Helsinki Capital Region" 
-// by Sampo Vesanen, 5.8.2020
+// by Sampo Vesanen, 26.9.2020
 
 
 
@@ -354,8 +354,8 @@ $(document).one('shiny:idle', function(event) {
 			var this_id = '#drop_' + i;
 
 			// these attributes add tooltips to dropdown items.
-			$(this_id).attr("data-placement", "right");
-			$(this_id).attr("title", symbology_arr[i]);
+			$(this_id).attr('data-placement', 'right');
+			$(this_id).attr('title', symbology_arr[i]);
 			
 			if (i >= 0 && i <= 2) {
 				$(this_id).prepend("<i class='dropbar'></i>");
@@ -371,17 +371,23 @@ $(document).one('shiny:idle', function(event) {
 		for(var i = 0; i < optgroup_lbls.length; i++) {
 			optgroup_lbls[i].setAttribute("id", "optlbl_" + i);
 		};
+		// "Visualise data (Equal interval)"
 		$('#optlbl_0').prepend("<i class='icon database-grey'></i>");
 		$('#optlbl_1').prepend("<i class='icon poll-grey'></i>");
 		$('#optlbl_2').prepend("<i class='icon exchange-grey'></i>");
+		// "Color scheme"
+		// This is buggy right now, fill icons do not appear on first open of dropdown
+		// menu
+		$('#optlbl_3').prepend("<i class='icon fill-grey'></i>");
+		$('#optlbl_4').prepend("<i class='icon fill-grey'></i>");
 	});
 });
 
 
 
-// ---------------------------------------------------- //
-// Signal when fill_column does not respond to a origin //
-// ---------------------------------------------------- //
+// ------------------------------------------------------ //
+// Message when fill_column does not respond to an origin //
+// ------------------------------------------------------ //
 $(document).on('shiny:idle', function(event) {
 	
 	var fillcol = $('#fill_column').val();
