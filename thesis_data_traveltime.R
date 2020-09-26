@@ -12,7 +12,8 @@
 #   size
 # - Of minor importance: The JavaScript additions to dropdown menus are quite
 #   shoddy. User can see that they are added each time menu opens. Also, fill
-#   icons in "color scheme" menu do not appear on the first opening.
+#   icons in "color scheme" menu do not appear on the first opening. In fact,
+#   they only appear after first opening "visualise data" menu once.
 # - There is a rare issue where the application complains about non-unique 
 #   breaks. This occurs inside CreateJenksColumn_b(), where a column presumably
 #   does not have enough unique values to create the amount of symbology classes
@@ -519,7 +520,7 @@ server <- function(input, output, session) {
                             thesis_all_pct), 
                        ~round(., 2)) %>%
       
-      # Add TTM18/thesis comparison columns
+      # Add thesis-TTM18 comparison columns
       dplyr::mutate(comp_r_sfp = thesis_r_sfp / ttm_sfp,
                     comp_m_sfp = thesis_m_sfp / ttm_sfp,
                     comp_all_sfp = thesis_all_sfp / ttm_sfp,
@@ -542,12 +543,11 @@ server <- function(input, output, session) {
   
   
   # equalBreaksColumn() calculates new class intervals when an input change is
-  # detected on input$fill_column. Use the named vector "vis_cols".
+  # detected on input$fill_column or amount of classes is changed in 
+  # input$classIntervals_n. Use the named vector "vis_cols".
   equalBreaksColumn <- reactive({
     
     inputdata <- thisTTM()
-    
-    # Check for locked classes
     res <- CreateJenksColumn_b(inputdata, 
                                vis_cols[[input$fill_column]], 
                                input$fill_column, 
@@ -563,7 +563,7 @@ server <- function(input, output, session) {
   output$researcharea <- renderGirafe({
     
     # Reactive value: Insert equal breaks column for ggplot mapping.
-    inputdata <<- equalBreaksColumn()
+    inputdata <- equalBreaksColumn()
     
     # Get the origin zipcode for mapping
     originzip <- postal_f[postal_f["zipcode"] == validate_zipcode(), ]
@@ -964,13 +964,6 @@ ui <- shinyUI(
           max = 11, 
           value = 11),
         
-        HTML("<label class='control-label onoff-label' for='locked_breaks'>",
-             "Compareable colours: lock class breaks for all variables of the", 
-             "same type</label>"),
-        shinyWidgets::switchInput(
-          inputId = "locked_breaks",
-          size = "mini",
-          value = FALSE),
         HTML("</div>",
              "</div>"),
         HTML("</div>"),
