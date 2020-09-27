@@ -2,7 +2,7 @@
 // JavaScript for the travel time comparison app of my thesis results
 
 // "Parking of private cars and spatial accessibility in Helsinki Capital Region" 
-// by Sampo Vesanen, 27.9.2020
+// by Sampo Vesanen, 28.9.2020
 
 
 
@@ -336,12 +336,16 @@ $(document).one('shiny:idle', function(event) {
 	'Compare datasets, midday, percentage',
 	'Compare datasets, all values, percentage'];
 	
-	// Add tooltip text for comparable colors switch
-	$('#comparable').attr('data-placement', 'right');
-	$('#comparable').attr('title', 'If "ON", classes intervals will persist for all \nrush-mid-all trios and all postal code areas.\nFor example, you can select rush, midday or all values\nversion of ttm18_drivetime and any origin postal code \narea and the intervals will remain the same.\nIf "OFF", classes intervals will be recalculated when\nany parameter is changed.');
+	// Add tooltip text for comparable colors drop down menu
+	var locked_arr = ['Feature is disabled. A change in any parameter triggers recalculation of\nclass intervals.', 
+	'Feature is in use for rush hour-midday-all values trios. Class\ninterval recalculation will trigger if origin postal code area or\nparameter type, for example from compare_drivetime to\nttm18_avg, is changed.', 
+	'Feature is in use for all postal code areas and rush hour-midday-all values\ntrios. Class interval recalculation will only trigger when parameter type is\nchanged, for example from ttm_drivetime to msc_pct.'];
+	
+	//$('#comparable').attr('data-placement', 'right');
+	//$('#comparable').attr('title', 'If "ON", classes intervals will persist for all \nrush-mid-all trios and all postal code areas.\nFor example, you can select rush, midday or all values\nversion of ttm18_drivetime and any origin postal code \narea and the intervals will remain the same.\nIf "OFF", classes intervals will be recalculated when\nany parameter is changed.');
 	
 	// Disable mobile keyboard on selectize.js dropdown menus
-	$('.selectize-input input').attr('readonly','readonly');
+	$('.selectize-input input').attr('readonly', 'readonly');
 	
 	$('.selectize-input').on('click', function (e) {
 		// Find only the first dropdown menu, the symbology selection
@@ -384,6 +388,26 @@ $(document).one('shiny:idle', function(event) {
 		// menu
 		$('#optlbl_3').prepend("<i class='icon fill-grey'></i>");
 		$('#optlbl_4').prepend("<i class='icon fill-grey'></i>");
+	});
+	
+	// Add helping tooltips to locked class intervals dropdown menu
+	$('.selectize-input').eq(2).on('click', function (e) {
+		var locked_lbls = $('.selectize-dropdown').eq(2).find('.option');
+		
+		// Add ids for dropdown items
+		for(var i = 0; i < locked_lbls.length; i++) {
+			locked_lbls[i].setAttribute("id", "lock_" + i);
+		};
+		
+		// add tooltip texts to locked class intervals dropdown menu
+		for(var i = 0; i < locked_lbls.length; i++) {
+			
+			var this_id = '#lock_' + i;
+			
+			// these attributes add tooltips to dropdown items.
+			$(this_id).attr('data-placement', 'right');
+			$(this_id).attr('title', locked_arr[i]);
+		};
 	});
 });
 

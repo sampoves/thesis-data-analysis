@@ -2,7 +2,7 @@
 # Helsinki Region Travel Time comparison application
 # Helsinki Region Travel Time Matrix 2018 <--> My thesis survey results
 
-# 27.9.2020
+# 28.9.2020
 # Sampo Vesanen
 
 
@@ -48,7 +48,7 @@ library(ggspatial)
 
 
 # App version
-app_v <- "0067.postal (27.9.2020)"
+app_v <- "0068.postal (28.9.2020)"
 
 # Working directory
 wd <- "C:/Sampon/Maantiede/Master of the Universe"
@@ -529,7 +529,7 @@ server <- function(input, output, session) {
   
   
   # Get correct locked classes value range out of this reactive object
-  locked_class_breaks <- shiny::reactive({
+  locked_class_breaks_all <- shiny::reactive({
     
     if(input$fill_column %in% c("ttm18_r_avg", "ttm18_m_avg", "ttm18_all_avg")) {
       ttm_avg_vals
@@ -628,27 +628,50 @@ server <- function(input, output, session) {
   # equalIntervalsColumn() calculates new class intervals when an input change is
   # detected on input$fill_column or amount of classes is changed in 
   # input$classIntervals_n. 
-  # Also check the state of the locked_breaks switch, as different behaviour
+  # Also check the state of the locked_breaks dropdown menu, as different behaviour
   # is required from CreateEqualColumn() based on the state.
   equalIntervalsColumn <- reactive({
     
-    inputdata <- thisTTM()
+    inputdata <<- thisTTM()
     
-    # Check for locked classes switch state
-    if(input$locked_breaks == FALSE) {
+    # Check for locked classes dropdown menu state
+    if(input$locked_breaks == "off") {
       
       # Normal behaviour
       res <- CreateEqualColumn(inputdata, 
                                vis_cols[[input$fill_column]], 
                                input$fill_column, 
                                input$classIntervals_n)
-    } else {
+      
+    } else if (input$locked_breaks == "params") {
+      
+      # Get only the three columns which belong to the current trio of rush hour,
+      # midday, and all values. use the result of columnFinder() to get correct
+      # column names out of named vector vis_cols
+      currentColumns <- columnFinder(input$fill_column, names(vis_cols))
+      thisDf <- inputdata[, vis_cols[currentColumns]]
+      
+      # Calculate the value range from smallest value to largest and use
+      # "theseVals" in CreateEqualColumn() function
+      thisRange <- range(c(thisDf[, 1], thisDf[, 2], thisDf[, 3]), na.rm = TRUE)
+      theseVals <- seq(from = thisRange[1], 
+                      to = thisRange[2], 
+                      length.out = nrow(postal_f))
+      
+      res <- CreateEqualColumn(inputdata,
+                               vis_cols[[input$fill_column]],
+                               input$fill_column,
+                               input$classIntervals_n,
+                               theseVals)
+      
+    } else if (input$locked_breaks == "all") {
+      
       # User has selected locked classes
       res <- CreateEqualColumn(inputdata,
                                vis_cols[[input$fill_column]],
                                input$fill_column,
                                input$classIntervals_n,
-                               locked_class_breaks())
+                               locked_class_breaks_all())
     }
     res
   })
@@ -675,18 +698,38 @@ server <- function(input, output, session) {
       gsub(",", " \U2012 ", .)
     legendname <- GetLegendName(input$fill_column, originzip)
 
-    # The sum of individual factor levels. Check for locked classes switch state.
+    # The sum of individual factor levels. Check for locked classes menu state.
     # If classes breaks are locked, additional data is needed to calculate
     # frequency of class occurrence.
-    if(input$locked_breaks == FALSE) {
+    if(input$locked_breaks == "off") {
+      
+      # Normal behaviour
       l_labels <- AddLevelCounts(inputdata, vis_cols[[input$fill_column]], 
                                  input$fill_column, input$classIntervals_n, 
                                  l_labels)
-    } else {
-      # Classes are locked
+      
+    } else if (input$locked_breaks == "params") {
+      
+      # Parameters
+      # This portion of the code is a copy from above, the reactive object
+      # "equalIntervalsColumn()". This should be put to a function of its own.
+      currentColumns <- columnFinder(input$fill_column, names(vis_cols))
+      thisDf <- inputdata[, vis_cols[currentColumns]]
+      thisRange <- range(c(thisDf[, 1], thisDf[, 2], thisDf[, 3]), na.rm = TRUE)
+      theseVals <- seq(from = thisRange[1], 
+                       to = thisRange[2], 
+                       length.out = nrow(postal_f))
+      
       l_labels <- AddLevelCounts(inputdata, vis_cols[[input$fill_column]], 
                                  input$fill_column, input$classIntervals_n, 
-                                 l_labels, locked_class_breaks())
+                                 l_labels, theseVals)
+      
+    } else if (input$locked_breaks == "all") {
+      
+      # Classes are locked, parameters and all postal code areas
+      l_labels <- AddLevelCounts(inputdata, vis_cols[[input$fill_column]], 
+                                 input$fill_column, input$classIntervals_n, 
+                                 l_labels, locked_class_breaks_all())
     }
     
     # Origin id legend label
@@ -1031,7 +1074,7 @@ ui <- shinyUI(
              "<div id='contents'>"),
         selectInput(
           inputId = "fill_column",
-          label = "Visualise data (equal interval)",
+          label = "Visualise data (equal intervals)",
           selected = "ttm18_m_avg",
           choices = list(
             `Travel Time Matrix 2018 private car data` = 
@@ -1078,12 +1121,16 @@ ui <- shinyUI(
           value = 11),
         
         HTML("<label id='comparable' class='control-label onoff-label' for='locked_breaks'>",
-             "Comparable colour schemes: lock class breaks for variables of the", 
-             "same type</label>"),
-        shinyWidgets::switchInput(
+             "Comparable colours: lock class breaks for variables of the same", 
+             "type</label>"),
+        selectInput(
           inputId = "locked_breaks",
-          size = "mini",
-          value = FALSE),
+          label = NULL,
+          selected = "off",
+          choices = list("Off" = "off",
+                         "Parameters" = "params",
+                         "Parameters and postal code areas" = "all")),
+        
         HTML("</div>",
              "</div>"),
         HTML("</div>"),

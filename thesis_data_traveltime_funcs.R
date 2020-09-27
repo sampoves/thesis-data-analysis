@@ -4,7 +4,7 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 27.9.2020
+# 28.9.2020
 
 
 
@@ -323,6 +323,30 @@ GetCentroids <- function(fortified, unique_id, nominator) {
   if (is.factor(result$lat) == TRUE) {
     result$lat <- as.numeric(levels(result$lat))[result$lat]
   }
+  
+  return(result)
+}
+
+
+
+str_start <- function (string,char) {
+  substr(string, 1, char)
+}
+
+str_end <- function (string, char) {
+  substr(string, nchar(string) - (char - 1), nchar(string))
+}
+
+columnFinder <- function(columnname, compare_vector) {
+  
+  # Insert a column name in inputdata, receive all three columns of the same
+  # type. To be used with locked class breaks option "params". In this script,
+  # "compare_vector" is names(vis_cols).
+  
+  bool <- 
+    grepl(str_start(columnname, 3), compare_vector) & 
+    grepl(str_end(columnname, 3), compare_vector)
+  result <- compare_vector[bool]
   
   return(result)
 }
