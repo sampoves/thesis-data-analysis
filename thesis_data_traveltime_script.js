@@ -341,9 +341,6 @@ $(document).one('shiny:idle', function(event) {
 	'Feature is in use for rush hour-midday-all values trios. Class\ninterval recalculation will trigger if origin postal code area or\nparameter type, for example from compare_drivetime to\nttm18_avg, is changed.', 
 	'Feature is in use for all postal code areas and rush hour-midday-all values\ntrios. Class interval recalculation will only trigger when parameter type is\nchanged, for example from ttm_drivetime to msc_pct.'];
 	
-	//$('#comparable').attr('data-placement', 'right');
-	//$('#comparable').attr('title', 'If "ON", classes intervals will persist for all \nrush-mid-all trios and all postal code areas.\nFor example, you can select rush, midday or all values\nversion of ttm18_drivetime and any origin postal code \narea and the intervals will remain the same.\nIf "OFF", classes intervals will be recalculated when\nany parameter is changed.');
-	
 	// Disable mobile keyboard on selectize.js dropdown menus
 	$('.selectize-input input').attr('readonly', 'readonly');
 	
