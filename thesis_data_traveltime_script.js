@@ -2,7 +2,7 @@
 // JavaScript for the travel time comparison app of my thesis results
 
 // "Parking of private cars and spatial accessibility in Helsinki Capital Region" 
-// by Sampo Vesanen, 26.9.2020
+// by Sampo Vesanen, 27.9.2020
 
 
 
@@ -335,6 +335,10 @@ $(document).one('shiny:idle', function(event) {
 	'Compare datasets, rush hour, percentage',
 	'Compare datasets, midday, percentage',
 	'Compare datasets, all values, percentage'];
+	
+	// Add tooltip text for comparable colors switch
+	$('#comparable').attr('data-placement', 'right');
+	$('#comparable').attr('title', 'If "ON", classes intervals will persist for all \nrush-mid-all trios and all postal code areas.\nFor example, you can select rush, midday or all values\nversion of ttm18_drivetime and any origin postal code \narea and the intervals will remain the same.\nIf "OFF", classes intervals will be recalculated when\nany parameter is changed.');
 	
 	// Disable mobile keyboard on selectize.js dropdown menus
 	$('.selectize-input input').attr('readonly','readonly');

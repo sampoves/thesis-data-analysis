@@ -2,7 +2,7 @@
 # Helsinki Region Travel Time comparison application
 # Helsinki Region Travel Time Matrix 2018 <--> My thesis survey results
 
-# 26.9.2020
+# 27.9.2020
 # Sampo Vesanen
 
 
@@ -48,7 +48,7 @@ library(ggspatial)
 
 
 # App version
-app_v <- "0066.postal (26.9.2020)"
+app_v <- "0067.postal (27.9.2020)"
 
 # Working directory
 wd <- "C:/Sampon/Maantiede/Master of the Universe"
@@ -334,7 +334,9 @@ vis_cols <- c("ttm18_r_avg" = "ttm_r_avg",
 
 
 
-#### 3 Prepare reactive fetch of TTM18 data ----------------------------------
+#### 3 fst operations ----------------------------------------------------------
+
+#### 3.1 Prepare reactive fetch of TTM18 data ----------------------------------
 
 # NB! The execution of this code will fail at this point if TTM18 data is not 
 # converted to fst. Please make sure you have a local copy of the fst format
@@ -345,6 +347,119 @@ all_postal_fst <- list.files(path = fst_postal_fp,
                              pattern = ".fst$",
                              recursive = TRUE,
                              full.names = TRUE)
+
+
+
+### 3.2 Prepare values for locked up class breaks ------------------------------
+
+# In this section prepare all values for the case where map symbology needs to
+# remain the same with different settings.
+
+# Get all possible datasets from fst files, then group by destination postal
+# code area, and get only the first row for each zipcode
+
+for (i in 1:length(all_postal_fst)) {
+  if (i == 1) {
+    # As these fst files are full of multiples, select the first row of each fst 
+    # destination postal code areas
+    bigdf <-
+      Reactive_TTM_fetch(all_postal_fst[i], thesisdata, postal_f) %>%
+      dplyr::group_by(id) %>%
+      dplyr::filter(row_number() == 1)
+  } else {
+    thisRound <-
+      Reactive_TTM_fetch(all_postal_fst[i], thesisdata, postal_f) %>%
+      dplyr::group_by(id) %>%
+      dplyr::filter(row_number() == 1)
+    bigdf <- rbind(bigdf, thisRound)
+  }
+}
+
+# Get value ranges of the column groups
+ttm_avg_range <- 
+  range(c(bigdf$ttm_r_avg, bigdf$ttm_m_avg, bigdf$ttm_all_avg), 
+        na.rm = TRUE)
+ttm_drivetime_range <- 
+  range(c(bigdf$ttm_r_drivetime, bigdf$ttm_m_drivetime, bigdf$ttm_all_drivetime), 
+        na.rm = TRUE)
+ttm_pct_range <- 
+  range(c(bigdf$ttm_r_pct, bigdf$ttm_m_pct, bigdf$ttm_all_pct), 
+        na.rm = TRUE)
+
+thesis_sfp_range <- 
+  range(c(bigdf$thesis_r_sfp, bigdf$thesis_m_sfp, bigdf$thesis_all_sfp), 
+        na.rm = TRUE)
+thesis_wtd_range <- 
+  range(c(bigdf$thesis_r_wtd, bigdf$thesis_m_wtd, bigdf$thesis_all_wtd), 
+        na.rm = TRUE)
+thesis_drivetime_range <- 
+  range(c(bigdf$thesis_r_drivetime, bigdf$thesis_m_drivetime, bigdf$thesis_all_drivetime),
+        na.rm = TRUE)
+thesis_pct_range <- 
+  range(c(bigdf$thesis_r_pct, bigdf$thesis_m_pct, bigdf$thesis_all_pct), 
+        na.rm = TRUE)
+
+comp_sfp_range <- 
+  range(c(bigdf$comp_r_sfp, bigdf$comp_m_sfp, bigdf$comp_all_sfp), 
+        na.rm = TRUE)
+comp_wtd_range <- 
+  range(c(bigdf$comp_r_wtd, bigdf$comp_m_wtd, bigdf$comp_all_wtd), 
+        na.rm = TRUE)
+comp_drivetime_range <- 
+  range(c(bigdf$comp_r_drivetime, bigdf$comp_m_drivetime, bigdf$comp_all_drivetime), 
+        na.rm = TRUE)
+comp_pct_range <- 
+  range(c(bigdf$comp_r_pct, bigdf$comp_m_pct, bigdf$comp_all_pct), 
+        na.rm = TRUE)
+
+# Create sequences from column ranges. These will be used to create the equal
+# interval classes.
+ttm_avg_vals <- 
+  seq(from = ttm_avg_range[1],
+      to = ttm_avg_range[2],
+      length.out = nrow(postal_f))
+ttm_drivetime_vals <- 
+  seq(from = ttm_drivetime_range[1],
+      to = ttm_drivetime_range[2],
+      length.out = nrow(postal_f))
+ttm_pct_vals <- 
+  seq(from = ttm_pct_range[1],
+      to = ttm_pct_range[2],
+      length.out = nrow(postal_f))
+
+thesis_sfp_vals <- 
+  seq(from = thesis_sfp_range[1],
+      to = thesis_sfp_range[2],
+      length.out = nrow(postal_f))
+thesis_wtd_vals <- 
+  seq(from = thesis_wtd_range[1],
+      to = thesis_wtd_range[2],
+      length.out = nrow(postal_f))
+thesis_drivetime_vals <- 
+  seq(from = thesis_drivetime_range[1],
+      to = thesis_drivetime_range[2],
+      length.out = nrow(postal_f))
+thesis_pct_vals <- 
+  seq(from = thesis_pct_range[1],
+      to = thesis_pct_range[2],
+      length.out = nrow(postal_f))
+
+comp_sfp_vals <- 
+  seq(from = comp_sfp_range[1],
+      to = comp_sfp_range[2],
+      length.out = nrow(postal_f))
+comp_wtd_vals <- 
+  seq(from = comp_wtd_range[1],
+      to = comp_wtd_range[2],
+      length.out = nrow(postal_f))
+comp_drivetime_vals <- 
+  seq(from = comp_drivetime_range[1],
+      to = comp_drivetime_range[2],
+      length.out = nrow(postal_f))
+comp_pct_vals <- 
+  seq(from = comp_pct_range[1],
+      to = comp_pct_range[2],
+      length.out = nrow(postal_f))
 
 
 
@@ -413,6 +528,53 @@ server <- function(input, output, session) {
   })
   
   
+  # Get correct locked classes value range out of this reactive object
+  locked_class_breaks <- shiny::reactive({
+    
+    if(input$fill_column %in% c("ttm18_r_avg", "ttm18_m_avg", "ttm18_all_avg")) {
+      ttm_avg_vals
+      
+    } else if (input$fill_column %in% c("msc_r_sfp", "msc_m_sfp", "msc_all_sfp")) {
+      thesis_sfp_vals
+      
+    } else if (input$fill_column %in% c("msc_r_wtd", "msc_m_wtd", "msc_all_wtd")) {
+      thesis_wtd_vals
+      
+    } else if (input$fill_column %in% c("ttm18_r_drivetime", "ttm18_m_drivetime", 
+                                        "ttm18_all_drivetime")) {
+      ttm_drivetime_vals
+      
+    } else if (input$fill_column %in% c("msc_r_drivetime", "msc_m_drivetime", 
+                                        "msc_all_drivetime")) {
+      thesis_drivetime_vals
+      
+    } else if (input$fill_column %in% c("ttm18_r_pct", "ttm18_m_pct", 
+                                        "ttm18_all_pct")) {
+      ttm_pct_vals
+      
+    } else if (input$fill_column %in% c("msc_r_pct", "msc_m_pct", 
+                                        "msc_all_pct")) {
+      thesis_pct_vals
+      
+    } else if (input$fill_column %in% c("compare_r_sfp", "compare_m_sfp", 
+                                        "compare_all_sfp")) {
+      comp_sfp_vals
+      
+    } else if (input$fill_column %in% c("compare_r_wtd", "compare_m_wtd", 
+                                        "compare_all_wtd")) {
+      comp_wtd_vals
+      
+    } else if (input$fill_column %in% c("compare_r_drivetime", "compare_m_drivetime", 
+                                        "compare_all_drivetime")) {
+      comp_drivetime_vals
+      
+    } else if (input$fill_column %in% c("compare_r_pct", "compare_m_pct", 
+                                        "compare_all_pct")) {
+      comp_pct_vals
+    }
+  })
+  
+  
   # helper_output_zip() and helper_output_symbology(): Print helpful text for 
   # the user
   helper_output_zip <- shiny::reactive({
@@ -454,104 +616,40 @@ server <- function(input, output, session) {
     #### Fetch aggregated TTM18 data ---
 
     # Use validate_zipcode() to find the filepath for the needed aggregated
-    # TTM18 fst file
+    # TTM18 fst file. Reactive_TTM_fetch() then lifts the heavy load.
     postal_loc <- grepl(validate_zipcode(), all_postal_fst, fixed = TRUE)
     this_fp <- all_postal_fst[postal_loc]
+    result <- Reactive_TTM_fetch(this_fp, thesisdata, postal_f)
     
-    result <-
-      fst::read_fst(this_fp, as.data.table = TRUE) %>%
-      
-      dplyr::left_join(., thesisdata, by = "zipcode") %>%
-      dplyr::left_join(postal_f, ., by = "zipcode") %>%
-      
-      # Generate drivetime (min) and pct (%) columns for TTM18 data. 
-      # NB! Use a mean of r, m, and sl for all the columns "sl".
-      dplyr::mutate(ttm_all_avg = rowMeans(select(., c(ttm_r_avg, ttm_m_avg, ttm_sl_avg))),
-                    ttm_r_drivetime = ttm_r_avg - ttm_sfp - ttm_wtd,
-                    ttm_m_drivetime = ttm_m_avg - ttm_sfp - ttm_wtd,
-                    ttm_all_drivetime = ttm_all_avg - ttm_sfp - ttm_wtd,
-                    ttm_r_pct = (ttm_sfp + ttm_wtd) / ttm_r_avg,
-                    ttm_m_pct = (ttm_sfp + ttm_wtd) / ttm_m_avg,
-                    ttm_all_pct = (ttm_sfp + ttm_wtd) / ttm_all_avg) %>%
-      dplyr::mutate_at(vars(ttm_all_avg, ttm_all_drivetime, ttm_r_pct, ttm_m_pct, ttm_all_pct), 
-                       ~round(., 2)) %>%
-      
-      # If zipcode is NA, then convert all calculated data to NA as well
-      dplyr::mutate(ttm_r_avg = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_r_avg),
-                    ttm_m_avg = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_m_avg),
-                    ttm_sl_avg = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_sl_avg),
-                    ttm_all_avg = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_all_avg),
-                    ttm_sfp = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_sfp),
-                    ttm_wtd = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_wtd),
-                    ttm_r_drivetime = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_r_drivetime),
-                    ttm_m_drivetime = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_m_drivetime),
-                    ttm_all_drivetime = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_all_drivetime),
-                    ttm_r_pct = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_r_pct),
-                    ttm_m_pct = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_m_pct),
-                    ttm_all_pct = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_all_pct)) %>%
-      dplyr::mutate_at(vars(ttm_r_avg, ttm_m_avg, ttm_all_avg),
-                       ~dplyr::na_if(., -1)) %>%
-      
-      # Add the rest of thesis_ columns. with if_else() change possible NA's to 
-      # zeros so that calculations are not rendered NA
-      dplyr::mutate(thesis_r_drivetime = ttm_r_drivetime - 
-                      if_else(is.na(thesis_r_sfp), 0, thesis_r_sfp) - 
-                      if_else(is.na(thesis_r_wtd), 0, thesis_r_wtd),
-                    
-                    thesis_m_drivetime = ttm_m_drivetime - 
-                      if_else(is.na(thesis_m_sfp), 0, thesis_m_sfp) - 
-                      if_else(is.na(thesis_m_wtd), 0, thesis_m_wtd),
-                    
-                    thesis_all_drivetime = ttm_all_drivetime - 
-                      if_else(is.na(thesis_all_sfp), 0, thesis_all_sfp) - 
-                      if_else(is.na(thesis_all_wtd), 0, thesis_all_wtd),
-                    
-                    # Forgo if_else() here so that if thesis results sfp or wtd
-                    # are missing for a postal code, pct value also gets NA
-                    thesis_r_pct = (thesis_r_sfp + thesis_r_wtd) / ttm_r_drivetime,
-                    thesis_m_pct = (thesis_m_sfp + thesis_m_wtd) / ttm_m_drivetime,
-                    
-                    thesis_all_pct = (
-                      if_else(is.na(thesis_all_sfp), 0, thesis_all_sfp) + 
-                        if_else(is.na(thesis_all_wtd), 0, thesis_all_wtd)) / ttm_all_drivetime) %>%
-      
-      dplyr::mutate_at(vars(thesis_r_drivetime, thesis_m_drivetime, 
-                            thesis_all_drivetime, thesis_r_pct, thesis_m_pct, 
-                            thesis_all_pct), 
-                       ~round(., 2)) %>%
-      
-      # Add thesis-TTM18 comparison columns
-      dplyr::mutate(comp_r_sfp = thesis_r_sfp / ttm_sfp,
-                    comp_m_sfp = thesis_m_sfp / ttm_sfp,
-                    comp_all_sfp = thesis_all_sfp / ttm_sfp,
-                    comp_r_wtd = thesis_r_wtd / ttm_wtd,
-                    comp_m_wtd = thesis_m_wtd / ttm_wtd,
-                    comp_all_wtd = thesis_all_wtd / ttm_wtd,
-                    comp_r_drivetime = thesis_r_drivetime / ttm_r_drivetime,
-                    comp_m_drivetime = thesis_m_drivetime / ttm_m_drivetime,
-                    comp_all_drivetime = thesis_all_drivetime / ttm_all_drivetime,
-                    comp_r_pct = thesis_r_pct / ttm_r_pct,
-                    comp_m_pct = thesis_m_pct / ttm_m_pct,
-                    comp_all_pct = thesis_all_pct / ttm_all_pct) %>%
-      dplyr::mutate_at(vars(comp_r_sfp, comp_m_sfp, comp_all_sfp, comp_r_wtd,
-                            comp_m_wtd, comp_all_wtd, comp_r_drivetime, 
-                            comp_m_drivetime, comp_all_drivetime, comp_r_pct,
-                            comp_m_pct, comp_all_pct), 
-                       ~round(., 2))
     result
   })
   
   
   # equalBreaksColumn() calculates new class intervals when an input change is
   # detected on input$fill_column or amount of classes is changed in 
-  # input$classIntervals_n. Use the named vector "vis_cols".
+  # input$classIntervals_n. 
+  # Also check the state of the locked_breaks switch, as different behaviour
+  # is required from CreateJenksColumn_b() based on the state.
   equalBreaksColumn <- reactive({
     
     inputdata <- thisTTM()
-    res <- CreateJenksColumn_b(inputdata, 
-                               vis_cols[[input$fill_column]], 
-                               input$fill_column, 
-                               input$classIntervals_n)
+    
+    # Check for locked classes switch state
+    if(input$locked_breaks == FALSE) {
+      
+      # Normal behaviour
+      res <- CreateJenksColumn_b(inputdata, 
+                                 vis_cols[[input$fill_column]], 
+                                 input$fill_column, 
+                                 input$classIntervals_n)
+    } else {
+      # User has selected locked classes
+      res <- CreateJenksColumn_b(inputdata,
+                                 vis_cols[[input$fill_column]],
+                                 input$fill_column,
+                                 input$classIntervals_n,
+                                 locked_class_breaks())
+    }
     res
   })
   
@@ -577,10 +675,19 @@ server <- function(input, output, session) {
       gsub(",", " \U2012 ", .)
     legendname <- GetLegendName(input$fill_column, originzip)
 
-    # The sum of individual factor levels
-    l_labels <- AddLevelCounts(inputdata, vis_cols[[input$fill_column]], 
-                               input$fill_column, input$classIntervals_n, 
-                               l_labels)
+    # The sum of individual factor levels. Check for locked classes switch state.
+    # If classes breaks are locked, additional data is needed to calculate
+    # frequency of class occurrence.
+    if(input$locked_breaks == FALSE) {
+      l_labels <- AddLevelCounts(inputdata, vis_cols[[input$fill_column]], 
+                                 input$fill_column, input$classIntervals_n, 
+                                 l_labels)
+    } else {
+      # Classes are locked
+      l_labels <- AddLevelCounts(inputdata, vis_cols[[input$fill_column]], 
+                                 input$fill_column, input$classIntervals_n, 
+                                 l_labels, locked_class_breaks())
+    }
     
     # Origin id legend label
     o_label <- setNames("purple",
@@ -642,26 +749,33 @@ server <- function(input, output, session) {
                         drop = FALSE) +
       
       # Define map extent manually
-      coord_fixed(xlim = c(min(inputdata$lon) + 1300, max(inputdata$lon) - 1300),
-                  ylim = c(min(inputdata$lat) + 1100, max(inputdata$lat) - 1100)) +
+      coord_fixed(xlim = c(min(inputdata$lon) + 1500, max(inputdata$lon) - 1500),
+                  ylim = c(min(inputdata$lat) + 1300, max(inputdata$lat) - 1300)) +
       
-      # Scale bar and north arrow
-      ggsn::scalebar(inputdata, 
+      # Scale bar and north arrow. Because we defined visible map extent above,
+      # manually set scalebar location.
+      ggsn::scalebar(data = inputdata,
                      dist_unit = "km",
                      dist = 2,
                      st.dist = 0.01,
-                     st.size = 4, 
+                     st.size = 4.75, 
                      height = 0.01, 
-                     transform = FALSE) +
+                     transform = FALSE,
+                     anchor = c(
+                       x = max(inputdata$lon) - 1000 , 
+                       y = min(inputdata$lat) + 400)) +
       
       ggsn::north(inputdata, 
                   location = "topright", 
                   scale = 0.04, 
                   symbol = 10) +
       
-      # Legend settings
+      # Legend settings. Remove axis titles, text, and ticks.
       theme(legend.title = element_text(size = 15),
-            legend.text = element_text(size = 14))
+            legend.text = element_text(size = 14),
+            axis.title = element_blank(),
+            axis.text = element_blank(),
+            axis.ticks = element_blank())
     
     
     
@@ -823,9 +937,7 @@ server <- function(input, output, session) {
     # to global environment for download. Use larger fonts.
     compare_out <<- g + 
       theme(legend.title = element_text(size = 17),
-            legend.text = element_text(size = 16),
-            axis.text = element_text(size = 14),
-            axis.title = element_text(size = 16))
+            legend.text = element_text(size = 16))
     
     
     # Render comparison map
@@ -964,6 +1076,13 @@ ui <- shinyUI(
           max = 11, 
           value = 11),
         
+        HTML("<label id='comparable' class='control-label onoff-label' for='locked_breaks'>",
+             "Comparable colour schemes: lock class breaks for variables of the", 
+             "same type</label>"),
+        shinyWidgets::switchInput(
+          inputId = "locked_breaks",
+          size = "mini",
+          value = FALSE),
         HTML("</div>",
              "</div>"),
         HTML("</div>"),

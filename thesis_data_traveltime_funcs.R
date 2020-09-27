@@ -4,7 +4,7 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 26.9.2020
+# 27.9.2020
 
 
 
@@ -33,7 +33,8 @@ ReadAndClean <- function(fp) {
 
 
 
-CreateJenksColumn_b <- function(inputDf, datacol, newcolname, classes_n = 11) {
+CreateJenksColumn_b <- function(inputDf, datacol, newcolname, classes_n = 11, 
+                                lockedclasses) {
   
   # Function name _b refers to this function being the variant B of the function
   # CreateJenksColumn in thesis_data_vis.R.
@@ -43,12 +44,25 @@ CreateJenksColumn_b <- function(inputDf, datacol, newcolname, classes_n = 11) {
   # enable parameters as column names in dplyr, apply !! and := for the left
   # side and for the right side !!rlang::sym().
   #
+  # Provide possibility to select how classes breaks are created: create class
+  # breaks from a column in parameter dataframe "inputDf", or from an external
+  # vector of type double.
+  #
   # Adapted from:
   # https://medium.com/@traffordDataLab/lets-make-a-map-in-r-7bd1d9366098
   
-  # Suppress n jenks warnings, problem probably handled
-  classes <- suppressWarnings(
-    classInt::classIntervals(inputDf[, datacol], n = classes_n, style = "equal"))
+  if(missing(lockedclasses)) {
+    # Normal function behaviour
+    
+    # Suppress n jenks warnings, problem probably handled
+    classes <- suppressWarnings(
+      classInt::classIntervals(inputDf[, datacol], n = classes_n, style = "equal"))
+    
+  } else {
+    # This condition is met when parameter "lockedclasses" is detected
+    classes <- suppressWarnings(
+      classInt::classIntervals(lockedclasses, n = classes_n, style = "equal"))
+  }
   
   # Make note that breaks are rounded to two decimal places. In some cases the 
   # rounding would create non-unique breaks and this breaks the map view for the 
@@ -64,15 +78,28 @@ CreateJenksColumn_b <- function(inputDf, datacol, newcolname, classes_n = 11) {
 
 
 AddLevelCounts <- function(thisDf, datacol, newcolname, classes_n,
-                           labels_to_input) {
+                           labels_to_input, lockedclasses) {
   
   # Use this function to calculate how many times a legend key color appears
   # in the comparison app and add those values to the ggplot legend labels.
   # This function is non-optimal as half of this functionality is carried out
-  # in CreateJenksColumn_b(), but for the sake of clarity keep them apart.
+  # in CreateJenksColumn_b(), but for the sake of clarity keep them apart. For
+  # example, interval calculation with classInt could be moved to its own
+  # function, as it is identical with the one in CreateJenksColumn_b()
+  #
+  # We use an if statement to detect the state of locked classes breaks.
   
-  intervals <- suppressWarnings(
-    classInt::classIntervals(thisDf[, datacol], n = classes_n, style = "equal"))
+  if(missing(lockedclasses)) {
+    # Normal function behaviour
+      
+    intervals <- suppressWarnings(
+      classInt::classIntervals(thisDf[, datacol], n = classes_n, style = "equal"))
+    
+  } else {
+    # This condition is met when parameter "lockedclasses" is detected
+    intervals <- suppressWarnings(
+      classInt::classIntervals(lockedclasses, n = classes_n, style = "equal"))
+  }
   
   # Breaks are rounded to two decimal places
   interv_codes <- cut(thisDf[, datacol],
@@ -80,7 +107,7 @@ AddLevelCounts <- function(thisDf, datacol, newcolname, classes_n,
                       include.lowest = TRUE)
   input_levels <- levels(thisDf[, newcolname])
   
-  # Create level appearance count in this clunky way.
+  # Create level occurrence count in this clunky way.
   # In left_join NAs can be preserved if the new dataframe has NA present
   # like this: data.frame(brks = c(input_levels, NA))
   levels_n <-
@@ -298,5 +325,104 @@ GetCentroids <- function(fortified, unique_id, nominator) {
     result$lat <- as.numeric(levels(result$lat))[result$lat]
   }
   
+  return(result)
+}
+
+
+
+Reactive_TTM_fetch <- function(current_fst, thesisdata, postal_f) {
+  
+  # Use this function to calculate all necessary columns for the comparison
+  # application to work. "current_fst" represents one fst file on disk,
+  # "thesisdata" is the thesis survey data, and postal_f is a fortified version
+  # of postal code area polygon data (this dataframe sets the output function
+  # nrow of 14316)
+  #
+  # In the comparison app this function is used
+  # 1)  to get all possible column values to calculate minimums and maximums for
+  #     all columns (locked class breaks)
+  # 2)  Any time user requests a new origin postal code area, this function is
+  #     run
+  
+  result <-
+    fst::read_fst(current_fst, as.data.table = TRUE) %>%
+    
+    dplyr::left_join(., thesisdata, by = "zipcode") %>%
+    dplyr::left_join(postal_f, ., by = "zipcode") %>%
+    
+    # Generate drivetime (min) and pct (%) columns for TTM18 data.
+    # NB! Use a mean of r, m, and sl for all the columns "sl".
+    dplyr::mutate(ttm_all_avg = rowMeans(select(., c(ttm_r_avg, ttm_m_avg, ttm_sl_avg))),
+                  ttm_r_drivetime = ttm_r_avg - ttm_sfp - ttm_wtd,
+                  ttm_m_drivetime = ttm_m_avg - ttm_sfp - ttm_wtd,
+                  ttm_all_drivetime = ttm_all_avg - ttm_sfp - ttm_wtd,
+                  ttm_r_pct = (ttm_sfp + ttm_wtd) / ttm_r_avg,
+                  ttm_m_pct = (ttm_sfp + ttm_wtd) / ttm_m_avg,
+                  ttm_all_pct = (ttm_sfp + ttm_wtd) / ttm_all_avg) %>%
+    dplyr::mutate_at(vars(ttm_all_avg, ttm_all_drivetime, ttm_r_pct, ttm_m_pct, ttm_all_pct),
+                     ~round(., 2)) %>%
+    
+    # If zipcode is NA, then convert all calculated data to NA as well
+    dplyr::mutate(ttm_r_avg = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_r_avg),
+                  ttm_m_avg = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_m_avg),
+                  ttm_sl_avg = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_sl_avg),
+                  ttm_all_avg = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_all_avg),
+                  ttm_sfp = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_sfp),
+                  ttm_wtd = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_wtd),
+                  ttm_r_drivetime = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_r_drivetime),
+                  ttm_m_drivetime = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_m_drivetime),
+                  ttm_all_drivetime = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_all_drivetime),
+                  ttm_r_pct = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_r_pct),
+                  ttm_m_pct = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_m_pct),
+                  ttm_all_pct = case_when(is.na(zipcode) ~ NA_real_, TRUE ~ ttm_all_pct)) %>%
+    dplyr::mutate_at(vars(ttm_r_avg, ttm_m_avg, ttm_all_avg),
+                     ~dplyr::na_if(., -1)) %>%
+    
+    # Add the rest of thesis_ columns. with if_else() change possible NA's to
+    # zeros so that calculations are not rendered NA
+    dplyr::mutate(thesis_r_drivetime = ttm_r_drivetime -
+                    if_else(is.na(thesis_r_sfp), 0, thesis_r_sfp) -
+                    if_else(is.na(thesis_r_wtd), 0, thesis_r_wtd),
+                  
+                  thesis_m_drivetime = ttm_m_drivetime -
+                    if_else(is.na(thesis_m_sfp), 0, thesis_m_sfp) -
+                    if_else(is.na(thesis_m_wtd), 0, thesis_m_wtd),
+                  
+                  thesis_all_drivetime = ttm_all_drivetime -
+                    if_else(is.na(thesis_all_sfp), 0, thesis_all_sfp) -
+                    if_else(is.na(thesis_all_wtd), 0, thesis_all_wtd),
+                  
+                  # Forgo if_else() here so that if thesis results sfp or wtd
+                  # are missing for a postal code, pct value also gets NA
+                  thesis_r_pct = (thesis_r_sfp + thesis_r_wtd) / ttm_r_drivetime,
+                  thesis_m_pct = (thesis_m_sfp + thesis_m_wtd) / ttm_m_drivetime,
+                  
+                  thesis_all_pct = (
+                    if_else(is.na(thesis_all_sfp), 0, thesis_all_sfp) +
+                      if_else(is.na(thesis_all_wtd), 0, thesis_all_wtd)) / ttm_all_drivetime) %>%
+    
+    dplyr::mutate_at(vars(thesis_r_drivetime, thesis_m_drivetime,
+                          thesis_all_drivetime, thesis_r_pct, thesis_m_pct,
+                          thesis_all_pct),
+                     ~round(., 2)) %>%
+    
+    # Add TTM18/thesis comparison columns
+    dplyr::mutate(comp_r_sfp = thesis_r_sfp / ttm_sfp,
+                  comp_m_sfp = thesis_m_sfp / ttm_sfp,
+                  comp_all_sfp = thesis_all_sfp / ttm_sfp,
+                  comp_r_wtd = thesis_r_wtd / ttm_wtd,
+                  comp_m_wtd = thesis_m_wtd / ttm_wtd,
+                  comp_all_wtd = thesis_all_wtd / ttm_wtd,
+                  comp_r_drivetime = thesis_r_drivetime / ttm_r_drivetime,
+                  comp_m_drivetime = thesis_m_drivetime / ttm_m_drivetime,
+                  comp_all_drivetime = thesis_all_drivetime / ttm_all_drivetime,
+                  comp_r_pct = thesis_r_pct / ttm_r_pct,
+                  comp_m_pct = thesis_m_pct / ttm_m_pct,
+                  comp_all_pct = thesis_all_pct / ttm_all_pct) %>%
+    dplyr::mutate_at(vars(comp_r_sfp, comp_m_sfp, comp_all_sfp, comp_r_wtd,
+                          comp_m_wtd, comp_all_wtd, comp_r_drivetime,
+                          comp_m_drivetime, comp_all_drivetime, comp_r_pct,
+                          comp_m_pct, comp_all_pct),
+                     ~round(., 2))
   return(result)
 }
