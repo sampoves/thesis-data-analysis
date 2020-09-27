@@ -15,7 +15,7 @@
 #   icons in "color scheme" menu do not appear on the first opening. In fact,
 #   they only appear after first opening "visualise data" menu once.
 # - There is a rare issue where the application complains about non-unique 
-#   breaks. This occurs inside CreateJenksColumn_b(), where a column presumably
+#   breaks. This occurs inside CreateEqualColumn(), where a column presumably
 #   does not have enough unique values to create the amount of symbology classes
 #   the app requests. To counter this, reactive object checkSliderInput() is
 #   created. This handles the error, but not before the map view disappears
@@ -484,7 +484,7 @@ server <- function(input, output, session) {
   
   # This reactive object is created to enable listening of multiple inputs user
   # can trigger. Triggering an input may require lowering the classes breaks
-  # inside the function CreateJenksColumn_b(), otherwise we will get an error
+  # inside the function CreateEqualColumn(), otherwise we will get an error
   # ""
   checkSliderInput <- reactive({
     list(input$classIntervals_n, input$calcZip, input$fill_column)
@@ -504,7 +504,7 @@ server <- function(input, output, session) {
     
     # Object returned from classIntervals() has an attribute "nobs" which I
     # use to detect cases where too large input$classIntervals_n is inputted to
-    # CreateJenksColumn_b() function.
+    # CreateEqualColumn() function.
     # The minus one should prevent the breaks error from showing.
     if(attributes(classes_test)$nobs - 1 < input$classIntervals_n) {
       updateSliderInput(session,
@@ -625,12 +625,12 @@ server <- function(input, output, session) {
   })
   
   
-  # equalBreaksColumn() calculates new class intervals when an input change is
+  # equalIntervalsColumn() calculates new class intervals when an input change is
   # detected on input$fill_column or amount of classes is changed in 
   # input$classIntervals_n. 
   # Also check the state of the locked_breaks switch, as different behaviour
-  # is required from CreateJenksColumn_b() based on the state.
-  equalBreaksColumn <- reactive({
+  # is required from CreateEqualColumn() based on the state.
+  equalIntervalsColumn <- reactive({
     
     inputdata <- thisTTM()
     
@@ -638,17 +638,17 @@ server <- function(input, output, session) {
     if(input$locked_breaks == FALSE) {
       
       # Normal behaviour
-      res <- CreateJenksColumn_b(inputdata, 
-                                 vis_cols[[input$fill_column]], 
-                                 input$fill_column, 
-                                 input$classIntervals_n)
+      res <- CreateEqualColumn(inputdata, 
+                               vis_cols[[input$fill_column]], 
+                               input$fill_column, 
+                               input$classIntervals_n)
     } else {
       # User has selected locked classes
-      res <- CreateJenksColumn_b(inputdata,
-                                 vis_cols[[input$fill_column]],
-                                 input$fill_column,
-                                 input$classIntervals_n,
-                                 locked_class_breaks())
+      res <- CreateEqualColumn(inputdata,
+                               vis_cols[[input$fill_column]],
+                               input$fill_column,
+                               input$classIntervals_n,
+                               locked_class_breaks())
     }
     res
   })
@@ -660,8 +660,8 @@ server <- function(input, output, session) {
   #### 4.2.1 Da plot -----------------------------------------------------------
   output$researcharea <- renderGirafe({
     
-    # Reactive value: Insert equal breaks column for ggplot mapping.
-    inputdata <- equalBreaksColumn()
+    # Reactive value: Insert equal intervals column for ggplot mapping.
+    inputdata <- equalIntervalsColumn()
     
     # Get the origin zipcode for mapping
     originzip <- postal_f[postal_f["zipcode"] == validate_zipcode(), ]
@@ -737,10 +737,11 @@ server <- function(input, output, session) {
                              comp_r_pct, comp_m_pct, comp_all_pct))
                    )) +
       
-      # Jenks classes colouring and labels. drop = FALSE is very important in
-      # most of the cases of input$fill_column. Levels may end up appearing zero
-      # times in the data, and that would get them erased from the legend and
-      # mix everything up. Get actual colouring from user in input$brewerpal
+      # Equal interval classes colouring and labels. drop = FALSE is very 
+      # important in most of the cases of input$fill_column. Levels may end up 
+      # appearing zero times in the data, and that would get them erased from 
+      # the legend and mix everything up. Get actual colouring from user in 
+      # input$brewerpal
       scale_fill_brewer(palette = input$brewerpal,
                         name = paste0(legendname, collapse = ""),
                         direction = -1,

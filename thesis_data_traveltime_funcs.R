@@ -33,14 +33,13 @@ ReadAndClean <- function(fp) {
 
 
 
-CreateJenksColumn_b <- function(inputDf, datacol, newcolname, classes_n = 11, 
-                                lockedclasses) {
+CreateEqualColumn <- function(inputDf, datacol, newcolname, classes_n = 11, 
+                              lockedclasses) {
   
-  # Function name _b refers to this function being the variant B of the function
-  # CreateJenksColumn in thesis_data_vis.R.
+  # This function is a variant of CreateJenksColumn() in thesis_data_vis.R.
   #
   # Use this function to create a column in fortified dataframe that can be
-  # used to portray Jenks breaks colouring in a ggplot map. Dplyr note: to
+  # used to portray equal intervals colouring in a ggplot map. Dplyr note: to
   # enable parameters as column names in dplyr, apply !! and := for the left
   # side and for the right side !!rlang::sym().
   #
@@ -54,7 +53,7 @@ CreateJenksColumn_b <- function(inputDf, datacol, newcolname, classes_n = 11,
   if(missing(lockedclasses)) {
     # Normal function behaviour
     
-    # Suppress n jenks warnings, problem probably handled
+    # Suppress n classes warnings, problem probably handled
     classes <- suppressWarnings(
       classInt::classIntervals(inputDf[, datacol], n = classes_n, style = "equal"))
     
@@ -83,9 +82,9 @@ AddLevelCounts <- function(thisDf, datacol, newcolname, classes_n,
   # Use this function to calculate how many times a legend key color appears
   # in the comparison app and add those values to the ggplot legend labels.
   # This function is non-optimal as half of this functionality is carried out
-  # in CreateJenksColumn_b(), but for the sake of clarity keep them apart. For
+  # in CreateEqualColumn(), but for the sake of clarity keep them apart. For
   # example, interval calculation with classInt could be moved to its own
-  # function, as it is identical with the one in CreateJenksColumn_b()
+  # function, as it is identical with the one in CreateEqualColumn()
   #
   # We use an if statement to detect the state of locked classes breaks.
   
