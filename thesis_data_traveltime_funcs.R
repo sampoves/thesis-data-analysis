@@ -58,7 +58,9 @@ CreateEqualColumn <- function(inputDf, datacol, newcolname, classes_n = 11,
       classInt::classIntervals(inputDf[, datacol], n = classes_n, style = "equal"))
     
   } else {
-    # This condition is met when parameter "lockedclasses" is detected
+    # This condition is met when the parameter "lockedclasses" is detected. This 
+    # condition works with the values outputted by locked_class_breaks_params() 
+    # and locked_class_breaks_all().
     classes <- suppressWarnings(
       classInt::classIntervals(lockedclasses, n = classes_n, style = "equal"))
   }
@@ -95,7 +97,9 @@ AddLevelCounts <- function(thisDf, datacol, newcolname, classes_n,
       classInt::classIntervals(thisDf[, datacol], n = classes_n, style = "equal"))
     
   } else {
-    # This condition is met when parameter "lockedclasses" is detected
+    # This condition is met when the parameter "lockedclasses" is detected. This 
+    # condition works with the values outputted by locked_class_breaks_params() 
+    # and locked_class_breaks_all().
     intervals <- suppressWarnings(
       classInt::classIntervals(lockedclasses, n = classes_n, style = "equal"))
   }
@@ -329,19 +333,26 @@ GetCentroids <- function(fortified, unique_id, nominator) {
 
 
 
-str_start <- function (string,char) {
-  substr(string, 1, char)
+str_start <- function (string, n) {
+  
+  # Get an amount of n characters from the beginning of a string.
+  
+  substr(string, 1, n)
 }
 
-str_end <- function (string, char) {
-  substr(string, nchar(string) - (char - 1), nchar(string))
+str_end <- function (string, n) {
+  
+  # Get an amount of n characters from the end of a string.
+  
+  substr(string, nchar(string) - (n - 1), nchar(string))
 }
 
 columnFinder <- function(columnname, compare_vector) {
   
-  # Insert a column name in inputdata, receive all three columns of the same
-  # type. To be used with locked class breaks option "params". In this script,
-  # "compare_vector" is names(vis_cols).
+  # Insert a column name that exists in an output of the reactive object of 
+  # thisTTM() and receive all three columns of the same type. To be used with 
+  # locked class breaks option "params". In this script, "compare_vector" is 
+  # names(vis_cols).
   
   bool <- 
     grepl(str_start(columnname, 3), compare_vector) & 

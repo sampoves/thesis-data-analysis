@@ -48,7 +48,7 @@ library(ggspatial)
 
 
 # App version
-app_v <- "0068.postal (28.9.2020)"
+app_v <- "0069.postal (28.9.2020)"
 
 # Working directory
 wd <- "C:/Sampon/Maantiede/Master of the Universe"
@@ -465,9 +465,9 @@ comp_pct_vals <-
 
 #### 4 Travel Time Comparison ShinyApp -----------------------------------------
 server <- function(input, output, session) {
-
+  
   #### 4.1 Reactive elements ---------------------------------------------------
-
+  
   # Launch tooltip legend jQuery UI dialog
   shiny::observeEvent(input$info_dialog_btn, {
     
@@ -489,7 +489,6 @@ server <- function(input, output, session) {
   checkSliderInput <- reactive({
     list(input$classIntervals_n, input$calcZip, input$fill_column)
   })
-  
   
   shiny::observeEvent(checkSliderInput(), {
     
@@ -514,7 +513,7 @@ server <- function(input, output, session) {
   })
 
   
-  # Validate ykr-id in the numeric field
+  # Validate ykr-id in the numeric field "input$calcZip"
   validate_zipcode <- shiny::eventReactive(input$calcZip, {
     
     # %then% allows only one error message at a time
@@ -528,6 +527,8 @@ server <- function(input, output, session) {
   })
   
   
+  # Locked class intervals, option: parameters of the same type (r-m-all trios) 
+  # and all postal code areas.
   # Get correct locked classes value range out of this reactive object
   locked_class_breaks_all <- shiny::reactive({
     
@@ -574,6 +575,26 @@ server <- function(input, output, session) {
     }
   })
   
+  # Locked class intervals, option: parameters of the same type (r-m-all trios)
+  locked_class_breaks_params <- shiny::reactive({
+    
+    # Get only the three columns which belong to the current trio of rush hour,
+    # midday, and all values. use the result of columnFinder() to get correct
+    # column names out of named vector "vis_cols"
+    inputdata <- thisTTM()
+    currentColumns <- columnFinder(input$fill_column, names(vis_cols))
+    thisDf <- inputdata[, vis_cols[currentColumns]]
+    
+    # Calculate the value range from smallest value to largest and use
+    # "theseVals" in CreateEqualColumn() function
+    thisRange <- range(c(thisDf[, 1], thisDf[, 2], thisDf[, 3]), na.rm = TRUE)
+    theseVals <- seq(from = thisRange[1], 
+                     to = thisRange[2], 
+                     length.out = nrow(postal_f))
+    theseVals
+    
+  })
+  
   
   # helper_output_zip() and helper_output_symbology(): Print helpful text for 
   # the user
@@ -591,7 +612,6 @@ server <- function(input, output, session) {
     help_output
   })
   
-  
   helper_output_symbology <- shiny::reactive({
     
     thisVal <- GetSymbologyHelp(input$fill_column)
@@ -605,16 +625,13 @@ server <- function(input, output, session) {
   })
   
   
-  
-  #### 4.1.1 Reactive fetch of TTM18 data --------------------------------------
+  #### Reactive fetch of aggregated TTM18 data
   
   # This is the reactively built Helsinki Region Travel Time Matrix 2018 for the 
   # origin id inserted by the user. User's chosen YKR_ID value is 
   # validate_zipcode().
   thisTTM <- shiny::reactive({
     
-    #### Fetch aggregated TTM18 data ---
-
     # Use validate_zipcode() to find the filepath for the needed aggregated
     # TTM18 fst file. Reactive_TTM_fetch() then lifts the heavy load.
     postal_loc <- grepl(validate_zipcode(), all_postal_fst, fixed = TRUE)
@@ -632,7 +649,7 @@ server <- function(input, output, session) {
   # is required from CreateEqualColumn() based on the state.
   equalIntervalsColumn <- reactive({
     
-    inputdata <<- thisTTM()
+    inputdata <- thisTTM()
     
     # Check for locked classes dropdown menu state
     if(input$locked_breaks == "off") {
@@ -645,28 +662,16 @@ server <- function(input, output, session) {
       
     } else if (input$locked_breaks == "params") {
       
-      # Get only the three columns which belong to the current trio of rush hour,
-      # midday, and all values. use the result of columnFinder() to get correct
-      # column names out of named vector vis_cols
-      currentColumns <- columnFinder(input$fill_column, names(vis_cols))
-      thisDf <- inputdata[, vis_cols[currentColumns]]
-      
-      # Calculate the value range from smallest value to largest and use
-      # "theseVals" in CreateEqualColumn() function
-      thisRange <- range(c(thisDf[, 1], thisDf[, 2], thisDf[, 3]), na.rm = TRUE)
-      theseVals <- seq(from = thisRange[1], 
-                      to = thisRange[2], 
-                      length.out = nrow(postal_f))
-      
+      # User has selected locked classes: parameters
       res <- CreateEqualColumn(inputdata,
                                vis_cols[[input$fill_column]],
                                input$fill_column,
                                input$classIntervals_n,
-                               theseVals)
+                               locked_class_breaks_params())
       
     } else if (input$locked_breaks == "all") {
       
-      # User has selected locked classes
+      # User has selected locked classes: parameters and all postal code areas
       res <- CreateEqualColumn(inputdata,
                                vis_cols[[input$fill_column]],
                                input$fill_column,
@@ -704,32 +709,31 @@ server <- function(input, output, session) {
     if(input$locked_breaks == "off") {
       
       # Normal behaviour
-      l_labels <- AddLevelCounts(inputdata, vis_cols[[input$fill_column]], 
-                                 input$fill_column, input$classIntervals_n, 
+      l_labels <- AddLevelCounts(inputdata, 
+                                 vis_cols[[input$fill_column]], 
+                                 input$fill_column, 
+                                 input$classIntervals_n, 
                                  l_labels)
       
     } else if (input$locked_breaks == "params") {
       
-      # Parameters
-      # This portion of the code is a copy from above, the reactive object
-      # "equalIntervalsColumn()". This should be put to a function of its own.
-      currentColumns <- columnFinder(input$fill_column, names(vis_cols))
-      thisDf <- inputdata[, vis_cols[currentColumns]]
-      thisRange <- range(c(thisDf[, 1], thisDf[, 2], thisDf[, 3]), na.rm = TRUE)
-      theseVals <- seq(from = thisRange[1], 
-                       to = thisRange[2], 
-                       length.out = nrow(postal_f))
-      
-      l_labels <- AddLevelCounts(inputdata, vis_cols[[input$fill_column]], 
-                                 input$fill_column, input$classIntervals_n, 
-                                 l_labels, theseVals)
+      # Classes are locked, option: parameters
+      l_labels <- AddLevelCounts(inputdata, 
+                                 vis_cols[[input$fill_column]], 
+                                 input$fill_column, 
+                                 input$classIntervals_n, 
+                                 l_labels, 
+                                 locked_class_breaks_params())
       
     } else if (input$locked_breaks == "all") {
       
-      # Classes are locked, parameters and all postal code areas
-      l_labels <- AddLevelCounts(inputdata, vis_cols[[input$fill_column]], 
-                                 input$fill_column, input$classIntervals_n, 
-                                 l_labels, locked_class_breaks_all())
+      # Classes are locked, option: parameters and all postal code areas
+      l_labels <- AddLevelCounts(inputdata, 
+                                 vis_cols[[input$fill_column]], 
+                                 input$fill_column, 
+                                 input$classIntervals_n, 
+                                 l_labels, 
+                                 locked_class_breaks_all())
     }
     
     # Origin id legend label
