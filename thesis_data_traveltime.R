@@ -2,7 +2,7 @@
 # Helsinki Region Travel Time comparison application
 # Helsinki Region Travel Time Matrix 2018 <--> My thesis survey results
 
-# 28.9.2020
+# 13.10.2020
 # Sampo Vesanen
 
 
@@ -51,35 +51,35 @@ library(ggspatial)
 app_v <- "0069.postal (28.9.2020)"
 
 # Working directory
-wd <- "C:/Sampon/Maantiede/Master of the Universe"
+wd <- "C:/Sampon/Maantiede/Master of the Universe/python"
 
 # Data directories
-munspath <- file.path(wd, "python/paavo/hcr_muns.shp")
-othermunspath <- file.path(wd, "python/paavo/other_muns.shp")
-subdivpath <- file.path(wd, "python/suuralueet/PKS_suuralue.kml")
-waterpath <- file.path(wd, "python/FI001L3_HELSINKI/ua2012_water.shp")
-roadpath <- file.path(wd, "python/vayla/mainroads.shp")
+munspath <- file.path(wd, "thesis_data_r/hcr_muns.shp")
+othermunspath <- file.path(wd, "thesis_data_r/other_muns.shp")
+subdivpath <- file.path(wd, "thesis_data_r/PKS_suuralue.kml")
+waterpath <- file.path(wd, "thesis_data_r/ua2012_water.shp")
+roadpath <- file.path(wd, "thesis_data_r/mainroads.shp")
 
 # Thesis' processed data
-recordspath <- file.path(wd, "records_for_r.csv")
-postal_path <- file.path(wd, "postal_for_r.csv")
-gridzipcodes <- file.path(wd, "grid_for_r.csv")
+recordspath <- file.path(wd, "thesis_data_r/records_for_r.csv")
+postal_path <- file.path(wd, "thesis_data_r/postal_for_r.csv")
+gridzipcodes <- file.path(wd, "thesis_data_r/grid_for_r.csv")
 fst_postal_fp <- file.path(wd, "TTM18_postal")
 
 # Comparison app additional functionality
-csspath <- file.path(wd, "python/thesis_data_traveltime_style.css")
-jspath <- file.path(wd, "python/thesis_data_traveltime_script.js")
-tooltip_path <- file.path(wd, "python/thesis_data_traveltime_tooltip.html")
-info_path <- file.path(wd, "python/thesis_data_traveltime_info.html")
+csspath <- file.path(wd, "thesis_data_traveltime_style.css")
+jspath <- file.path(wd, "thesis_data_traveltime_script.js")
+tooltip_path <- file.path(wd, "thesis_data_traveltime_tooltip.html")
+info_path <- file.path(wd, "thesis_data_traveltime_info.html")
 
 # Source functions and postal code variables
-source(file.path(wd, "python/thesis_data_traveltime_funcs.R"))
+source(file.path(wd, "thesis_data_traveltime_funcs.R"))
 
 # Convert Helsinki Region Travel Time Matrix 2018 into fst and then to dataset
 # aggregated to postal code area resolution. The user of this script is not
 # needed to run this script as the end-product of this script is provided in
 # the GitHub repository.
-#source(file.path(wd, "python/thesis_data_traveltime_conv.R"))
+#source(file.path(wd, "thesis_data_traveltime_conv.R"))
 
 
 
@@ -1062,7 +1062,7 @@ ui <- shinyUI(
         textInput(
           inputId = "zipcode",
           label = "Enter an origin postal code",
-          value = "00100"), # Starting value Helsinki Keskusta - Etu-Töölö
+          value = "00100"), # Starting value "Helsinki Keskusta - Etu-Töölö"
         HTML("</div>"),
         
         actionButton(

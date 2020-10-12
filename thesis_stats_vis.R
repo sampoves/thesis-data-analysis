@@ -4,7 +4,7 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 23.9.2020
+# 13.10.2020
 #
 # This is an interactive tool for analysing the results of my research survey.
 
@@ -33,6 +33,11 @@
 #### 1 Initialise --------------------------------------------------------------
 rm(list = ls())
 gc()
+
+# App versions
+app_a <- "23.9.2020"
+app_v <- "13.10.2020"
+
 
 #install.packages("onewaytests")
 #install.packages("car")
@@ -84,25 +89,25 @@ library(ggsn)
 
 
 # Working directory
-wd <- "C:/Sampon/Maantiede/Master of the Universe"
+wd <- "C:/Sampon/Maantiede/Master of the Universe/python"
 
 # Python prepared data directories
-datapath <- file.path(wd, "records_for_r.csv")
-visitorpath <- file.path(wd, "leaflet_survey_results/visitors.csv")
-postal_path <- file.path(wd, "postal_for_r.csv")
+datapath <- file.path(wd, "thesis_data_r/records_for_r.csv")
+visitorpath <- file.path(wd, "thesis_data_r/visitors_for_r.csv")
+postal_path <- file.path(wd, "thesis_data_r/postal_for_r.csv")
 
 # Spatial data paths
-suuraluepath <- file.path(wd, "python/suuralueet/PKS_suuralue.kml")
-munspath <- file.path(wd, "python/paavo/hcr_muns_sea.shp")
-othermunspath <- file.path(wd, "python/paavo/other_muns.shp")
-unreachablepath <- file.path(wd, "python/paavo/hcr_muns_unreachable.shp")
+suuraluepath <- file.path(wd, "thesis_data_r/PKS_suuralue.kml")
+munspath <- file.path(wd, "thesis_data_r/hcr_muns_sea.shp")
+othermunspath <- file.path(wd, "thesis_data_r/other_muns.shp")
+unreachablepath <- file.path(wd, "thesis_data_r/hcr_muns_unreachable.shp")
 
 # CSS data
-csspath <- file.path(wd, "python/thesis_stats_vis_style.css")
-jspath <- file.path(wd, "python/thesis_stats_vis_script.js")
+csspath <- file.path(wd, "thesis_stats_vis_style.css")
+jspath <- file.path(wd, "thesis_stats_vis_script.js")
 
 # Source functions and postal code variables
-source(file.path(wd, "python/thesis_stats_vis_funcs.R"))
+source(file.path(wd, "thesis_stats_vis_funcs.R"))
 
 
 
@@ -1548,7 +1553,8 @@ ui <- shinyUI(fluidPage(
            "</div>",
            "</div>",
            "</div>",
-           "<p id='version-info'>Analysis app version 23.9.2020</p>"),
+           paste("<p id='version-info'>Analysis application version", app_v, 
+                 "</p>")),
       
       width = 3
     ),
@@ -1761,10 +1767,33 @@ records_xts <- xts(x = thesisdata_for_xts$id,
 # Event timestamps are read from thesis_stats_vis_funcs.R
 visitor_server <- function(input, output) {
   
+  # Get the window width using JavaScript, then send to Shiny server
+  shinyjs::runjs("setInterval(function() {
+                    var wid = window.innerWidth;
+                    Shiny.onInputChange('windowsize_h', wid);
+                  }, 0);")
+  
+  # Reactively set the dygraph width
+  thisWidth <- shiny::reactive({
+    
+    # Make 100 % plot width actually 95 %, prevent overflow
+    if(input$width == 100) {
+      result <- input$windowsize_h * 0.95
+    } else {
+      result <- input$windowsize_h * (input$width / 100)
+    }
+    result
+  })
+  
   output$dygraph <- renderUI({
+    
     visitor_graph <- list(
-      dygraph(records_xts, main = "Received records", group = "thesis") %>%
-        dyOptions(drawPoints = TRUE, pointSize = 2) %>%
+      dygraph(records_xts, 
+              main = "Received records", 
+              group = "thesis",
+              width = thisWidth()) %>%
+        dyOptions(drawPoints = TRUE, 
+                  pointSize = 2) %>%
         dyRangeSelector(height = 70)  %>%
         
         dyEvent(twitter, "@Digigeolab, @AccessibilityRG", labelLoc = "bottom") %>%
@@ -1785,8 +1814,12 @@ visitor_server <- function(input, output) {
         dyEvent(lisaakaupunkia2, "Reminder, Lisää kaupunkia Helsinkiin", labelLoc = "bottom") %>%
         dyEvent(misc3, "Email list reminders, GIS-velhot FB group", labelLoc = "bottom"),
       
-      dygraph(visitor_xts, main = "Unique first visits", group = "thesis") %>%
-        dyOptions(drawPoints = TRUE, pointSize = 2) %>%
+      dygraph(visitor_xts, 
+              main = "Unique first visits", 
+              group = "thesis",
+              width = thisWidth()) %>%
+        dyOptions(drawPoints = TRUE, 
+                  pointSize = 2) %>%
         dyRangeSelector(height = 70)  %>%
         
         dyEvent(twitter, "@Digigeolab, @AccessibilityRG", labelLoc = "bottom") %>%
@@ -1813,6 +1846,7 @@ visitor_server <- function(input, output) {
 
 ### 8 Visitor UI elements ------------------------------------------------------
 visitor_ui <- basicPage(
+  shinyjs::useShinyjs(),
   
   # CSS tricks. Most importantly create white background box for the dygraph
   # and center it. In centering parent and child element are essential and
@@ -1823,12 +1857,17 @@ visitor_ui <- basicPage(
         width: 100%;
         text-align: center;
         background-color: #272b30;
+      	height: 100%;
+        scroll-behavior: smooth;
+        overflow: auto;
+        overscroll-behavior: contain; /*disable pull-down-to-refresh on Chrome*/
       }
       h2, p {
         color: #c8c8c8;
       }
       .contentsp {
         text-align: center;
+        display: inline-block;
       }
       .contentsc {
         border: 5px solid #2e3338;
@@ -1836,23 +1875,41 @@ visitor_ui <- basicPage(
         padding: 12px;
         margin-top: 15px;
         background: white;
-        display: inline-block;
+        text-align: center;
+      }
+      .shiny-input-container {
+        margin: auto;
       }
       #version-info {
-      	font-size: 11px; 
-      	color: grey;
-      	margin-top: -10px;
+        font-size: 11px;
+        color: grey;
+        margin-top: 5px;
+      }
+      #dygraph {
+        display: inline-block;
       }"
     ))
   ),
 
-  titlePanel("Sampo Vesanen MSc thesis research survey: received responses and survey page first visits"),
-  p("Click and hold, then drag and release to zoom to a period of time. Double click to return to the full view."),
-  HTML("<p id='version-info'>Analysis app version 16.5.2020</p>",
-       "<div class='contentsp'>",
+  titlePanel("Sampo Vesanen MSc thesis research survey: received responses",
+             "and survey page first visits"),
+  p("Click and hold, then drag and release to zoom to a period of time. Double",
+    "click to return to the full view."),
+  HTML("<div class='contentsp'>",
        "<div class='contentsc'>"),
+  
+  sliderInput(
+    inputId = "width",
+    label = HTML("plot width (% of screen)"),
+    min = 25,
+    max = 100,
+    value = 75,
+    step = 25),
+  
   uiOutput("dygraph"),
   HTML("</div>",
-       "</div>")
+       "</div>"),
+  HTML(paste("<p id='version-info'>Visitors analysis application version", 
+             app_v, "</p>"))
 )
 shinyApp(visitor_ui, visitor_server)

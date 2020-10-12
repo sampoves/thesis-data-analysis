@@ -6,7 +6,7 @@
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 
 # by Sampo Vesanen
-# 24.6.2020
+# 13.10.2020
 
 
 # This tool will convert an unchanged Helsinki Region Travel Time Matrix dataset 
@@ -37,6 +37,10 @@
 
 #### Initialise ----------------------------------------------------------------
 
+rm(list = ls())
+gc()
+
+
 # Libraries
 library(fst)
 library(dplyr)
@@ -48,14 +52,14 @@ library(tibble)
 
 
 # Working directory
-wd <- "C:/Sampon/Maantiede/Master of the Universe"
+wd <- "C:/Sampon/Maantiede/Master of the Universe/python"
 
 # Folder paths
 ttm_path <- file.path(wd, "HelsinkiTravelTimeMatrix2018")
-fst_orig_fp <- file.path(wd, "TTM18") 
+fst_orig_fp <- file.path(wd, "TTM18")
 fst_postal_fp <- file.path(wd, "TTM18_postal")
-gridzipcodes <- file.path(wd, "grid_for_r.csv")
-gridpath <- file.path(wd, "python/MetropAccess_YKR_grid_EurefFIN.shp")
+gridzipcodes <- file.path(wd, "thesis_data_r/grid_for_r.csv")
+gridpath <- file.path(wd, "thesis_data_r/MetropAccess_YKR_grid_EurefFIN.shp")
 
 
 
