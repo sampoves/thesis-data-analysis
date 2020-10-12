@@ -31,27 +31,24 @@ from rtree import index
 import random
 
 # Working directories
-wd = r"C:\Sampon\Maantiede\Master of the Universe"
-script_wd = r"C:\Sampon\Maantiede\Master of the Universe/python"
+wd = r"C:\Sampon\Maantiede\Master of the Universe\python"
 
 # Survey data file paths
-records_data = r"leaflet_survey_results\records.csv"
-visitors_data = r"leaflet_survey_results\visitors.csv"
+records_data = r"thesis_data_python\records.csv"
+visitors_data = r"thesis_data_python\visitors.csv"
 
 # Spatial data paths
-grid_path = r"python\MetropAccess_YKR_grid_EurefFIN.shp"
-resarea_path = r"python\paavo\pno_dissolve.shp"
-postal_path = r"python\paavo\2019\pno_tilasto_2019.shp"
-ykr_path = r"yhdyskuntarakenteenvyoh17\YKRVyohykkeet2017.shp"
-artificial_path = r"clc2018_fi20m\clc2018_level1_dissolve.shp"
-ttm_path = r"HelsinkiTravelTimeMatrix2018\{0}xxx\travel_times_to_ {1}.txt"
+grid_path = r"thesis_data_python\MetropAccess_YKR_grid_EurefFIN.shp"
+resarea_path = r"thesis_data_python\pno_dissolve.shp"
+postal_path = r"thesis_data_python\pno_tilasto_2019.shp"
+ykr_path = r"thesis_data_python\YKRVyohykkeet2017.shp"
+artificial_path = r"thesis_data_python\clc2018_level1_dissolve.shp"
 
 # Import functions and lists of zipcodes. Has to be done after inserting 
 # os.chdir()
-os.chdir(script_wd)
+os.chdir(wd)
 from thesis_data_analysis_funcs import *
 from thesis_data_zipcodes import *
-os.chdir(wd)
 
 
 
@@ -567,8 +564,8 @@ records = records.rename(columns={"artificial": "artificial_vals"})
 
 # Calculate jenks breaks for "artificial". Use breaks to reclassify values
 # in records. We will use code created by GitHub user Drewda. We will 
-# generate the breaks with postal, so that postal code values are not 
-# repeated over and over in the calculation.
+# generate the breaks with "postal", so that repeated rows of "records.artificial" 
+# do not interfere with class breaks calculations.
 breaks = getJenksBreaks(postal.artificial.tolist(), 5)
 
 # See the breaks on plot
@@ -594,6 +591,9 @@ records["artificial"] = np.where(
                                       (np.where(records.artificial_vals <= breaks[5], 
                                                 "Fully built",
                                                 "novalue"))))))))).tolist()
+
+# Get amount of artificial classes for thesis
+#records.groupby("zipcode").first().groupby("artificial").size()
 
 
 
