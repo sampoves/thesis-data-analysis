@@ -687,7 +687,7 @@ server <- function(input, output, session){
             legend.title = element_text(size = 16),
             legend.text = element_text(size = 15),
             legend.spacing.y = unit(0.4, "cm"),
-            legend.position = c(0.92, 0.81),
+            legend.position = c(0.92, 0.79),
             axis.text = element_text(size = 13),
             axis.title = element_text(size = 15),
             text = element_text(size = 13)) +
@@ -758,6 +758,7 @@ server <- function(input, output, session){
             legend.title = element_text(size = 32),
             legend.text = element_text(size = 30),
             legend.spacing.y = unit(0.6, "cm"),
+            legend.position = c(0.92, 0.78),
             axis.text = element_text(size = 26),
             axis.title = element_text(size = 29),
             
@@ -1616,7 +1617,7 @@ ui <- shinyUI(fluidPage(
            "</div>",
            "</div>",
            "</div>",
-           paste("<p id='version-info'>Analysis application version", app_v, 
+           paste("<p id='version-info'>Analysis application version", app_a, 
                  "</p>")),
       
       width = 3
