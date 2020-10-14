@@ -4,7 +4,7 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 21.9.2020
+# 13.10.2020
 
 # Initialise
 library(onewaytests)
@@ -291,15 +291,17 @@ SigTableToShiny <- function(sigTable, hasHeading) {
   }
   
   # Get the location of the signif.star
-  signif_ncol <- ncol(read.table(textConnection(
-    capture.output(sigTable)[sigTablePosition]), 
-    fill = TRUE))
+  signif_ncol <- ncol(read.table(
+    textConnection(capture.output(sigTable)[sigTablePosition]), 
+    fill = TRUE,
+    stringsAsFactors = TRUE))
   
   # get signif.star
-  signif_star <- read.table(textConnection(
-    capture.output(sigTable)[sigTablePosition]), 
-    fill = TRUE)[[signif_ncol]]
-  
+  signif_star <- read.table(
+    textConnection(capture.output(sigTable)[sigTablePosition]), 
+    fill = TRUE,
+    stringsAsFactors = TRUE)[[signif_ncol]]
+
   # Detect if signif_star is something else than factor. If so, the function
   # has picked up a value from probability column and the current analysis is 
   # not significant. Change value to " ".

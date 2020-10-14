@@ -4,7 +4,7 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 13.10.2020
+# 15.10.2020
 #
 # This is an interactive tool for analysing the results of my research survey.
 
@@ -35,7 +35,7 @@ rm(list = ls())
 gc()
 
 # App versions
-app_a <- "23.9.2020"
+app_a <- "15.10.2020"
 app_v <- "13.10.2020"
 
 
@@ -364,8 +364,8 @@ server <- function(input, output, session){
       parktime <= input$parktime_max,
       walktime <= input$walktime_max)
   )
-
-
+  
+  
   # currentpostal() recalculates, when needed, new answer counts, means, and 
   # medians for the values currently active in currentdata(). This is needed to 
   # make the interactive map tooltip values responsive to changes. In this phase,
@@ -426,13 +426,13 @@ server <- function(input, output, session){
   # data contained in currentpostal(). This is a copy of the code above, seen
   # in "Interactive map for ShinyApp". Please See code comments in the original.
   current_data_f <- shiny::reactive({
-
+    
     currentpostal <- currentpostal()
-
+    
     geometries <- lapply(currentpostal[, "geometry"], "readWKT", p4s = app_crs)
     sp_tmp_ID <- mapply(sp::spChFIDs, geometries, as.character(currentpostal[, 1]))
     row.names(currentpostal) <- currentpostal[, 1]
-
+    
     data_f <- sp::SpatialPolygonsDataFrame(
       sp::SpatialPolygons(unlist(lapply(sp_tmp_ID, function(x) x@polygons)),
                           proj4string = app_crs), data = currentpostal) %>%
@@ -448,7 +448,7 @@ server <- function(input, output, session){
   shiny::observe({
     # 5.1.3 Detect changes in selectInput to modify available check boxes ------
     x <- input$expl
-
+    
     updateCheckboxGroupInput(
       session, 
       "checkGroup", 
@@ -518,7 +518,7 @@ server <- function(input, output, session){
   })
   
   
-
+  
   #### 5.2 Descriptive statistics ----------------------------------------------
   output$descri <- renderTable({
     
@@ -535,7 +535,7 @@ server <- function(input, output, session){
     # allowed parktime and walktime values, and see changes in input$checkGroup 
     # and input$subdivGroup
     inputdata <- currentdata()
-
+    
     # Take subdiv checkbox group into account
     inputdata <- inputdata[, !names(inputdata) %in% supportcols]
     response <- inputdata[[resp_col]]
@@ -632,39 +632,44 @@ server <- function(input, output, session){
     inputdata <- currentdata()
     resp_vect <- inputdata[[resp_col]] # for vertical line labels
     
+    # These textGrobs determine the value shown at the bottom of vertical mean and
+    # median geom_vlines. Produce objects separately for the normal version and
+    # the downloadable versions to control font size.
+    meanval <- round(mean(resp_vect), 2)
+    medianval <- round(median(resp_vect), 2)
+    
+    meangrob <- grid::textGrob(label = meanval,
+                               hjust = -0.3,
+                               vjust = 1.25,
+                               gp = grid::gpar(cex = 1.2, col = "red"))
+    mediangrob <- grid::textGrob(label = medianval,
+                                 hjust = 2,
+                                 vjust = 1.25,
+                                 gp = grid::gpar(cex = 1.2, col = "blue"))
+    meangrob_out <- grid::textGrob(label = meanval,
+                                   hjust = -0.3,
+                                   vjust = 1.25,
+                                   gp = grid::gpar(cex = 2.2, col = "red"))
+    mediangrob_out <- grid::textGrob(label = medianval,
+                                     hjust = 2,
+                                     vjust = 1.25,
+                                     gp = grid::gpar(cex = 2.2, col = "blue"))
+    
     p <- ggplot(inputdata, aes(x = !!sym(resp_col))) + 
       geom_histogram(color = "black", fill = "grey", binwidth = binwidth) +
       xlab(paste(resp_col, "(min)")) +
       
       # Vertical lines for mean and median, respectively. Also display exact
-      # values with annotate_custom() and textGrobs.
+      # values with annotate_custom() and textGrobs. They are added a bit later.
       geom_vline(aes(xintercept = mean(!!sym(resp_col)),
                      color = "mean"),
                  linetype = "longdash", 
                  size = 1) +
-      annotation_custom(
-        grob = grid::textGrob(label = round(mean(resp_vect), 2), 
-                              hjust = -0.3,
-                              vjust = 1.25, 
-                              gp = grid::gpar(cex = 1.2, col = "red")),
-        ymin = 0,
-        ymax = 0,
-        xmin = round(mean(resp_vect), 2),
-        xmax = round(mean(resp_vect), 2)) +
       
       geom_vline(aes(xintercept = median(!!sym(resp_col)),
                      color = "median"),
                  linetype = "longdash", 
                  size = 1) +
-      annotation_custom(
-        grob = grid::textGrob(label = round(median(resp_vect), 2), 
-                              hjust = 2,
-                              vjust = 1.25, 
-                              gp = grid::gpar(cex = 1.2, col = "blue")),
-        ymin = 0,
-        ymax = 0,
-        xmin = round(median(resp_vect), 2),
-        xmax = round(median(resp_vect), 2)) +
       
       # This is kernel density estimate, a smoothed version of the histogram.
       # Usually geom_density() sets the scale for y axis, but here we will
@@ -675,19 +680,25 @@ server <- function(input, output, session){
                    show.legend = FALSE,
                    adjust = binwidth) +
       
-      theme(legend.title = element_text(size = 16),
+      # increase amount of ticks on x axis
+      scale_x_continuous(breaks = seq(0, max(resp_vect), by = 10)) +
+      
+      theme(legend.key.size = unit(1.5, "line"),
+            legend.title = element_text(size = 16),
             legend.text = element_text(size = 15),
-            legend.spacing.y = unit(0.3, "cm"),
-            legend.position = c(0.94, 0.84),
+            legend.spacing.y = unit(0.4, "cm"),
+            legend.position = c(0.92, 0.81),
             axis.text = element_text(size = 13),
             axis.title = element_text(size = 15),
             text = element_text(size = 13)) +
+      guides(shape = guide_legend(override.aes = list(size = 1.5)),
+             color = guide_legend(override.aes = list(size = 1.5))) +
       
-      # Build legend, override colors to get visible color for density. Also,
+      # Build legend, override colors to get a visible color for density. Also,
       # override linetype to get a solid line for density.
       scale_color_manual(name = paste("Legend for\n", resp_col, sep = ""), 
                          values = c(median = "blue", 
-                                    mean = "red", 
+                                    mean = "red",
                                     "kernel density\nestimate" = alpha("black", 0.4))) +
       guides(color = guide_legend(
         override.aes = list(color = c("darkgrey", "red", "blue"),
@@ -696,33 +707,84 @@ server <- function(input, output, session){
     # Conditional histogram bar labeling. No label for zero. Create the labeling
     # separately for the histogram shown in the app and the histogram made for
     # downloading. To my knowledge there is no other way to control the font size.
+    # Also add annotations for geom_vlines here.
     p_out <- p + stat_bin(binwidth = binwidth,
                           geom = "text",
                           aes(label = ifelse(..count.. > 0, ..count.., "")),
-                          vjust = -0.65)
-    
+                          vjust = -0.65) +
+      annotation_custom(
+        grob = meangrob,
+        ymin = 0,
+        ymax = 0,
+        xmin = meanval,
+        xmax = meanval) +
+      
+      annotation_custom(
+        grob = mediangrob,
+        ymin = 0,
+        ymax = 0,
+        xmin = medianval,
+        xmax = medianval)
     
     # Prepare the downloadable histogram. "hist_out" is brought global environment 
     # for download. Use larger fonts.
     hist_out <- LabelBuilder(p, input$expl, input$checkGroup, input$subdivGroup)
-    hist_out <<- 
+    hist_out <- 
       hist_out + 
       
       # a larger font size for bar labeling
       stat_bin(binwidth = binwidth,
                geom = "text",
                aes(label = ifelse(..count.. > 0, ..count.., "")),
-               size = 6,
+               size = 9.5,
                vjust = -0.65) +
       
-      theme(legend.title = element_text(size = 23),
-            legend.text = element_text(size = 22),
-            axis.text = element_text(size = 19),
-            axis.title = element_text(size = 22))
+      # Larger fonts for geom_vline annotations
+      annotation_custom(
+        grob = meangrob_out,
+        ymin = 0,
+        ymax = 0,
+        xmin = meanval,
+        xmax = meanval) +
+      
+      annotation_custom(
+        grob = mediangrob_out,
+        ymin = 0,
+        ymax = 0,
+        xmin = medianval,
+        xmax = medianval) +
+      
+      theme(legend.key.size = unit(1.5, "line"),
+            legend.title = element_text(size = 32),
+            legend.text = element_text(size = 30),
+            legend.spacing.y = unit(0.6, "cm"),
+            axis.text = element_text(size = 26),
+            axis.title = element_text(size = 29),
+            
+            legend.key = element_rect(size = 6),
+            legend.key.height = unit(1.5, "cm"),
+            legend.key.width = unit(1, "cm")) + 
+      
+      # this enables larger legend symbols. To my knowledge, I have to redefine
+      # the whole aes() here
+      guides(color = guide_legend(
+        override.aes = list(color = c("grey60", "red", "blue"),
+                            linetype = c("solid", "longdash", "longdash"),
+                            size = 2.5)))
+    
+    # This is a crude way of updating plot values. Depends on knowing the
+    # indices of plot items. Unpack plot with ggplot_build(), then reassemble
+    # with ggplot_gtable(). 
+    disassembled <- ggplot_build(hist_out)
+    disassembled$data[[1]]$size <- 1 # bars
+    disassembled$data[[2]]$size <- 1.5 #mean
+    disassembled$data[[3]]$size <- 1.5 #median
+    disassembled$data[[4]]$size <- 1.5 #density
+    hist_out <<- ggplot_gtable(disassembled)
     
     # Render histogram
     ggiraph(code = print(p_out),
-            width_svg = 16.7,
+            width_svg = 17,
             height_svg = 6)
   })
 
@@ -1278,6 +1340,9 @@ server <- function(input, output, session){
       theme(legend.title = element_text(size = 15),
             legend.text = element_text(size = 14),
             legend.position = c(0.94, 0.84),
+            axis.title = element_blank(),
+            axis.text = element_blank(),
+            axis.ticks = element_blank(),
             plot.caption = element_text(size = 13, hjust = 0.5, face = "italic"))
     
 
@@ -1288,9 +1353,7 @@ server <- function(input, output, session){
     interactive_out <<- 
       interactive_out + 
       theme(legend.title = element_text(size = 17),
-            legend.text = element_text(size = 16),
-            axis.text = element_text(size = 14),
-            axis.title = element_text(size = 16))
+            legend.text = element_text(size = 16))
     
     # Render interactive map
     girafe(ggobj = g,
@@ -1592,7 +1655,9 @@ ui <- shinyUI(fluidPage(
       downloadLink("dl_hist",
                    label = HTML("<i class='icon file' title='Download hi-res version of this plot (png)'></i>")),
       HTML("</h3>"),
-      ggiraphOutput("hist", height = "400px"),
+      ggiraphOutput("hist", 
+                    width = "100%",
+                    height = "100%"),
       HTML("</div>"),
       hr(),
       
@@ -1613,7 +1678,9 @@ ui <- shinyUI(fluidPage(
       conditionalPanel(
         condition = 
           "input.expl == 'likert' || input.expl == 'parkspot' || input.expl == 'timeofday'",
-        ggiraphOutput("barplot_ord", height = "400px"),
+        ggiraphOutput("barplot_ord", 
+                      width = "100%",
+                      height = "100%"),
       ),
       HTML("</div>"),
       hr(),
@@ -1628,7 +1695,9 @@ ui <- shinyUI(fluidPage(
       downloadLink("dl_boxplot",
                    label = HTML("<i class='icon file' title='Download hi-res version of this plot (png)'></i>")),
       HTML("</h3>"),
-      ggiraphOutput("boxplot", height = "500px"),
+      ggiraphOutput("boxplot", 
+                    width = "100%",
+                    height = "100%"),
       HTML("</div>"),
       hr(),
       
@@ -1697,7 +1766,9 @@ ui <- shinyUI(fluidPage(
       downloadLink("dl_interactive",
                    label = HTML("<i class='icon file' title='Download hi-res version of this figure (png)'></i>")),
       HTML("</h3>"),
-      girafeOutput("interactive"),
+      girafeOutput("interactive", 
+                   width = "100%",
+                   height = "100%"),
       HTML("</div>"),
       hr(),
       
