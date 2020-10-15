@@ -2,12 +2,19 @@
 # Helsinki Region Travel Time comparison application
 # Helsinki Region Travel Time Matrix 2018 <--> My thesis survey results
 
-# 13.10.2020
+# 15.10.2020
 # Sampo Vesanen
 
 
 
 # Notes:
+# - .loadingdiv is bound by .col-sm-9, the mainPanel() content. For this
+#   reason, on first load the loading appears now on top of the screen. As
+#   the map is loaded, loading text moves to th center of the screen. I could
+#   not find a solution to this for the time being. This only appeared after
+#   update to R 4.0.0 and updating several libraries. Before, girafeOutput()
+#   did not need width and height, and the loading div was placed in the center
+#   from the start.
 # - Of minor importance: select#postal_label_choice does not scale with window 
 #   size
 # - Of minor importance: The JavaScript additions to dropdown menus are quite
@@ -48,7 +55,7 @@ library(ggspatial)
 
 
 # App version
-app_v <- "0069.postal (28.9.2020)"
+app_v <- "0070.postal (15.10.2020)"
 
 # Working directory
 wd <- "C:/Sampon/Maantiede/Master of the Universe/python"
@@ -690,7 +697,7 @@ server <- function(input, output, session) {
     
     # Reactive value: Insert equal intervals column for ggplot mapping.
     inputdata <- equalIntervalsColumn()
-    
+
     # Get the origin zipcode for mapping
     originzip <- postal_f[postal_f["zipcode"] == validate_zipcode(), ]
     originname <- as.character(originzip$nimi[1])
@@ -702,7 +709,7 @@ server <- function(input, output, session) {
       gsub("(])|(\\()|(\\[)", "", levels(inputdata[, input$fill_column])) %>%
       gsub(",", " \U2012 ", .)
     legendname <- GetLegendName(input$fill_column, originzip)
-
+    
     # The sum of individual factor levels. Check for locked classes menu state.
     # If classes breaks are locked, additional data is needed to calculate
     # frequency of class occurrence.
@@ -796,6 +803,17 @@ server <- function(input, output, session) {
                         na.value = "darkgrey",
                         drop = FALSE) +
       
+      #### Origin postal code area element and legend entry
+      # Plot origin YKR_ID, the starting position for TTM18
+      geom_polygon(data = originzip,
+                   aes(long, lat, group = group, color = nimi),
+                   fill = NA,
+                   size = 1.2) +
+      # Get a legend entry for origin ykr id
+      scale_color_manual(name = "Origin postal\ncode area",
+                         values = o_label,
+                         labels = names(o_label)) +
+      
       # Define map extent manually
       coord_fixed(xlim = c(min(inputdata$lon) + 1500, max(inputdata$lon) - 1500),
                   ylim = c(min(inputdata$lat) + 1300, max(inputdata$lat) - 1300)) +
@@ -810,7 +828,7 @@ server <- function(input, output, session) {
                      height = 0.01, 
                      transform = FALSE,
                      anchor = c(
-                       x = max(inputdata$lon) - 1000 , 
+                       x = max(inputdata$lon) - 1000, 
                        y = min(inputdata$lat) + 400)) +
       
       ggsn::north(inputdata, 
@@ -852,13 +870,14 @@ server <- function(input, output, session) {
     # Plot municipality boundaries on the map
     if(input$show_muns == TRUE) {
       
+      # Add boundaries of neighboring municipalities for visual reference
       g <- g + geom_polygon(data = othermuns_f,
                             aes(long, lat, group = group),   
                             color = alpha("black", 0.3), 
                             fill = "NA",
                             size = 0.8) +
       
-      # Municipality boundaries
+      # Study area municipality boundaries
       geom_polygon(data = muns_f,
                    aes(long, lat, group = group),   
                    color = alpha("black", 0.9), 
@@ -866,21 +885,7 @@ server <- function(input, output, session) {
                    size = 1.0)
     }
     
-    # ggnewscale makes it possible to map additional legends with same 
-    # properties, in this case a new scale_fill. 
-    g <- g + ggnewscale::new_scale_color() +
-      
-      # Plot origin YKR_ID, the starting position for TTM18
-      geom_polygon(data = originzip,
-                   aes(long, lat, group = group, color = nimi),
-                   fill = NA,
-                   size = 1.2) +
-      
-      # Get a legend entry for origin ykr id
-      scale_color_manual(name = "Origin postal\ncode area",
-                         values = o_label,
-                         labels = names(o_label))
-    
+    # Plot municipality subdivision boundaries on the map
     if(input$show_subdiv == TRUE) {
       
       # Municipality boundaries
@@ -894,17 +899,28 @@ server <- function(input, output, session) {
     # Plot walking center boundaries
     if(input$show_walk == TRUE) {
       
+      # ggnewscale makes it possible to map additional legends with same
+      # properties, in this case a new scale_color (origin postal code area 
+      # legend entry is already occupying the slot).
+      
       # New legend entry for walking center of Helsinki
       g <- g + ggnewscale::new_scale_color() +
         
         geom_polygon(data = walk_f,
                      aes(long, lat, color = label),
                      fill = NA,
+                     linetype = "longdash",
+                     key_glyph = "polygon",
                      size = 0.9) + 
         
         scale_color_manual(name = NULL,
                            values = setNames("#6b01ab", "walk"),
-                           labels = "Helsinki walking\ncenter (TTM18)")
+                           labels = "Helsinki walking\ncenter (TTM18)") + 
+        
+        # Modify legend symbol: rectangle to square by making the symbol larger,
+        # also make line narrower
+        guides(colour = guide_legend(override.aes = list(size = 12)),
+               linetype = guide_legend(override.aes = list(size = 0.9)))
     }
     
     # Plot postal code area labels
@@ -1241,7 +1257,9 @@ ui <- shinyUI(
              "Loading map view. Once finished, see <i class='icon info'></i> for more information.",
              "</div>"),
         
-        girafeOutput("researcharea"), 
+        girafeOutput("researcharea",
+                     width = "100%",
+                     height = "100%"),
         
         width = 9
       )
