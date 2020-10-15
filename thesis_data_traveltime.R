@@ -12,7 +12,7 @@
 #   decimal places. This is all good for the tooltip values and the values
 #   printed on the map proper. However, the legend scale is a bit tricky.
 #   Essential cut() function used in CreateEqualColumn() reduces decimal places
-#   And I don't know how to prevent this. As a consequence, I have to add the
+#   and I don't know how to prevent this. As a consequence, I have to add the
 #   decimal places back to the legend with regex, resulting in situations where
 #   the largest value shown on map can be larger than the top value in the
 #   color scale. I don't think there are other caveats.
@@ -704,20 +704,7 @@ server <- function(input, output, session) {
   output$researcharea <- renderGirafe({
     
     # Reactive value: Insert equal intervals column for ggplot mapping.
-    inputdata <<- equalIntervalsColumn()
-    
-    
-    # classess <- classInt::classIntervals(inputdata[, "ttm_m_avg"], n = 11, style = "equal")
-    # resultt <- 
-    #   inputdata %>%
-    #   dplyr::mutate(jeeuus = cut(ttm_m_avg, 
-    #                              unique(round(classess$brks, 5)), 
-    #                              include.lowest = TRUE)) %>%
-    #   dplyr::select(ttm_m_avg, ttm18_m_avg, jeeuus)
-    
-    
-    
-    
+    inputdata <- equalIntervalsColumn()
     
     # Get the origin zipcode for mapping
     originzip <- postal_f[postal_f["zipcode"] == validate_zipcode(), ]
@@ -763,14 +750,7 @@ server <- function(input, output, session) {
                                  l_labels, 
                                  locked_class_breaks_all())
     }
-    # kaka <<- l_labels
-    # kaka2 <<- str_extract_all(kaka, "\\(?[-0-9,.]+\\)?", simplify = TRUE) %>%
-    #   as.data.frame()
-    # kaka3 <<- apply(kaka2, 1, function(x) {
-    #   paste(sprintf("%0.2f", as.numeric(x[1])), " \U2012 ",
-    #         sprintf("%0.2f", as.numeric(x[2])), " [", x[3], "]",
-    #         sep = "")
-    # })
+
     # Add two decimal places to all label values. Do this by disassembling
     # "l_labels" and determining which values need decimals added.
     l_labels <- str_extract_all(l_labels, "\\(?[-0-9,.]+\\)?", simplify = TRUE) %>%
