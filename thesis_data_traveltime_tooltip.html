@@ -1,5 +1,5 @@
  <!-- This is the HTML code for the travel time comparison app tooltip. -->
- <!-- for Sampo Vesanen's MSc thesis. 18.7.2020. -->
+ <!-- for Sampo Vesanen's MSc thesis. 15.10.2020. -->
 <div id='app-tooltip'>
 	<div>
 		<i class='icon hourglass-start'></i>%s, %s<br> <!-- from_zip, nimi[1] -->
@@ -28,9 +28,9 @@
 					<div class='cell-expl'>searching for parking (min)</div>
 				</div>
 			</td>
-			<td class='tg-cell'>%s</td> <!-- ttm_sfp -->
-			<td class='tg-cell'>%s</td> <!-- ttm_sfp -->
-			<td class='tg-cell'>%s</td> <!-- ttm_sfp -->
+			<td class='tg-cell'>%0.2f</td> <!-- ttm_sfp -->
+			<td class='tg-cell'>%0.2f</td> <!-- ttm_sfp -->
+			<td class='tg-cell'>%0.2f</td> <!-- ttm_sfp -->
 		</tr>
 		<tr id='ttm-wtd'>
 			<td class='tg-cell mover'>
@@ -39,9 +39,9 @@
 					<div class='cell-expl'>walk to destination, mean (min)</div>
 				</div>
 			</td>
-			<td class='tg-cell'>%s</td> <!-- ttm_wtd -->
-			<td class='tg-cell'>%s</td> <!-- ttm_wtd -->
-			<td class='tg-cell'>%s</td> <!-- ttm_wtd -->
+			<td class='tg-cell'>%0.2f</td> <!-- ttm_wtd -->
+			<td class='tg-cell'>%0.2f</td> <!-- ttm_wtd -->
+			<td class='tg-cell'>%0.2f</td> <!-- ttm_wtd -->
 		</tr>
 	</table>
 	<table class='tg'>
@@ -52,9 +52,9 @@
 					<div class='cell-expl'>mean duration of the total travel chain (min)</div>
 				</div>
 			</td>
-			<td class='tg-cell'>%s</td> <!-- ttm_r_avg -->
-			<td class='tg-cell'>%s</td> <!-- ttm_m_avg -->
-			<td class='tg-cell'>%s</td> <!-- ttm_all_avg -->
+			<td class='tg-cell'>%0.2f</td> <!-- ttm_r_avg -->
+			<td class='tg-cell'>%0.2f</td> <!-- ttm_m_avg -->
+			<td class='tg-cell'>%0.2f</td> <!-- ttm_all_avg -->
 		</tr>
 		<tr class='tg vl-drive-pct' id='ttm-drivetime'>
 			<td class='tg-cell mover'>
@@ -63,9 +63,9 @@
 					<div class='cell-expl'>duration of the driving segment in the mean total travel chain (min)</div>
 				</div>
 			</td>
-			<td class='tg-cell'>%s</td> <!-- ttm_r_drivetime -->
-			<td class='tg-cell'>%s</td> <!-- ttm_m_drivetime -->
-			<td class='tg-cell'>%s</td> <!-- ttm_all_drivetime -->
+			<td class='tg-cell'>%0.2f</td> <!-- ttm_r_drivetime -->
+			<td class='tg-cell'>%0.2f</td> <!-- ttm_m_drivetime -->
+			<td class='tg-cell'>%0.2f</td> <!-- ttm_all_drivetime -->
 		</tr>
 		<tr class='tg vl-drive-pct' id='ttm-pct'>
 			<td class='tg-cell mover'>
@@ -74,9 +74,9 @@
 					<div class='cell-expl'>share of the parking process in the total duration of the travel chain (%%)</div>
 				</div>
 			</td>
-			<td class='tg-cell'>%s</td> <!-- ttm_r_pct -->
-			<td class='tg-cell'>%s</td> <!-- ttm_m_pct -->
-			<td class='tg-cell'>%s</td> <!-- ttm_all_pct -->
+			<td class='tg-cell'>%0.2f</td> <!-- ttm_r_pct -->
+			<td class='tg-cell'>%0.2f</td> <!-- ttm_m_pct -->
+			<td class='tg-cell'>%0.2f</td> <!-- ttm_all_pct -->
 		</tr>
 	</table>
 	<hr class='tooltip-hr'>
@@ -101,9 +101,9 @@
 					<div class='cell-expl'>searching for parking, mean (min)</div>
 				</div>
 			</td>
-			<td class='tg-cell'>%s</td> <!-- thesis_r_sfp -->
-			<td class='tg-cell'>%s</td> <!-- thesis_m_sfp -->
-			<td class='tg-cell'>%s</td> <!-- thesis_all_sfp -->
+			<td class='tg-cell'>%0.2f</td> <!-- thesis_r_sfp -->
+			<td class='tg-cell'>%0.2f</td> <!-- thesis_m_sfp -->
+			<td class='tg-cell'>%0.2f</td> <!-- thesis_all_sfp -->
 		</tr>
 		<tr id='thesis-wtd'>
 			<td class='tg-cell mover'>
@@ -112,9 +112,9 @@
 					<div class='cell-expl'>walk to destination, mean (min)</div>
 				</div>
 			</td>
-			<td class='tg-cell'>%s</td> <!-- thesis_r_wtd -->
-			<td class='tg-cell'>%s</td> <!-- thesis_m_wtd -->
-			<td class='tg-cell'>%s</td> <!-- thesis_all_wtd -->
+			<td class='tg-cell'>%0.2f</td> <!-- thesis_r_wtd -->
+			<td class='tg-cell'>%0.2f</td> <!-- thesis_m_wtd -->
+			<td class='tg-cell'>%0.2f</td> <!-- thesis_all_wtd -->
 		</tr>
 	</table>
 	<table class='tg vl-drive-pct'>
@@ -125,9 +125,9 @@
 					<div class='cell-expl'>duration of the driving segment in the mean total travel chain (min)</div>
 				</div>
 			</td>
-			<td class='tg-cell'>%s</td> <!-- thesis_r_drivetime -->
-			<td class='tg-cell'>%s</td> <!-- thesis_m_drivetime -->
-			<td class='tg-cell'>%s</td> <!-- thesis_all_drivetime -->
+			<td class='tg-cell'>%0.2f</td> <!-- thesis_r_drivetime -->
+			<td class='tg-cell'>%0.2f</td> <!-- thesis_m_drivetime -->
+			<td class='tg-cell'>%0.2f</td> <!-- thesis_all_drivetime -->
 		</tr>
 		<tr id='thesis-pct'>
 			<td class='tg-cell mover'>
@@ -136,9 +136,9 @@
 					<div class='cell-expl'>share of the parking process in the total travel chain (%%)</div>
 				</div>
 			</td>
-			<td class='tg-cell'>%s</td> <!-- thesis_r_pct -->
-			<td class='tg-cell'>%s</td> <!-- thesis_m_pct -->
-			<td class='tg-cell'>%s</td> <!-- thesis_all_pct -->
+			<td class='tg-cell'>%0.2f</td> <!-- thesis_r_pct -->
+			<td class='tg-cell'>%0.2f</td> <!-- thesis_m_pct -->
+			<td class='tg-cell'>%0.2f</td> <!-- thesis_all_pct -->
 		</tr>
 	</table>
 	<hr class='tooltip-hr'>
@@ -164,9 +164,9 @@
 					<div class='cell-expl'>compare datasets: searching for parking (%%)</div>
 				</div>
 			</td>
-			<td class='tg-cell compcol1'>%s</td> <!-- comp_r_sfp -->
-			<td class='tg-cell compcol2'>%s</td> <!-- comp_m_sfp -->
-			<td class='tg-cell compcol3'>%s</td> <!-- comp_all_sfp -->
+			<td class='tg-cell compcol1'>%0.2f</td> <!-- comp_r_sfp -->
+			<td class='tg-cell compcol2'>%0.2f</td> <!-- comp_m_sfp -->
+			<td class='tg-cell compcol3'>%0.2f</td> <!-- comp_all_sfp -->
 		</tr>
 		<tr id='compare-wtd'>
 			<td class='tg-cell mover'>
@@ -175,9 +175,9 @@
 					<div class='cell-expl'>compare datasets: walk to destination (%%)</div>
 				</div>
 			</td>
-			<td class='tg-cell compcol1'>%s</td> <!-- comp_r_wtd -->
-			<td class='tg-cell compcol2'>%s</td> <!-- comp_m_wtd -->
-			<td class='tg-cell compcol3'>%s</td> <!-- comp_all_wtd -->
+			<td class='tg-cell compcol1'>%0.2f</td> <!-- comp_r_wtd -->
+			<td class='tg-cell compcol2'>%0.2f</td> <!-- comp_m_wtd -->
+			<td class='tg-cell compcol3'>%0.2f</td> <!-- comp_all_wtd -->
 		</tr>
 	</table>
 	<table class='tg tg-compare vl-drive-pct'>
@@ -188,9 +188,9 @@
 					<div class='cell-expl'>compare durations of the driving segments in the two datasets (%%)</div>
 				</div>
 			</td>
-			<td class='tg-cell compcol1'>%s</td> <!-- comp_r_drivetime -->
-			<td class='tg-cell compcol2'>%s</td> <!-- comp_m_drivetime -->
-			<td class='tg-cell compcol3'>%s</td> <!-- comp_all_drivetime -->
+			<td class='tg-cell compcol1'>%0.2f</td> <!-- comp_r_drivetime -->
+			<td class='tg-cell compcol2'>%0.2f</td> <!-- comp_m_drivetime -->
+			<td class='tg-cell compcol3'>%0.2f</td> <!-- comp_all_drivetime -->
 		</tr>
 		<tr id='compare-pct'>
 			<td class='tg-cell mover'>
@@ -199,9 +199,9 @@
 					<div class='cell-expl'>compare the significances of the parking processes in the two datasets (%%)</div>
 				</div>
 			</td>
-			<td class='tg-cell compcol1'>%s</td> <!-- comp_r_pct -->
-			<td class='tg-cell compcol2'>%s</td> <!-- comp_m_pct -->
-			<td class='tg-cell compcol3'>%s</td> <!-- comp_all_pct -->
+			<td class='tg-cell compcol1'>%0.2f</td> <!-- comp_r_pct -->
+			<td class='tg-cell compcol2'>%0.2f</td> <!-- comp_m_pct -->
+			<td class='tg-cell compcol3'>%0.2f</td> <!-- comp_all_pct -->
 		</tr>
 	</table>
 </div>

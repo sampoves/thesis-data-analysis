@@ -8,6 +8,9 @@
 
 
 # Notes:
+# - Note to self: to develop exact decimal places in legend, it will probably
+#   be the easiest just to detect decimal values through regex. The function
+#   cut() cuts of any trailing zeroes, with no way apparent way to prevent that.
 # - .loadingdiv is bound by .col-sm-9, the mainPanel() content. For this
 #   reason, on first load the loading appears now on top of the screen. As
 #   the map is loaded, loading text moves to th center of the screen. I could
@@ -917,10 +920,8 @@ server <- function(input, output, session) {
                            values = setNames("#6b01ab", "walk"),
                            labels = "Helsinki walking\ncenter (TTM18)") + 
         
-        # Modify legend symbol: rectangle to square by making the symbol larger,
-        # also make line narrower
-        guides(colour = guide_legend(override.aes = list(size = 12)),
-               linetype = guide_legend(override.aes = list(size = 0.9)))
+        # Modify legend symbol: rectangle to square by making the symbol larger
+        guides(colour = guide_legend(override.aes = list(size = 12)))
     }
     
     # Plot postal code area labels
@@ -930,7 +931,7 @@ server <- function(input, output, session) {
         
         # Fetch current symbology values. For the join there has to be a column
         # of same name in both dataframes, therefore mutate() one into thisTTM.
-        this_zipcode_lbl <- 
+        this_zipcode_lbl <<- 
           dplyr::left_join(zipcode_lbl,
                            thisTTM() %>%
                              dplyr::mutate(label = as.character(zipcode)) %>%
@@ -941,20 +942,36 @@ server <- function(input, output, session) {
           dplyr::distinct(zipcode, .keep_all = TRUE) %>%
           dplyr::select(c(long, lat, label))
         
+        # Remove rows that have NAs in "label", otherwise they are printed on
+        # the map
+        this_zipcode_lbl <- this_zipcode_lbl[!is.na(this_zipcode_lbl$label), ]
+        
+        # We need to generate this annotation separately for "Current symbology"
+        # and "postal code areas" because we can't force two decimal places for
+        # postal codes.
+        g <- g + with(this_zipcode_lbl,
+                      annotate(geom = "label",
+                               x = long,
+                               y = lat,
+                               label = sprintf("%0.2f", label),
+                               label.size = NA,
+                               fill = alpha("white", 0.5),
+                               size = 4))
+        
       } else {
         # if "Postal codes", use the object "zipcode_lbl" produced in 2.7.
         this_zipcode_lbl <- zipcode_lbl
+        
+        # Add zipcode labels
+        g <- g + with(this_zipcode_lbl,
+                      annotate(geom = "label",
+                               x = long,
+                               y = lat,
+                               label = label,
+                               label.size = NA,
+                               fill = alpha("white", 0.5),
+                               size = 4))
       }
-      
-      # Add zipcode labels
-      g <- g + with(this_zipcode_lbl,
-                    annotate(geom = "label",
-                             x = long,
-                             y = lat,
-                             label = label,
-                             label.size = NA,
-                             fill = alpha("white", 0.5),
-                             size = 4))
     }
     
     # Plot postal code area labels
