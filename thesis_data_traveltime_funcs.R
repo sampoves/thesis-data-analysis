@@ -4,7 +4,7 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 28.9.2020
+# 15.10.2020
 
 
 
@@ -71,7 +71,7 @@ CreateEqualColumn <- function(inputDf, datacol, newcolname, classes_n = 11,
   result <- 
     inputDf %>%
     dplyr::mutate(!!newcolname := cut(!!rlang::sym(datacol), 
-                                      unique(round(classes$brks, 2)), 
+                                      unique(round(classes$brks, 5)), 
                                       include.lowest = TRUE))
   return(result)
 }
@@ -106,7 +106,7 @@ AddLevelCounts <- function(thisDf, datacol, newcolname, classes_n,
   
   # Breaks are rounded to two decimal places
   interv_codes <- cut(thisDf[, datacol],
-                      round(unique(intervals$brks), 2),
+                      round(unique(intervals$brks), 5),
                       include.lowest = TRUE)
   input_levels <- levels(thisDf[, newcolname])
   
@@ -153,7 +153,7 @@ GetLegendName <- function(val, originzip) {
   # thisUnit is minutes, except when datasource is "compare" or 
   # description "_pct"
   if (grepl("compare_", val) || grepl("_pct", val)) {
-    thisUnit <- "(unit percent, where 1 = 100 %)"
+    thisUnit <- "(unit percent, where 1.00 = 100 %)"
   } else {
     thisUnit <- "(unit minutes)"
   }
