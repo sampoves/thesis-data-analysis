@@ -11,7 +11,7 @@ In 2019, a survey was conducted for my thesis. The collected data was then prepr
 
 The raw data collected for this thesis are available here:
 
-* [Survey responses (csv)](../blob/master/thesis_data_python/records.py)
+* [Survey responses (csv)](../master/thesis_data_python/records.py)
 * [Survey visitors (csv)](../blob/master/thesis_data_python/visitors.py)
 
 The web applications created for this thesis are available for viewing:
