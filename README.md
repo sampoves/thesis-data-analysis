@@ -49,6 +49,8 @@ During the process of creating the thesis, the following side products came into
 
 The contents of this repository work in a linear fashion. From the starting point of the raw research data, one script uses the outcomes of other scripts until a end result, the Shiny applications are produced. Please see the following table (or thesis figure 3, pp. 13) for more information.
 
+### Data analysis workflow
+
 | Order | Main script file | Associated script files | Input | Output |
 | --- | --- | --- | --- | --- |
 | 1 | [thesis_data_anonymisation.py](../master/thesis_data_anonymisation.py) | – | Raw survey data with IP addresses | Survey data with IP addresses anonymised: [records.csv](../master/thesis_data_python/records.csv), [visitors.csv](../master/thesis_data_python/visitors.csv) |
@@ -56,6 +58,28 @@ The contents of this repository work in a linear fashion. From the starting poin
 | 3 | [thesis_stats_vis.R](../master/thesis_stats_vis.R) | [thesis_stats_vis_funcs.R](../master/thesis_stats_vis_funcs.R), [thesis_stats_vis_script.js](../master/thesis_stats_vis_script.js), [thesis_stats_vis_style.css](../master/thesis_stats_vis_style.css) | records_for_r.csv, visitors_for_r.csv and various spatial data | the Shiny web applications: [records app](https://sampoves.shinyapps.io/analysis/), [visitors app](https://sampoves.shinyapps.io/visitors/) |
 | 4a | [thesis_data_traveltime_conv.R](../master/thesis_data_traveltime_conv.R) | – | [Helsinki Region Travel Time Matrix 2018](https://blogs.helsinki.fi/accessibility/helsinki-region-travel-time-matrix-2018/) | Efficiently compressed travel time data: [TTM18_postal](../master/TTM18_postal) |
 | 4b | [thesis_data_traveltime.R](../master/thesis_data_traveltime.R) | [thesis_data_traveltime_funcs.R](../master/thesis_data_traveltime_funcs.R), [thesis_data_traveltime_info.html](../master/thesis_data_traveltime_info.html), [thesis_data_traveltime_script.js](../master/thesis_data_traveltime_script.js), [thesis_data_traveltime_style.css](../master/thesis_data_traveltime_style.css), [thesis_data_traveltime_tooltip.html](../master/thesis_data_traveltime_tooltip.html) | TTM18_postal, records_for_r.csv, visitors_for_r.csv and various spatial data | the Shiny web application: [comparison app](https://sampoves.shinyapps.io/comparison/) |
+
+### Data
+
+| File | Purpose in this thesis | Original data | Web address | 
+| --- | --- | --- | --- |
+| [thesis_data_python/MetropAccess_YKR_grid_EurefFIN.shp](../master/thesis_data_python/MetropAccess_YKR_grid_EurefFIN.shp) | Match thesis survey data with Helsinki Region Travel Time Matrix 2018 | MetropAccess-YKR-grid shapefile | https://blogs.helsinki.fi/accessibility/helsinki-region-travel-time-matrix-2018/ |
+| [thesis_data_python/YKRVyohykkeet2017.shp](../master/thesis_data_python/YKRVyohykkeet2017.shp) | Largest zone of urban structure in each postal code area | Yhdyskuntarakenteen vyöhykkeet 2017 (Zones of urban structure) | https://ckan.ymparisto.fi/dataset/%7B18AF2F7C-1D7E-4EBE-BB14-265FEAF91410%7D |
+| [thesis_data_python/clc2018_level1_dissolve.shp](../master/thesis_data_python/clc2018_level1_dissolve.shp) | Percentage of artificial surfaces in each postal code area | CORINE Land Cover 2018 | https://ckan.ymparisto.fi/dataset/%7B0B4B2FAC-ADF1-43A1-A829-70F02BF0C0E5%7D |
+| [thesis_data_python/pno_dissolve.shp](../master/thesis_data_python/pno_dissolve.shp) | Study area outer boundary | Paavo – Open data by postal code area (2018) | http://www.stat.fi/org/avoindata/paikkatietoaineistot/paavo_en.html |
+| [thesis_data_python/pno_tilasto_2019.shp](../master/thesis_data_python/pno_tilasto_2019.shp) | Study area municipalities | Paavo – Open data by postal code area (2018) | http://www.stat.fi/org/avoindata/paikkatietoaineistot/paavo_en.html |
+| [thesis_data_r/PKS_suuralue.kml](../master/thesis_data_r/PKS_suuralue.kml) | Visualise and analyse by the subdivisions of the study area | Metropolitan area in districts | https://hri.fi/data/en_GB/dataset/paakaupunkiseudun-aluejakokartat |
+| [thesis_data_r/hcr_muns.shp](../master/thesis_data_r/hcr_muns.shp) | Study area municipalities, for visualisation | Regional population
+density 2012, Paavo – Open data by postal code area (2018) | https://etsin.fairdata.fi/dataset/b5a5ba2f-d79f-4746-9d92-f3bba995a46b, http://www.stat.fi/org/avoindata/paikkatietoaineistot/paavo_en.html |
+| [thesis_data_r/hcr_muns_sea.shp](../master/thesis_data_r/hcr_muns_sea.shp) | Study area municipalities with open water territories, for visualisation | Regional population
+density 2012, Paavo – Open data by postal code area (2018) | https://etsin.fairdata.fi/dataset/b5a5ba2f-d79f-4746-9d92-f3bba995a46b, http://www.stat.fi/org/avoindata/paikkatietoaineistot/paavo_en.html |
+| [thesis_data_r/hcr_muns_unreachable.shp](../master/thesis_data_r/hcr_muns_unreachable.shp) | Study area islands unreachable by car, for visualisation | Regional population
+density 2012, Paavo – Open data by postal code area (2018) | https://etsin.fairdata.fi/dataset/b5a5ba2f-d79f-4746-9d92-f3bba995a46b, http://www.stat.fi/org/avoindata/paikkatietoaineistot/paavo_en.html |
+| [thesis_data_r/mainroads.shp](../master/thesis_data_r/mainroads.shp) | Visualise main roads in the study area | Digiroad road and street database | https://vayla.fi/en/open-data/road-network |
+| [thesis_data_r/other_muns.shp](../master/thesis_data_r/other_muns.shp) | Neighboring municipalities of the study area, for visualisation | Regional population
+density 2012, Paavo – Open data by postal code area (2018) | https://etsin.fairdata.fi/dataset/b5a5ba2f-d79f-4746-9d92-f3bba995a46b, http://www.stat.fi/org/avoindata/paikkatietoaineistot/paavo_en.html |
+| [thesis_data_r/ua2012_water.shp](../master/thesis_data_r/ua2012_water.shp) | Visualise largest lakes in the study area | Urban Atlas 2012 | https://land.copernicus.eu/local/urban-atlas/urban-atlas-2012 |
+| [TTM18_postal/](../master/TTM18_postal) | Travel time data for the comparison application | Helsinki Region Travel Time Matrix 2018 | https://blogs.helsinki.fi/accessibility/helsinki-region-travel-time-matrix-2018/ |
 
 ## Programming environment details
 
