@@ -11,15 +11,15 @@ In 2019, a survey was conducted for my thesis. The collected data was then prepr
 
 The raw data collected for this thesis are available here:
 
-* [Survey responses (csv)](../master/thesis_data_python/records.csv)
-* [Survey visitors (csv)](../master/thesis_data_python/visitors.csv)
+* **[Survey responses (csv)](../master/thesis_data_python/records.csv)**
+* **[Survey visitors (csv)](../master/thesis_data_python/visitors.csv)**
 
 The web applications created for this thesis are available for viewing:
 
-* Survey web application: https://parking-survey.socialsawblade.fi
-* Survey data analysis and statistics: https://sampoves.shinyapps.io/analysis/
-* Survey visitors data analysis: https://sampoves.shinyapps.io/visitors/
-* Travel time comparison application: https://sampoves.shinyapps.io/comparison/
+* **Survey web application: https://parking-survey.socialsawblade.fi**
+* **Survey data analysis and statistics: https://sampoves.shinyapps.io/analysis/**
+* **Survey visitors data analysis: https://sampoves.shinyapps.io/visitors/**
+* **Travel time comparison application: https://sampoves.shinyapps.io/comparison/**
 
 The other repositories for this thesis are as follows:
 
