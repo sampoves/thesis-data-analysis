@@ -1,4 +1,7 @@
 # thesis-data-analysis
+
+## Thesis data analysis overview
+
 Data analysis scripts for the master's thesis of Sampo Vesanen.
 
 This repository contains the scripts written for my University of Helsinki master's thesis, *Parking private cars and spatial accessibility in Helsinki Capital Region – Parking time as a part of the total travel time*.
@@ -8,6 +11,8 @@ The thesis is available as PDF at University of Helsinki E-thesis: https://ethes
 To promote openness and transparency in science, the thesis, its development history, and all of the data analysis is available for viewing here on GitHub. This repository is the landing page, if you will, for all of the separate repositories created for the thesis.
 
 In 2019, a survey was conducted for my thesis. The collected data was then preprocessed in Python. The preprocessed survey data was finally used as input in several analysis applications written in R, using Shiny, the web application platform package.
+
+### Important outcomes
 
 The raw data collected for this thesis are available here:
 
@@ -20,6 +25,8 @@ The web applications created for this thesis are available for viewing:
 * **Survey data analysis and statistics: https://sampoves.shinyapps.io/analysis/**
 * **Survey visitors data analysis: https://sampoves.shinyapps.io/visitors/**
 * **Travel time comparison application: https://sampoves.shinyapps.io/comparison/**
+
+### Associated repositories
 
 The other repositories for this thesis are as follows:
 
