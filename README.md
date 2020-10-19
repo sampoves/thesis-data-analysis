@@ -3,12 +3,15 @@ Data analysis scripts for the master's thesis of Sampo Vesanen.
 
 This repository contains the scripts written for my University of Helsinki master's thesis, *Parking private cars and spatial accessibility in Helsinki Capital Region – Parking time as a part of the total travel time*.
 
+The thesis is available as PDF at University of Helsinki E-thesis: https://ethesis.helsinki.fi/en/ **(NB: the thesis not yet published)**
+
 To promote openness and transparency in science, the thesis, its development history, and all of the data analysis is available for viewing here on GitHub. This repository is the landing page, if you will, for all of the separate repositories created for the thesis.
 
 In 2019, a survey was conducted for my thesis. The collected data was then preprocessed in Python. The preprocessed survey data was finally used as input in several analysis applications written in R, using Shiny, the web application platform package.
 
-The analysis web applications are available for viewing in shinyapps.io:
+The web applications created for this thesis are available for viewing:
 
+* Survey web application: https://parking-survey.socialsawblade.fi
 * Survey data analysis and statistics: https://sampoves.shinyapps.io/analysis/
 * Survey visitors data analysis: https://sampoves.shinyapps.io/visitors/
 * Travel time comparison application: https://sampoves.shinyapps.io/comparison/
@@ -17,20 +20,30 @@ The other repositories for this thesis are as follows:
 
 | Repository | Description | Language(s) |
 | --- | --- | --- |
-| https://github.com/sampoves/Masters-2020 | the Master's thesis | LaTeX |
+| https://github.com/sampoves/Masters-2020 | The Master's thesis | LaTeX |
 | https://github.com/sampoves/parking-in-helsinki-region | The web based survey application | HTML, Javascript, PHP |
 | https://github.com/sampoves/thesis-analysis-shinyapps | shinyapps.io deployment of the survey data analysis and statistics application | R |
 | https://github.com/sampoves/thesis-visitors-shinyapps | shinyapps.io deployment of the visitors analysis application | R |
 | https://github.com/sampoves/thesis-comparison-shinyapps | shinyapps.io deployment of the travel time comparison application | R |
 
-The thesis also produced two side products:
+During the process of creating the thesis, the following side products came into being:
 
 | Repository | Description | Language(s) |
 | --- | --- | --- |
 | https://github.com/sampoves/leaflet-map-survey-point | A variant of the survey application. Users place points on the map instead of postal code areas | HTML, Javascript, PHP |
-| https://github.com/sampoves/msc-thesis-template | A barebones LaTeX thesis template in the style required by department of geosciences and geography in the University of Helsinki, 2020 | LaTeX |
+| https://github.com/sampoves/msc-thesis-template | A barebones LaTeX thesis template in the style required by department of geosciences and geography in the University of Helsinki in late 2020 | LaTeX |
 
 ## Repository structure
+
+The contents of this repository work in a linear fashion. From the starting point of the raw research data, one script uses the outcomes of other scripts until a end result, the Shiny applications are produced. Please see the following table for more information.
+
+| Script file | Data used | Outcome |
+| [thesis_data_anonymisation.py](../blob/master/thesis_data_anonymisation.py) | --- | --- |
+| --- | --- | --- |
+| --- | --- | --- |
+| --- | --- | --- |
+| --- | --- | --- |
+| --- | --- | --- |
 
 ## Programming environment details
 
