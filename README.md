@@ -12,7 +12,7 @@ In 2019, a survey was conducted for my thesis. The collected data was then prepr
 The raw data collected for this thesis are available here:
 
 * [Survey responses (csv)](../master/thesis_data_python/records.csv)
-* [Survey visitors (csv)](../blob/master/thesis_data_python/visitors.csv)
+* [Survey visitors (csv)](../master/thesis_data_python/visitors.csv)
 
 The web applications created for this thesis are available for viewing:
 
@@ -42,14 +42,13 @@ During the process of creating the thesis, the following side products came into
 
 The contents of this repository work in a linear fashion. From the starting point of the raw research data, one script uses the outcomes of other scripts until a end result, the Shiny applications are produced. Please see the following table (or thesis figure 3, pp. 13) for more information.
 
-| Script file | Input | Output |
-| --- | --- | --- |
-| [thesis_data_anonymisation.py](../blob/master/thesis_data_anonymisation.py) | Raw survey data with IP addresses | Survey data with IP addresses anonymised: [records.csv](../blob/master/thesis_data_python/records.py), [visitors.csv](../blob/master/thesis_data_python/visitors.py) |
-| [thesis_data_analysis.py](../blob/master/thesis_data_analysis.py) | Survey data with IP addresses anonymised, various spatial data | Preprocessed survey data for later visualisation in R: [records_for_r.csv](../blob/master/thesis_data_r/records_for_r.csv), [visitors_for_r.csv](../blob/master/thesis_data_r/visitors_for_r.csv) |
-| [thesis_data_anonymisation.py](../blob/master/thesis_data_anonymisation.py) | --- | --- |
-| [thesis_data_anonymisation.py](../blob/master/thesis_data_anonymisation.py) | --- | --- |
-| [thesis_data_anonymisation.py](../blob/master/thesis_data_anonymisation.py) | --- | --- |
-| [thesis_data_anonymisation.py](../blob/master/thesis_data_anonymisation.py) | --- | --- |
+| Order | Main script file | Associated script files | Input | Output |
+| --- | --- | --- | --- |
+| 1 | [thesis_data_anonymisation.py](../master/thesis_data_anonymisation.py) | – | Raw survey data with IP addresses | Survey data with IP addresses anonymised: [records.csv](../master/thesis_data_python/records.csv), [visitors.csv](../master/thesis_data_python/visitors.csv) |
+| 2 | [thesis_data_analysis.py](../master/thesis_data_analysis.py) | [thesis_data_analysis_funcs.py](../master/thesis_data_analysis_funcs.py), [thesis_data_zipcodes.py](../master/thesis_data_zipcodes.py) | Survey data with IP addresses anonymised, various spatial data | Preprocessed survey data for later visualisation in R: [records_for_r.csv](../master/thesis_data_r/records_for_r.csv), [visitors_for_r.csv](../master/thesis_data_r/visitors_for_r.csv) |
+| 3 | [thesis_stats_vis.R](../master/thesis_stats_vis.R) | [thesis_stats_vis_funcs.R](../master/thesis_stats_vis_funcs.R), [thesis_stats_vis_script.js](../master/thesis_stats_vis_script.js), [thesis_stats_vis_style.css](../master/thesis_stats_vis_style.css) | records_for_r.csv, visitors_for_r.csv and various spatial data | the Shiny web applications |
+| 4a | [thesis_data_traveltime_conv.R](../master/thesis_data_traveltime_conv.R) | – | [Helsinki Region Travel Time Matrix 2018](https://blogs.helsinki.fi/accessibility/helsinki-region-travel-time-matrix-2018/) | Efficiently compressed travel time data: [TTM18_postal](../master/TTM18_postal) |
+| 4b | [thesis_data_traveltime.R](../master/thesis_data_traveltime.R) | [thesis_data_traveltime_funcs.R](../master/thesis_data_traveltime_funcs.R) | [thesis_data_traveltime_info.html](../master/thesis_data_traveltime_info.html), [thesis_data_traveltime_script.js](../master/thesis_data_traveltime_script.js), [thesis_data_traveltime_style.css](../master/thesis_data_traveltime_style.css), [thesis_data_traveltime_tooltip.html](../master/thesis_data_traveltime_tooltip.html) | TTM18_postal, records_for_r.csv, visitors_for_r.csv and various spatial data | the Shiny web application |
 
 ## Programming environment details
 
