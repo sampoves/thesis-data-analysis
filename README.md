@@ -11,8 +11,8 @@ In 2019, a survey was conducted for my thesis. The collected data was then prepr
 
 The raw data collected for this thesis are available here:
 
-* [Survey responses (csv)](../master/thesis_data_python/records.py)
-* [Survey visitors (csv)](../master/thesis_data_python/visitors.py)
+* [Survey responses (csv)](../blob/master/thesis_data_python/records.py)
+* [Survey visitors (csv)](../blob/master/thesis_data_python/visitors.py)
 
 The web applications created for this thesis are available for viewing:
 
@@ -44,12 +44,12 @@ The contents of this repository work in a linear fashion. From the starting poin
 
 | Script file | Input | Output |
 | --- | --- | --- |
-| [thesis_data_anonymisation.py](../master/thesis_data_anonymisation.py) | Raw survey data with IP addresses | survey data with IP addresses anonymised: [records.csv](../master/thesis_data_python/records.py), [visitors.csv](../master/thesis_data_python/visitors.py) |
-| [thesis_data_anonymisation.py](../master/thesis_data_anonymisation.py) | --- | --- |
-| [thesis_data_anonymisation.py](../master/thesis_data_anonymisation.py) | --- | --- |
-| [thesis_data_anonymisation.py](../master/thesis_data_anonymisation.py) | --- | --- |
-| [thesis_data_anonymisation.py](../master/thesis_data_anonymisation.py) | --- | --- |
-| [thesis_data_anonymisation.py](../master/thesis_data_anonymisation.py) | --- | --- |
+| [thesis_data_anonymisation.py](../blob/master/thesis_data_anonymisation.py) | Raw survey data with IP addresses | Survey data with IP addresses anonymised: [records.csv](../blob/master/thesis_data_python/records.py), [visitors.csv](../blob/master/thesis_data_python/visitors.py) |
+| [thesis_data_analysis.py](../blob/master/thesis_data_analysis.py) | Survey data with IP addresses anonymised, various spatial data | Preprocessed survey data for later visualisation in R: [records_for_r.csv](../blob/master/thesis_data_r/records_for_r.csv), [visitors_for_r.csv](../blob/master/thesis_data_r/visitors_for_r.csv) |
+| [thesis_data_anonymisation.py](../blob/master/thesis_data_anonymisation.py) | --- | --- |
+| [thesis_data_anonymisation.py](../blob/master/thesis_data_anonymisation.py) | --- | --- |
+| [thesis_data_anonymisation.py](../blob/master/thesis_data_anonymisation.py) | --- | --- |
+| [thesis_data_anonymisation.py](../blob/master/thesis_data_anonymisation.py) | --- | --- |
 
 ## Programming environment details
 
