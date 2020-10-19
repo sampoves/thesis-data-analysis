@@ -9,6 +9,11 @@ To promote openness and transparency in science, the thesis, its development his
 
 In 2019, a survey was conducted for my thesis. The collected data was then preprocessed in Python. The preprocessed survey data was finally used as input in several analysis applications written in R, using Shiny, the web application platform package.
 
+The raw data collected for this thesis are available here:
+
+* [Survey responses (csv)](../master/thesis_data_python/records.py)
+* [Survey visitors (csv)](../master/thesis_data_python/visitors.py)
+
 The web applications created for this thesis are available for viewing:
 
 * Survey web application: https://parking-survey.socialsawblade.fi
@@ -35,15 +40,16 @@ During the process of creating the thesis, the following side products came into
 
 ## Repository structure
 
-The contents of this repository work in a linear fashion. From the starting point of the raw research data, one script uses the outcomes of other scripts until a end result, the Shiny applications are produced. Please see the following table for more information.
+The contents of this repository work in a linear fashion. From the starting point of the raw research data, one script uses the outcomes of other scripts until a end result, the Shiny applications are produced. Please see the following table (or thesis figure 3, pp. 13) for more information.
 
-| Script file | Data used | Outcome |
-| [thesis_data_anonymisation.py](../blob/master/thesis_data_anonymisation.py) | --- | --- |
+| Script file | Input | Output |
 | --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
+| [thesis_data_anonymisation.py](../master/thesis_data_anonymisation.py) | Raw survey data with IP addresses | survey data with IP addresses anonymised: [records.csv](../master/thesis_data_python/records.py), [visitors.csv](../master/thesis_data_python/visitors.py) |
+| [thesis_data_anonymisation.py](../master/thesis_data_anonymisation.py) | --- | --- |
+| [thesis_data_anonymisation.py](../master/thesis_data_anonymisation.py) | --- | --- |
+| [thesis_data_anonymisation.py](../master/thesis_data_anonymisation.py) | --- | --- |
+| [thesis_data_anonymisation.py](../master/thesis_data_anonymisation.py) | --- | --- |
+| [thesis_data_anonymisation.py](../master/thesis_data_anonymisation.py) | --- | --- |
 
 ## Programming environment details
 
