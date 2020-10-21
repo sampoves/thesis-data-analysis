@@ -1,5 +1,18 @@
 # thesis-data-analysis
 
+## Contents
+
+* [Thesis data analysis overview](#thesis-data-analysis-overview)
+  * [Important outcomes](#important-outcomes)
+  * [Associated repositories](#associated-repositories)
+* [Repository structure](#repository-structure)
+  * [Data analysis workflow](#data-analysis-workflow)
+  * [Data](#data)
+* [Programming environment details](#programming-environment-details)
+  * [Python](#python)
+  * [R](#r)
+* [Sonic Landscapes](#sonic-landscapes)
+
 ## Thesis data analysis overview
 
 Data analysis scripts for the master's thesis of Sampo Vesanen.
