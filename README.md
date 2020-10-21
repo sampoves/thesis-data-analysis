@@ -15,9 +15,9 @@
 
 ## Thesis data analysis overview
 
-Data analysis scripts for the master's thesis of Sampo Vesanen.
+These are the data analysis scripts for the Master's thesis of Sampo Vesanen.
 
-This repository contains the scripts written for my University of Helsinki master's thesis, *Parking private cars and spatial accessibility in Helsinki Capital Region – Parking time as a part of the total travel time*.
+This repository contains the scripts written for my University of Helsinki Master's thesis, *Parking private cars and spatial accessibility in Helsinki Capital Region – Parking time as a part of the total travel time*.
 
 The thesis is available as PDF at University of Helsinki E-thesis: https://ethesis.helsinki.fi/en/ **(NB: the thesis not yet published)**
 
