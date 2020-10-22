@@ -1,4 +1,4 @@
-# The data analysis and visualisation workflow of Sampo Vesanen's master's thesis
+# The data analysis and visualisation workflow of Sampo Vesanen's Master's thesis
 
 ## Contents
 
