@@ -1,5 +1,7 @@
 # The data analysis and visualisation workflow of Sampo Vesanen's Master's thesis
 
+This repository contains the data analysis scripts for the Master's thesis of Sampo Vesanen.
+
 ## Contents
 
 * [Thesis data analysis overview](#thesis-data-analysis-overview)
@@ -16,8 +18,6 @@
 * [Sonic Landscapes](#sonic-landscapes)
 
 ## Thesis data analysis overview
-
-These are the data analysis scripts for the Master's thesis of Sampo Vesanen.
 
 This repository contains the scripts written for my University of Helsinki Master's thesis, *Parking private cars and spatial accessibility in Helsinki Capital Region – Parking time as a part of the total travel time*.
 
