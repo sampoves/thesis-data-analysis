@@ -5,6 +5,8 @@
 * [Thesis data analysis overview](#thesis-data-analysis-overview)
   * [Important outcomes](#important-outcomes)
   * [Associated repositories](#associated-repositories)
+    * [Primary repositories](#primary-repositories)
+    * [Appendixes](#appendixes)
 * [Repository structure](#repository-structure)
   * [Data analysis workflow](#data-analysis-workflow)
   * [Data](#data)
@@ -41,7 +43,9 @@ The web applications created for this thesis are available for viewing:
 
 ### Associated repositories
 
-The other repositories for this thesis are as follows:
+#### Primary repositories
+
+The other primary repositories for this thesis are as follows:
 
 | Repository | Description | Language(s) |
 | --- | --- | --- |
@@ -50,6 +54,8 @@ The other repositories for this thesis are as follows:
 | https://github.com/sampoves/thesis-analysis-shinyapps | shinyapps.io deployment of the survey data analysis and statistics application | R |
 | https://github.com/sampoves/thesis-visitors-shinyapps | shinyapps.io deployment of the visitors analysis application | R |
 | https://github.com/sampoves/thesis-comparison-shinyapps | shinyapps.io deployment of the travel time comparison application | R |
+
+#### Appendixes
 
 During the process of creating the thesis, the following side products came into being:
 
