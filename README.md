@@ -21,7 +21,7 @@ This repository contains the data analysis scripts for the Master's thesis of Sa
 
 This repository contains the scripts written for my University of Helsinki Master's thesis, *Parking private cars and spatial accessibility in Helsinki Capital Region – Parking time as a part of the total travel time*.
 
-The thesis is available as PDF at the Digital Repository of the University of Helsinki: https://ethesis.helsinki.fi/en/ **(NB: the thesis not yet published)**
+The thesis is available as PDF at the Digital Repository of the University of Helsinki: **http://urn.fi/URN:NBN:fi:hulib-202010304366**
 
 To promote openness and transparency in science, the thesis, its development history, and all of the data analysis is available for viewing here on GitHub. This repository is the landing page, if you will, for all of the separate repositories created for the thesis.
 
